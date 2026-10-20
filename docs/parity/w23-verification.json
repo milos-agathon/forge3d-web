@@ -1,16 +1,21 @@
 {
-  "schemaVersion": 3,
-  "recordedAt": "2026-10-19T13:37:35.123Z",
-  "testedImplementationRevision": "ddbd1310023727616d2b8bee1f0b8096b1150595",
-  "scope": "W23 second-review corrections: original regional computations, independent execution evidence, semantic ownership and derivation provenance.",
+  "schemaVersion": 4,
+  "recordedAt": "2026-10-20T08:14:09.496Z",
+  "testedImplementationRevision": "391c84362ecfc8f54588f45dd38aad8e2f0fc184",
+  "acceptanceRevision": "d5cf3b57",
+  "scope": "Remaining W23 review corrections: externally observed triangle/COG/MP4 stages, generator output proof, source-subject routing, original PNOA DEM, exact shipped text bytes and cold-load unit timeout.",
   "supersedes": {
-    "revision": "efba9305",
-    "reason": "Earlier green gates did not prove per-example regional computations or IBL/effects/rig execution, and accepted substring routes and storage-history-only provenance."
+    "revision": "5b3d1025",
+    "reason": "The earlier record accepted self-reported triangle/COG/video execution, unrelated existing generators and incorrect routes/PNOA input, and retained a cold-load unit timeout."
   },
   "environment": {
     "platform": "win32",
     "architecture": "x64",
     "node": "v24.4.0",
+    "CARGO_TARGET_DIR": "C:\\devin-target\\forge3d-web",
+    "browserEnvironment": {
+      "FORGE3D_TEST_PORT": "57923"
+    },
     "browserProject": "chromium-preflight",
     "physicalBrowserQualification": false
   },
@@ -50,22 +55,22 @@
     "unmapped": [],
     "testSuites": 81,
     "testDefinitionsAre": "Individually routed to capability evidence, not assertions of one-for-one test translation or execution.",
-    "corrections": 450,
-    "coverageSha256": "054671521d55e7b245db3b828020d7a07063427125bd1c244ace174da8d624ca",
+    "corrections": 454,
+    "coverageSha256": "7ad44138bf42401c4a03b358605b9ab03f741cd16de323cce8751d44466b355d",
     "assets": 2582,
-    "assetsSha256": "f2f2a2f80f9fb309c1ca9deb42656a9f23867d53150eaa0c21d773338a67b13d",
+    "assetsSha256": "3d4f689f0e29646c981b013d9b0c39706ae6e2cf820a3087f7d286269a4575e1",
     "nativeBytePreserved": 340,
     "sourceSnapshots": 113,
     "derivationKinds": {
-      "upstream-dependency": 33,
+      "upstream-dependency": 34,
       "upstream-manifest": 7,
       "converted-native-data": 4,
       "source-copy": 112,
       "browser-migration-source": 15,
-      "generated-control": 2061,
-      "authored-contract-input": 3,
+      "generated-control": 2037,
+      "authored-contract-input": 20,
       "native-source-inventory": 1,
-      "browser-observation": 1,
+      "browser-observation": 7,
       "native-kernel-capture": 5
     }
   },
@@ -75,23 +80,209 @@
       "files": 92,
       "passed": 1960,
       "failed": 0,
-      "earlierAttempt": "One w20-pdf-errors font-shaping case timed out at 5 seconds under the default parallel run. It passed alone in 305 ms; a fresh full default run passed all 1960 tests. PowerShell/npm swallowed attempted worker/reporter overrides; no timeout or test implementation was changed."
+      "consecutiveRuns": [
+        {
+          "run": 1,
+          "passed": 1960,
+          "files": 92,
+          "shapingAssertionMs": 19
+        },
+        {
+          "run": 2,
+          "passed": 1960,
+          "files": 92,
+          "shapingAssertionMs": 21
+        },
+        {
+          "run": 3,
+          "passed": 1960,
+          "files": 92,
+          "shapingAssertionMs": 24
+        }
+      ],
+      "cause": "The async mock importOriginal and pdf-lib dynamic import ran cold transforms inside the 5-second shaping test. Static backend imports now finish during test collection; the real shaping failure and cancellation assertions are unchanged.",
+      "focusedMeasurement": {
+        "command": "npx vitest run tests/unit/w20-pdf-errors.test.ts",
+        "collectionMs": 6990,
+        "assertionMs": 23,
+        "timeoutMs": 5000
+      }
     },
     "commands": [
-      "npm run verify:w23",
-      "npm run verify:parity",
-      "npm run test:api",
-      "npm run test:package",
-      "npm run build:example",
-      "python scripts/audit-w23-native.py",
-      "node scripts/audit-w23-semantics.mjs",
-      "python scripts/generate-w23-goldens.py --check",
-      "python scripts/generate-w23-application-fixtures.py --check"
+      {
+        "name": "verify",
+        "command": "npm run verify:w23",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:05:49.488Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:06:20.953Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-verify.log",
+        "sha256": "dd79cc253ba6b00692a25f1e13c4ff193d0aaca2078ee99fc652aa3791465710"
+      },
+      {
+        "name": "parity",
+        "command": "npm run verify:parity",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:06:21.001Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:06:24.169Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-parity.log",
+        "sha256": "4790dc0eb01b87dd8b1f8d7e87338de1876329e22cae99784110d5ad0b526d9f"
+      },
+      {
+        "name": "api",
+        "command": "npm run test:api",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:06:24.213Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:06:33.996Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-api.log",
+        "sha256": "7400eb2e75890505b9c2aea600711378db12d52db4385ac97e9530a338a0f2d0"
+      },
+      {
+        "name": "unit-1",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:06:34.036Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:06:57.854Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-unit-1.log",
+        "sha256": "2967c2455cd7e7d65ee267b5301778a0c1e1932ebc220be271933964a2708bfe"
+      },
+      {
+        "name": "unit-2",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:06:57.898Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:07:21.741Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-unit-2.log",
+        "sha256": "5b82c13c90a621be10b83782c458c003910caed15bfaa561f34ea3e5ef43d074"
+      },
+      {
+        "name": "unit-3",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:07:21.786Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:07:46.425Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-unit-3.log",
+        "sha256": "c9175c5e06c89e6ea4a47c493e3d2b4d7a9851e133e7964f4dec19cf4fce0e5d"
+      },
+      {
+        "name": "example-build",
+        "command": "npm run build:example",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:07:46.470Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:07:50.428Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-example-build.log",
+        "sha256": "9477a81059dd00ae48eaa3bca7ee5fec5af3ce30eaa1f66baa999da4196758d7"
+      },
+      {
+        "name": "package",
+        "command": "npm run test:package",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:07:50.473Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:08:25.259Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-package.log",
+        "sha256": "266617e81a0f3d57bfff142206a4ad643688319ab6c646d28e0f19f60498f2e3"
+      },
+      {
+        "name": "browser",
+        "command": "npm run test:w23 -- --reporter=list,json --output=test-results/w23-review3-browser-output",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:08:25.305Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:11:26.635Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-browser.log",
+        "sha256": "c824b5359a36cedfadc9f0f7513dd986272e540a77c1f4f27483b046fd71da57"
+      },
+      {
+        "name": "installed",
+        "command": "npm run test:package-consumer:w23",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:11:26.684Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:13:54.500Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-installed.log",
+        "sha256": "d8d9e3c608a2c999482cffbe95d5eccf00f4891b293d077a91ff6a9b73f2f6dc"
+      },
+      {
+        "name": "single-tile-oracle",
+        "command": "python scripts/generate-w23-goldens.py --check",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:13:54.545Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:13:54.844Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-single-tile-oracle.log",
+        "sha256": "67b6cd00347972bb347a8b49a197c0a37e1f5a0e93addf8e5d942ae9daf5f8e0"
+      },
+      {
+        "name": "regional-oracle",
+        "command": "python scripts/generate-w23-application-fixtures.py --check",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T08:13:54.884Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:13:58.334Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-regional-oracle.log",
+        "sha256": "7ee061d9f8ce34b9290c6cc071c4f893dd54c3ed2f3e4a1c8007a47a3c759a8c"
+      },
+      {
+        "name": "native-audit",
+        "command": "python scripts/audit-w23-native.py",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23",
+        "startedAt": "2026-10-20T08:13:58.374Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:14:06.432Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-native-audit.log",
+        "sha256": "0672845d937280a57e8d4aac6ccecc51c13e7b772b3f363d09bb3eb89f014d94"
+      },
+      {
+        "name": "semantic-audit",
+        "command": "node scripts/audit-w23-semantics.mjs",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23",
+        "startedAt": "2026-10-20T08:14:06.472Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T08:14:08.042Z",
+        "log": "crates/forge3d-web/test-results/w23-review3-semantic-audit.log",
+        "sha256": "63c6c51d1818dd7c8cc9a53a1a2781cf6ad76c5e3262f52563ae6628f5666dd8"
+      }
     ],
-    "w23Cases": 63,
+    "w23Cases": 66,
     "codeFencesCompiled": 33,
     "strictCompleteExamples": 2,
-    "semanticRouteCorrectionsAgainstEfba9305": 171,
+    "semanticRouteCorrectionsAgainstEfba9305": 175,
+    "furtherRouteCorrectionsAgainst5b3d1025": 31,
+    "routingSourceFilesInspected": 29,
+    "generatorOutputProof": {
+      "generatedControls": 2037,
+      "unrelatedExistingGeneratorRejected": true,
+      "negativeControl": "generate-w18-native.py substituted with its real matching hash for glacier_heights.f32",
+      "directoryManifestRequiresMatchingGeneratorAndListedFile": true
+    },
+    "pnoaDem": {
+      "captureCommand": "python scripts/capture-w23-dem-inputs.py",
+      "archive": "original Forge3D example data archive",
+      "path": "assets/tif/Bryce_Canyon.tif",
+      "sourceSha256": "9052ee54f4ef23b56c6981bc2a7672117c6f5ecb430726530f4fe456e6484a39",
+      "window": [
+        2000,
+        1900,
+        16,
+        16
+      ],
+      "bounds": [
+        397998.5,
+        4163658.5,
+        398014.5,
+        4163674.5
+      ],
+      "crs": "EPSG:26912",
+      "convertedSha256": "c1cc00ac8e4c4bc697d2ebd93a93c229f7987e5958f77018fbe8d15577fe6be7",
+      "conversion": "Read band 1 in the recorded window; cast to little-endian float32; no geographic resampling or synthetic replacement."
+    },
     "nativeOracle": {
       "examples": 24,
       "operations": 29,
@@ -103,12 +294,12 @@
       "rasterio": "1.4.3"
     },
     "sourceAndDist": {
-      "startedAt": "2026-10-19T13:25:01.618Z",
+      "startedAt": "2026-10-20T08:08:57.285Z",
       "lanes": [
         {
           "title": "W23 source: all 54 migrated example workflows execute",
           "status": "passed",
-          "durationMs": 78662,
+          "durationMs": 71401,
           "examples": 54,
           "regionalExamples": [
             {
@@ -268,23 +459,23 @@
                 "sha256": "b6ce4cec37132e0fb0366c0aedc280496b2ad8b7dda70c2aa66734d1e2c8f3c5"
               },
               "inputs": {
-                "path": "assets/tif/dem_rainier.tif",
+                "path": "assets/tif/Bryce_Canyon.tif",
                 "archive": "original Forge3D example data archive",
-                "sourceSha256": "875b243474b151175f76037acd60c2149ac2e46fba9ba2bbce0c9a6998015dd3",
+                "sourceSha256": "9052ee54f4ef23b56c6981bc2a7672117c6f5ecb430726530f4fe456e6484a39",
                 "window": [
-                  1055,
-                  1055,
+                  2000,
+                  1900,
                   16,
                   16
                 ],
                 "bounds": [
-                  -121.76004836475155,
-                  46.847704258017686,
-                  -121.75777388455316,
-                  46.84997873821608
+                  397998.5,
+                  4163658.5,
+                  398014.5,
+                  4163674.5
                 ],
-                "crs": "EPSG:4326",
-                "convertedSha256": "5a26937644639ee47d984e5dd1acb9a97f30183a72323b965f6732e27a66dda9",
+                "crs": "EPSG:26912",
+                "convertedSha256": "c1cc00ac8e4c4bc697d2ebd93a93c229f7987e5958f77018fbe8d15577fe6be7",
                 "conversion": "Read band 1 in the recorded window; cast to little-endian float32; no geographic resampling or synthetic replacement."
               },
               "operations": [
@@ -1101,6 +1292,34 @@
               "message": "Rig clearance failed: orbit"
             }
           ],
+          "literalStageNegativeControls": {
+            "matchingManifest": true,
+            "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+            "integrityVerified": 17,
+            "outcomes": [
+              {
+                "workflow": "triangle",
+                "name": "triangle_png.py",
+                "rejected": true,
+                "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+                "observedEvents": 0
+              },
+              {
+                "workflow": "cog",
+                "name": "cog_streaming_demo.py",
+                "rejected": true,
+                "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+                "observedEvents": 0
+              },
+              {
+                "workflow": "video",
+                "name": "camera_animation_demo.py",
+                "rejected": true,
+                "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+                "observedEvents": 0
+              }
+            ]
+          },
           "guideExamples": {
             "snapshotBytes": 3194,
             "roundTripBytes": 74,
@@ -1109,7 +1328,7 @@
           "materials": [
             {
               "name": "pnoa_river_showcase.py",
-              "sceneShadowPixels": 227,
+              "sceneShadowPixels": 325,
               "shadowControlPixels": 564
             },
             {
@@ -1179,33 +1398,1000 @@
             }
           ],
           "independentObservations": {
-            "total": 896,
+            "total": 1422,
             "kinds": {
-              "gpu.render": 409,
+              "gpu.render": 411,
+              "gpu.read": 396,
               "scene.frame": 325,
               "oit.mode": 128,
+              "video.configure": 10,
+              "video.encode": 35,
+              "video.output": 35,
+              "video.flush": 10,
+              "download": 11,
               "rig.bake": 3,
               "ibl.prepare": 9,
               "ibl.load": 3,
               "ibl.bind": 3,
               "gpu.rgb": 14,
+              "cog.open": 1,
+              "cog.tile": 15,
+              "cog.upload": 8,
+              "cog.converged": 1,
+              "triangle.frame": 2,
               "vector.report": 1,
               "postfx.report": 1
             },
             "minimumRigClearance": 1.9999999886499236,
             "maximumTaaHistoryFrames": 4
           },
+          "triangleEvidence": [
+            {
+              "label": "Running triangle_png.py: triangle…",
+              "kind": "triangle.frame",
+              "triangle": true,
+              "recipeWithoutTriangle": "{\"crs\":\"LOCAL\",\"terrain\":{\"source\":{\"id\":\"dem\",\"format\":\"heightmap\",\"crs\":\"LOCAL\",\"data\":{\"width\":16,\"height\":16,\"heights\":{\"0\":0.19066663086414337,\"1\":0.2940823435783386,\"2\":0.42433640360832214,\"3\":0.5727941989898682,\"4\":0.7233259081840515,\"5\":0.8545085787773132,\"6\":0.9443780183792114,\"7\":0.9763877987861633,\"8\":0.9443780183792114,\"9\":0.8545085787773132,\"10\":0.7233259081840515,\"11\":0.5727941989898682,\"12\":0.42433640360832214,\"13\":0.2940823435783386,\"14\":0.19066663086414337,\"15\":0.1156451553106308,\"16\":0.2940823435783386,\"17\":0.4535897672176361,\"18\":0.6544923186302185,\"19\":0.883472204208374,\"20\":1.1156507730484009,\"21\":1.3179856538772583,\"22\":1.456599473953247,\"23\":1.505971074104309,\"24\":1.456599473953247,\"25\":1.3179856538772583,\"26\":1.1156507730484009,\"27\":0.883472204208374,\"28\":0.6544923186302185,\"29\":0.4535897672176361,\"30\":0.2940823435783386,\"31\":0.17836996912956238,\"32\":0.42433640360832214,\"33\":0.6544923186302185,\"34\":0.9443780183792114,\"35\":1.2747769355773926,\"36\":1.6097913980484009,\"37\":1.901743769645691,\"38\":2.1017518043518066,\"39\":2.1729910373687744,\"40\":2.1017518043518066,\"41\":1.901743769645691,\"42\":1.6097913980484009,\"43\":1.2747769355773926,\"44\":0.9443780183792114,\"45\":0.6544923186302185,\"46\":0.42433640360832214,\"47\":0.25737303495407104,\"48\":0.5727941989898682,\"49\":0.883472204208374,\"50\":1.2747769355773926,\"51\":1.720768928527832,\"52\":2.1729910373687744,\"53\":2.5670855045318604,\"54\":2.8370683193206787,\"55\":2.9332311153411865,\"56\":2.8370683193206787,\"57\":2.5670855045318604,\"58\":2.1729910373687744,\"59\":1.720768928527832,\"60\":1.2747769355773926,\"61\":0.883472204208374,\"62\":0.5727941989898682,\"63\":0.34741726517677307,\"64\":0.7233259081840515,\"65\":1.1156507730484009,\"66\":1.6097913980484009,\"67\":2.1729910373687744,\"68\":2.744058132171631,\"69\":3.2417216300964355,\"70\":3.5826566219329834,\"71\":3.7040910720825195,\"72\":3.5826566219329834,\"73\":3.2417216300964355,\"74\":2.744058132171631,\"75\":2.1729910373687744,\"76\":1.6097913980484009,\"77\":1.1156507730484009,\"78\":0.7233259081840515,\"79\":0.43871933221817017,\"80\":0.8545085787773132,\"81\":1.3179856538772583,\"82\":1.901743769645691,\"83\":2.5670855045318604,\"84\":3.2417216300964355,\"85\":3.829641580581665,\"86\":4.23240852355957,\"87\":4.375866413116455,\"88\":4.23240852355957,\"89\":3.829641580581665,\"90\":3.2417216300964355,\"91\":2.5670855045318604,\"92\":1.901743769645691,\"93\":1.3179856538772583,\"94\":0.8545085787773132,\"95\":0.5182856321334839,\"96\":0.9443780183792114,\"97\":1.456599473953247,\"98\":2.1017518043518066,\"99\":2.8370683193206787,\"100\":3.5826566219329834,\"101\":4.23240852355957,\"102\":4.677535057067871,\"103\":4.836080551147461,\"104\":4.677535057067871,\"105\":4.23240852355957,\"106\":3.5826566219329834,\"107\":2.8370683193206787,\"108\":2.1017518043518066,\"109\":1.456599473953247,\"110\":0.9443780183792114,\"111\":0.5727941989898682,\"112\":0.9763877987861633,\"113\":1.505971074104309,\"114\":2.1729910373687744,\"115\":2.9332311153411865,\"116\":3.7040910720825195,\"117\":4.375866413116455,\"118\":4.836080551147461,\"119\":5,\"120\":4.836080551147461,\"121\":4.375866413116455,\"122\":3.7040910720825195,\"123\":2.9332311153411865,\"124\":2.1729910373687744,\"125\":1.505971074104309,\"126\":0.9763877987861633,\"127\":0.5922091603279114,\"128\":0.9443780183792114,\"129\":1.456599473953247,\"130\":2.1017518043518066,\"131\":2.8370683193206787,\"132\":3.5826566219329834,\"133\":4.23240852355957,\"134\":4.677535057067871,\"135\":4.836080551147461,\"136\":4.677535057067871,\"137\":4.23240852355957,\"138\":3.5826566219329834,\"139\":2.8370683193206787,\"140\":2.1017518043518066,\"141\":1.456599473953247,\"142\":0.9443780183792114,\"143\":0.5727941989898682,\"144\":0.8545085787773132,\"145\":1.3179856538772583,\"146\":1.901743769645691,\"147\":2.5670855045318604,\"148\":3.2417216300964355,\"149\":3.829641580581665,\"150\":4.23240852355957,\"151\":4.375866413116455,\"152\":4.23240852355957,\"153\":3.829641580581665,\"154\":3.2417216300964355,\"155\":2.5670855045318604,\"156\":1.901743769645691,\"157\":1.3179856538772583,\"158\":0.8545085787773132,\"159\":0.5182856321334839,\"160\":0.7233259081840515,\"161\":1.1156507730484009,\"162\":1.6097913980484009,\"163\":2.1729910373687744,\"164\":2.744058132171631,\"165\":3.2417216300964355,\"166\":3.5826566219329834,\"167\":3.7040910720825195,\"168\":3.5826566219329834,\"169\":3.2417216300964355,\"170\":2.744058132171631,\"171\":2.1729910373687744,\"172\":1.6097913980484009,\"173\":1.1156507730484009,\"174\":0.7233259081840515,\"175\":0.43871933221817017,\"176\":0.5727941989898682,\"177\":0.883472204208374,\"178\":1.2747769355773926,\"179\":1.720768928527832,\"180\":2.1729910373687744,\"181\":2.5670855045318604,\"182\":2.8370683193206787,\"183\":2.9332311153411865,\"184\":2.8370683193206787,\"185\":2.5670855045318604,\"186\":2.1729910373687744,\"187\":1.720768928527832,\"188\":1.2747769355773926,\"189\":0.883472204208374,\"190\":0.5727941989898682,\"191\":0.34741726517677307,\"192\":0.42433640360832214,\"193\":0.6544923186302185,\"194\":0.9443780183792114,\"195\":1.2747769355773926,\"196\":1.6097913980484009,\"197\":1.901743769645691,\"198\":2.1017518043518066,\"199\":2.1729910373687744,\"200\":2.1017518043518066,\"201\":1.901743769645691,\"202\":1.6097913980484009,\"203\":1.2747769355773926,\"204\":0.9443780183792114,\"205\":0.6544923186302185,\"206\":0.42433640360832214,\"207\":0.25737303495407104,\"208\":0.2940823435783386,\"209\":0.4535897672176361,\"210\":0.6544923186302185,\"211\":0.883472204208374,\"212\":1.1156507730484009,\"213\":1.3179856538772583,\"214\":1.456599473953247,\"215\":1.505971074104309,\"216\":1.456599473953247,\"217\":1.3179856538772583,\"218\":1.1156507730484009,\"219\":0.883472204208374,\"220\":0.6544923186302185,\"221\":0.4535897672176361,\"222\":0.2940823435783386,\"223\":0.17836996912956238,\"224\":0.19066663086414337,\"225\":0.2940823435783386,\"226\":0.42433640360832214,\"227\":0.5727941989898682,\"228\":0.7233259081840515,\"229\":0.8545085787773132,\"230\":0.9443780183792114,\"231\":0.9763877987861633,\"232\":0.9443780183792114,\"233\":0.8545085787773132,\"234\":0.7233259081840515,\"235\":0.5727941989898682,\"236\":0.42433640360832214,\"237\":0.2940823435783386,\"238\":0.19066663086414337,\"239\":0.1156451553106308,\"240\":0.1156451553106308,\"241\":0.17836996912956238,\"242\":0.25737303495407104,\"243\":0.34741726517677307,\"244\":0.43871933221817017,\"245\":0.5182856321334839,\"246\":0.5727941989898682,\"247\":0.5922091603279114,\"248\":0.5727941989898682,\"249\":0.5182856321334839,\"250\":0.43871933221817017,\"251\":0.34741726517677307,\"252\":0.25737303495407104,\"253\":0.17836996912956238,\"254\":0.1156451553106308,\"255\":0.07014233618974686},\"spacing\":[1.6,1.6],\"bounds\":[-12,-12,12,12],\"domain\":[0,5],\"crs\":\"LOCAL\"}}},\"camera\":{\"position\":[24,32,42],\"target\":[0,2,0],\"up\":[0,1,0],\"fovYDegrees\":42,\"near\":0.1,\"far\":500},\"lighting\":{\"name\":\"daylight\"},\"output\":{\"width\":192,\"height\":128},\"reproducibility\":{\"seed\":23},\"runtimeOptions\":{\"clearColor\":[0.02,0.03,0.05,1]},\"layers\":[],\"timeSeconds\":0,\"renderPolicy\":\"continue_on_warning\"}",
+              "width": 192,
+              "height": 128,
+              "sha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5",
+              "coverage": 3384,
+              "changedPixels": 629
+            },
+            {
+              "label": "Running triangle_png.py: triangle…",
+              "kind": "triangle.frame",
+              "triangle": false,
+              "recipeWithoutTriangle": "{\"crs\":\"LOCAL\",\"terrain\":{\"source\":{\"id\":\"dem\",\"format\":\"heightmap\",\"crs\":\"LOCAL\",\"data\":{\"width\":16,\"height\":16,\"heights\":{\"0\":0.19066663086414337,\"1\":0.2940823435783386,\"2\":0.42433640360832214,\"3\":0.5727941989898682,\"4\":0.7233259081840515,\"5\":0.8545085787773132,\"6\":0.9443780183792114,\"7\":0.9763877987861633,\"8\":0.9443780183792114,\"9\":0.8545085787773132,\"10\":0.7233259081840515,\"11\":0.5727941989898682,\"12\":0.42433640360832214,\"13\":0.2940823435783386,\"14\":0.19066663086414337,\"15\":0.1156451553106308,\"16\":0.2940823435783386,\"17\":0.4535897672176361,\"18\":0.6544923186302185,\"19\":0.883472204208374,\"20\":1.1156507730484009,\"21\":1.3179856538772583,\"22\":1.456599473953247,\"23\":1.505971074104309,\"24\":1.456599473953247,\"25\":1.3179856538772583,\"26\":1.1156507730484009,\"27\":0.883472204208374,\"28\":0.6544923186302185,\"29\":0.4535897672176361,\"30\":0.2940823435783386,\"31\":0.17836996912956238,\"32\":0.42433640360832214,\"33\":0.6544923186302185,\"34\":0.9443780183792114,\"35\":1.2747769355773926,\"36\":1.6097913980484009,\"37\":1.901743769645691,\"38\":2.1017518043518066,\"39\":2.1729910373687744,\"40\":2.1017518043518066,\"41\":1.901743769645691,\"42\":1.6097913980484009,\"43\":1.2747769355773926,\"44\":0.9443780183792114,\"45\":0.6544923186302185,\"46\":0.42433640360832214,\"47\":0.25737303495407104,\"48\":0.5727941989898682,\"49\":0.883472204208374,\"50\":1.2747769355773926,\"51\":1.720768928527832,\"52\":2.1729910373687744,\"53\":2.5670855045318604,\"54\":2.8370683193206787,\"55\":2.9332311153411865,\"56\":2.8370683193206787,\"57\":2.5670855045318604,\"58\":2.1729910373687744,\"59\":1.720768928527832,\"60\":1.2747769355773926,\"61\":0.883472204208374,\"62\":0.5727941989898682,\"63\":0.34741726517677307,\"64\":0.7233259081840515,\"65\":1.1156507730484009,\"66\":1.6097913980484009,\"67\":2.1729910373687744,\"68\":2.744058132171631,\"69\":3.2417216300964355,\"70\":3.5826566219329834,\"71\":3.7040910720825195,\"72\":3.5826566219329834,\"73\":3.2417216300964355,\"74\":2.744058132171631,\"75\":2.1729910373687744,\"76\":1.6097913980484009,\"77\":1.1156507730484009,\"78\":0.7233259081840515,\"79\":0.43871933221817017,\"80\":0.8545085787773132,\"81\":1.3179856538772583,\"82\":1.901743769645691,\"83\":2.5670855045318604,\"84\":3.2417216300964355,\"85\":3.829641580581665,\"86\":4.23240852355957,\"87\":4.375866413116455,\"88\":4.23240852355957,\"89\":3.829641580581665,\"90\":3.2417216300964355,\"91\":2.5670855045318604,\"92\":1.901743769645691,\"93\":1.3179856538772583,\"94\":0.8545085787773132,\"95\":0.5182856321334839,\"96\":0.9443780183792114,\"97\":1.456599473953247,\"98\":2.1017518043518066,\"99\":2.8370683193206787,\"100\":3.5826566219329834,\"101\":4.23240852355957,\"102\":4.677535057067871,\"103\":4.836080551147461,\"104\":4.677535057067871,\"105\":4.23240852355957,\"106\":3.5826566219329834,\"107\":2.8370683193206787,\"108\":2.1017518043518066,\"109\":1.456599473953247,\"110\":0.9443780183792114,\"111\":0.5727941989898682,\"112\":0.9763877987861633,\"113\":1.505971074104309,\"114\":2.1729910373687744,\"115\":2.9332311153411865,\"116\":3.7040910720825195,\"117\":4.375866413116455,\"118\":4.836080551147461,\"119\":5,\"120\":4.836080551147461,\"121\":4.375866413116455,\"122\":3.7040910720825195,\"123\":2.9332311153411865,\"124\":2.1729910373687744,\"125\":1.505971074104309,\"126\":0.9763877987861633,\"127\":0.5922091603279114,\"128\":0.9443780183792114,\"129\":1.456599473953247,\"130\":2.1017518043518066,\"131\":2.8370683193206787,\"132\":3.5826566219329834,\"133\":4.23240852355957,\"134\":4.677535057067871,\"135\":4.836080551147461,\"136\":4.677535057067871,\"137\":4.23240852355957,\"138\":3.5826566219329834,\"139\":2.8370683193206787,\"140\":2.1017518043518066,\"141\":1.456599473953247,\"142\":0.9443780183792114,\"143\":0.5727941989898682,\"144\":0.8545085787773132,\"145\":1.3179856538772583,\"146\":1.901743769645691,\"147\":2.5670855045318604,\"148\":3.2417216300964355,\"149\":3.829641580581665,\"150\":4.23240852355957,\"151\":4.375866413116455,\"152\":4.23240852355957,\"153\":3.829641580581665,\"154\":3.2417216300964355,\"155\":2.5670855045318604,\"156\":1.901743769645691,\"157\":1.3179856538772583,\"158\":0.8545085787773132,\"159\":0.5182856321334839,\"160\":0.7233259081840515,\"161\":1.1156507730484009,\"162\":1.6097913980484009,\"163\":2.1729910373687744,\"164\":2.744058132171631,\"165\":3.2417216300964355,\"166\":3.5826566219329834,\"167\":3.7040910720825195,\"168\":3.5826566219329834,\"169\":3.2417216300964355,\"170\":2.744058132171631,\"171\":2.1729910373687744,\"172\":1.6097913980484009,\"173\":1.1156507730484009,\"174\":0.7233259081840515,\"175\":0.43871933221817017,\"176\":0.5727941989898682,\"177\":0.883472204208374,\"178\":1.2747769355773926,\"179\":1.720768928527832,\"180\":2.1729910373687744,\"181\":2.5670855045318604,\"182\":2.8370683193206787,\"183\":2.9332311153411865,\"184\":2.8370683193206787,\"185\":2.5670855045318604,\"186\":2.1729910373687744,\"187\":1.720768928527832,\"188\":1.2747769355773926,\"189\":0.883472204208374,\"190\":0.5727941989898682,\"191\":0.34741726517677307,\"192\":0.42433640360832214,\"193\":0.6544923186302185,\"194\":0.9443780183792114,\"195\":1.2747769355773926,\"196\":1.6097913980484009,\"197\":1.901743769645691,\"198\":2.1017518043518066,\"199\":2.1729910373687744,\"200\":2.1017518043518066,\"201\":1.901743769645691,\"202\":1.6097913980484009,\"203\":1.2747769355773926,\"204\":0.9443780183792114,\"205\":0.6544923186302185,\"206\":0.42433640360832214,\"207\":0.25737303495407104,\"208\":0.2940823435783386,\"209\":0.4535897672176361,\"210\":0.6544923186302185,\"211\":0.883472204208374,\"212\":1.1156507730484009,\"213\":1.3179856538772583,\"214\":1.456599473953247,\"215\":1.505971074104309,\"216\":1.456599473953247,\"217\":1.3179856538772583,\"218\":1.1156507730484009,\"219\":0.883472204208374,\"220\":0.6544923186302185,\"221\":0.4535897672176361,\"222\":0.2940823435783386,\"223\":0.17836996912956238,\"224\":0.19066663086414337,\"225\":0.2940823435783386,\"226\":0.42433640360832214,\"227\":0.5727941989898682,\"228\":0.7233259081840515,\"229\":0.8545085787773132,\"230\":0.9443780183792114,\"231\":0.9763877987861633,\"232\":0.9443780183792114,\"233\":0.8545085787773132,\"234\":0.7233259081840515,\"235\":0.5727941989898682,\"236\":0.42433640360832214,\"237\":0.2940823435783386,\"238\":0.19066663086414337,\"239\":0.1156451553106308,\"240\":0.1156451553106308,\"241\":0.17836996912956238,\"242\":0.25737303495407104,\"243\":0.34741726517677307,\"244\":0.43871933221817017,\"245\":0.5182856321334839,\"246\":0.5727941989898682,\"247\":0.5922091603279114,\"248\":0.5727941989898682,\"249\":0.5182856321334839,\"250\":0.43871933221817017,\"251\":0.34741726517677307,\"252\":0.25737303495407104,\"253\":0.17836996912956238,\"254\":0.1156451553106308,\"255\":0.07014233618974686},\"spacing\":[1.6,1.6],\"bounds\":[-12,-12,12,12],\"domain\":[0,5],\"crs\":\"LOCAL\"}}},\"camera\":{\"position\":[24,32,42],\"target\":[0,2,0],\"up\":[0,1,0],\"fovYDegrees\":42,\"near\":0.1,\"far\":500},\"lighting\":{\"name\":\"daylight\"},\"output\":{\"width\":192,\"height\":128},\"reproducibility\":{\"seed\":23},\"runtimeOptions\":{\"clearColor\":[0.02,0.03,0.05,1]},\"layers\":[],\"timeSeconds\":0,\"renderPolicy\":\"continue_on_warning\"}",
+              "width": 192,
+              "height": 128,
+              "sha256": "c25b37ed9e773d589bb428761e8b9781cb4cdd9ceae5956620492a5484b5cf43",
+              "coverage": 2891,
+              "changedPixels": 629
+            },
+            {
+              "label": "Running triangle_png.py: triangle…",
+              "kind": "download",
+              "name": "triangle_png.py-triangle-triangle.png",
+              "bytes": 5527,
+              "width": 192,
+              "height": 128,
+              "sha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5"
+            }
+          ],
+          "cogEvidence": [
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.open",
+              "datasetId": 571,
+              "source": "http://127.0.0.1:57923/examples/migration/rainier-cog.tif",
+              "overviewCount": 3
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 2,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 2,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 0,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 1,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 1,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 2,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 3,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 2,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 1,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 1,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 0,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.converged",
+              "converged": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "gpu.read",
+              "runtimeId": 161,
+              "coverage": 2530
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "gpu.read",
+              "runtimeId": 161,
+              "coverage": 2530
+            }
+          ],
+          "videoEvidence": [
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.configure",
+              "encoderId": 1,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 1,
+              "timestamp": 0
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 1,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 1,
+              "bytes": 5436,
+              "timestamp": 0
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 1,
+              "bytes": 5753,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 1,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 1,
+              "bytes": 5255,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.flush",
+              "encoderId": 1
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "download",
+              "name": "helsinki_transit_daycycle.py-video-animation.mp4",
+              "bytes": 17190,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.configure",
+              "encoderId": 2,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 2,
+              "timestamp": 0
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 2,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 2,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 2,
+              "bytes": 2041,
+              "timestamp": 0
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 2,
+              "bytes": 2422,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 2,
+              "bytes": 2571,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.flush",
+              "encoderId": 2
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "download",
+              "name": "camera_animation_demo.py-video-animation.mp4",
+              "bytes": 7780,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.configure",
+              "encoderId": 3,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 3,
+              "timestamp": 0
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 3,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 3,
+              "bytes": 3285,
+              "timestamp": 0
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 3,
+              "bytes": 5424,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 3,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 3,
+              "bytes": 3749,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.flush",
+              "encoderId": 3
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "download",
+              "name": "bryce_canyon_storm_timelapse.py-video-animation.mp4",
+              "bytes": 13204,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.configure",
+              "encoderId": 4,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 4,
+              "timestamp": 0
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 4,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 4,
+              "bytes": 4075,
+              "timestamp": 0
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 4,
+              "bytes": 4621,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 4,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 4,
+              "bytes": 4774,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.flush",
+              "encoderId": 4
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "download",
+              "name": "california_wildfire_smoke_video.py-video-animation.mp4",
+              "bytes": 14216,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.configure",
+              "encoderId": 5,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 5,
+              "timestamp": 0
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 5,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 5,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 5,
+              "bytes": 3229,
+              "timestamp": 0
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 5,
+              "bytes": 4015,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 5,
+              "bytes": 3843,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.flush",
+              "encoderId": 5
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "download",
+              "name": "terrain_camera_rigs_demo.py-video-animation.mp4",
+              "bytes": 11833,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.configure",
+              "encoderId": 6,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.encode",
+              "encoderId": 6,
+              "timestamp": 0
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.encode",
+              "encoderId": 6,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.output",
+              "encoderId": 6,
+              "bytes": 5368,
+              "timestamp": 0
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.output",
+              "encoderId": 6,
+              "bytes": 6172,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.encode",
+              "encoderId": 6,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.output",
+              "encoderId": 6,
+              "bytes": 5124,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.flush",
+              "encoderId": 6
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "download",
+              "name": "rotterdam_solar_potential_shadow_study.py-video-animation.mp4",
+              "bytes": 17410,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.configure",
+              "encoderId": 7,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 7,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 7,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 7,
+              "bytes": 3817,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 7,
+              "bytes": 5921,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 7,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 7,
+              "bytes": 4752,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.flush",
+              "encoderId": 7
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "download",
+              "name": "osm_city_daycycle.py-video-animation.mp4",
+              "bytes": 15236,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.configure",
+              "encoderId": 8,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 8,
+              "timestamp": 0
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 8,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 8,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 8,
+              "bytes": 4313,
+              "timestamp": 0
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 8,
+              "bytes": 5500,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 8,
+              "bytes": 4826,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.flush",
+              "encoderId": 8
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "download",
+              "name": "pnoa_river_showcase_video.py-video-animation.mp4",
+              "bytes": 15385,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.configure",
+              "encoderId": 9,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 0
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1237,
+              "timestamp": 0
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1190,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1487,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 1500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1400,
+              "timestamp": 1500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 2000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1547,
+              "timestamp": 2000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 2500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1475,
+              "timestamp": 2500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 3000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1617,
+              "timestamp": 3000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 3500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1404,
+              "timestamp": 3500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.flush",
+              "encoderId": 9
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "download",
+              "name": "khumbu_icefall_sentinel_timelapse.py-video-animation.mp4",
+              "bytes": 12151,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  8
+                ]
+              }
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.configure",
+              "encoderId": 10,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 10,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 10,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 10,
+              "bytes": 5228,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 10,
+              "bytes": 6594,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 10,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 10,
+              "bytes": 6463,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.flush",
+              "encoderId": 10
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "download",
+              "name": "osm_city_flood_daycycle.py-video-animation.mp4",
+              "bytes": 19031,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            }
+          ],
           "evidenceDigests": {
             "forge3d-webgpu-probe.json": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6",
-            "w23-independent-stage-observations.json": "9630d1adba443fc6675d137426c490037ae6ebd71bb897ddd1191883c4ae84b4",
+            "w23-independent-stage-observations.json": "69f509d30b6e3ca8153b4b47516bfba8ba78f8d36553010315135b9033087914",
             "w23-negative-controls.json": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c",
-            "w23-workflows.json": "4fe9b0bc8b28eddde4c3c9642a79b0b38900765e96622a723df417d6471ddc13"
+            "w23-literal-stage-negative-controls.json": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6",
+            "w23-workflows.json": "3a81c492575e734bf36eef8ff1e01855c00da34954cc50cfb08288f60da76838"
           }
         },
         {
           "title": "W23 dist: all 54 migrated example workflows execute",
           "status": "passed",
-          "durationMs": 81502,
+          "durationMs": 72651,
           "examples": 54,
           "regionalExamples": [
             {
@@ -1365,23 +2551,23 @@
                 "sha256": "b6ce4cec37132e0fb0366c0aedc280496b2ad8b7dda70c2aa66734d1e2c8f3c5"
               },
               "inputs": {
-                "path": "assets/tif/dem_rainier.tif",
+                "path": "assets/tif/Bryce_Canyon.tif",
                 "archive": "original Forge3D example data archive",
-                "sourceSha256": "875b243474b151175f76037acd60c2149ac2e46fba9ba2bbce0c9a6998015dd3",
+                "sourceSha256": "9052ee54f4ef23b56c6981bc2a7672117c6f5ecb430726530f4fe456e6484a39",
                 "window": [
-                  1055,
-                  1055,
+                  2000,
+                  1900,
                   16,
                   16
                 ],
                 "bounds": [
-                  -121.76004836475155,
-                  46.847704258017686,
-                  -121.75777388455316,
-                  46.84997873821608
+                  397998.5,
+                  4163658.5,
+                  398014.5,
+                  4163674.5
                 ],
-                "crs": "EPSG:4326",
-                "convertedSha256": "5a26937644639ee47d984e5dd1acb9a97f30183a72323b965f6732e27a66dda9",
+                "crs": "EPSG:26912",
+                "convertedSha256": "c1cc00ac8e4c4bc697d2ebd93a93c229f7987e5958f77018fbe8d15577fe6be7",
                 "conversion": "Read band 1 in the recorded window; cast to little-endian float32; no geographic resampling or synthetic replacement."
               },
               "operations": [
@@ -2198,6 +3384,34 @@
               "message": "Rig clearance failed: orbit"
             }
           ],
+          "literalStageNegativeControls": {
+            "matchingManifest": true,
+            "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+            "integrityVerified": 17,
+            "outcomes": [
+              {
+                "workflow": "triangle",
+                "name": "triangle_png.py",
+                "rejected": true,
+                "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+                "observedEvents": 0
+              },
+              {
+                "workflow": "cog",
+                "name": "cog_streaming_demo.py",
+                "rejected": true,
+                "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+                "observedEvents": 0
+              },
+              {
+                "workflow": "video",
+                "name": "camera_animation_demo.py",
+                "rejected": true,
+                "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+                "observedEvents": 0
+              }
+            ]
+          },
           "guideExamples": {
             "snapshotBytes": 3194,
             "roundTripBytes": 74,
@@ -2206,7 +3420,7 @@
           "materials": [
             {
               "name": "pnoa_river_showcase.py",
-              "sceneShadowPixels": 227,
+              "sceneShadowPixels": 325,
               "shadowControlPixels": 564
             },
             {
@@ -2276,42 +3490,1010 @@
             }
           ],
           "independentObservations": {
-            "total": 896,
+            "total": 1422,
             "kinds": {
-              "gpu.render": 409,
+              "gpu.render": 411,
+              "gpu.read": 396,
               "scene.frame": 325,
               "oit.mode": 128,
+              "video.configure": 10,
+              "video.encode": 35,
+              "video.output": 35,
+              "video.flush": 10,
+              "download": 11,
               "rig.bake": 3,
               "ibl.prepare": 9,
               "ibl.load": 3,
               "ibl.bind": 3,
               "gpu.rgb": 14,
+              "cog.open": 1,
+              "cog.tile": 15,
+              "cog.upload": 8,
+              "cog.converged": 1,
+              "triangle.frame": 2,
               "vector.report": 1,
               "postfx.report": 1
             },
             "minimumRigClearance": 1.9999999886499236,
             "maximumTaaHistoryFrames": 4
           },
+          "triangleEvidence": [
+            {
+              "label": "Running triangle_png.py: triangle…",
+              "kind": "triangle.frame",
+              "triangle": true,
+              "recipeWithoutTriangle": "{\"crs\":\"LOCAL\",\"terrain\":{\"source\":{\"id\":\"dem\",\"format\":\"heightmap\",\"crs\":\"LOCAL\",\"data\":{\"width\":16,\"height\":16,\"heights\":{\"0\":0.19066663086414337,\"1\":0.2940823435783386,\"2\":0.42433640360832214,\"3\":0.5727941989898682,\"4\":0.7233259081840515,\"5\":0.8545085787773132,\"6\":0.9443780183792114,\"7\":0.9763877987861633,\"8\":0.9443780183792114,\"9\":0.8545085787773132,\"10\":0.7233259081840515,\"11\":0.5727941989898682,\"12\":0.42433640360832214,\"13\":0.2940823435783386,\"14\":0.19066663086414337,\"15\":0.1156451553106308,\"16\":0.2940823435783386,\"17\":0.4535897672176361,\"18\":0.6544923186302185,\"19\":0.883472204208374,\"20\":1.1156507730484009,\"21\":1.3179856538772583,\"22\":1.456599473953247,\"23\":1.505971074104309,\"24\":1.456599473953247,\"25\":1.3179856538772583,\"26\":1.1156507730484009,\"27\":0.883472204208374,\"28\":0.6544923186302185,\"29\":0.4535897672176361,\"30\":0.2940823435783386,\"31\":0.17836996912956238,\"32\":0.42433640360832214,\"33\":0.6544923186302185,\"34\":0.9443780183792114,\"35\":1.2747769355773926,\"36\":1.6097913980484009,\"37\":1.901743769645691,\"38\":2.1017518043518066,\"39\":2.1729910373687744,\"40\":2.1017518043518066,\"41\":1.901743769645691,\"42\":1.6097913980484009,\"43\":1.2747769355773926,\"44\":0.9443780183792114,\"45\":0.6544923186302185,\"46\":0.42433640360832214,\"47\":0.25737303495407104,\"48\":0.5727941989898682,\"49\":0.883472204208374,\"50\":1.2747769355773926,\"51\":1.720768928527832,\"52\":2.1729910373687744,\"53\":2.5670855045318604,\"54\":2.8370683193206787,\"55\":2.9332311153411865,\"56\":2.8370683193206787,\"57\":2.5670855045318604,\"58\":2.1729910373687744,\"59\":1.720768928527832,\"60\":1.2747769355773926,\"61\":0.883472204208374,\"62\":0.5727941989898682,\"63\":0.34741726517677307,\"64\":0.7233259081840515,\"65\":1.1156507730484009,\"66\":1.6097913980484009,\"67\":2.1729910373687744,\"68\":2.744058132171631,\"69\":3.2417216300964355,\"70\":3.5826566219329834,\"71\":3.7040910720825195,\"72\":3.5826566219329834,\"73\":3.2417216300964355,\"74\":2.744058132171631,\"75\":2.1729910373687744,\"76\":1.6097913980484009,\"77\":1.1156507730484009,\"78\":0.7233259081840515,\"79\":0.43871933221817017,\"80\":0.8545085787773132,\"81\":1.3179856538772583,\"82\":1.901743769645691,\"83\":2.5670855045318604,\"84\":3.2417216300964355,\"85\":3.829641580581665,\"86\":4.23240852355957,\"87\":4.375866413116455,\"88\":4.23240852355957,\"89\":3.829641580581665,\"90\":3.2417216300964355,\"91\":2.5670855045318604,\"92\":1.901743769645691,\"93\":1.3179856538772583,\"94\":0.8545085787773132,\"95\":0.5182856321334839,\"96\":0.9443780183792114,\"97\":1.456599473953247,\"98\":2.1017518043518066,\"99\":2.8370683193206787,\"100\":3.5826566219329834,\"101\":4.23240852355957,\"102\":4.677535057067871,\"103\":4.836080551147461,\"104\":4.677535057067871,\"105\":4.23240852355957,\"106\":3.5826566219329834,\"107\":2.8370683193206787,\"108\":2.1017518043518066,\"109\":1.456599473953247,\"110\":0.9443780183792114,\"111\":0.5727941989898682,\"112\":0.9763877987861633,\"113\":1.505971074104309,\"114\":2.1729910373687744,\"115\":2.9332311153411865,\"116\":3.7040910720825195,\"117\":4.375866413116455,\"118\":4.836080551147461,\"119\":5,\"120\":4.836080551147461,\"121\":4.375866413116455,\"122\":3.7040910720825195,\"123\":2.9332311153411865,\"124\":2.1729910373687744,\"125\":1.505971074104309,\"126\":0.9763877987861633,\"127\":0.5922091603279114,\"128\":0.9443780183792114,\"129\":1.456599473953247,\"130\":2.1017518043518066,\"131\":2.8370683193206787,\"132\":3.5826566219329834,\"133\":4.23240852355957,\"134\":4.677535057067871,\"135\":4.836080551147461,\"136\":4.677535057067871,\"137\":4.23240852355957,\"138\":3.5826566219329834,\"139\":2.8370683193206787,\"140\":2.1017518043518066,\"141\":1.456599473953247,\"142\":0.9443780183792114,\"143\":0.5727941989898682,\"144\":0.8545085787773132,\"145\":1.3179856538772583,\"146\":1.901743769645691,\"147\":2.5670855045318604,\"148\":3.2417216300964355,\"149\":3.829641580581665,\"150\":4.23240852355957,\"151\":4.375866413116455,\"152\":4.23240852355957,\"153\":3.829641580581665,\"154\":3.2417216300964355,\"155\":2.5670855045318604,\"156\":1.901743769645691,\"157\":1.3179856538772583,\"158\":0.8545085787773132,\"159\":0.5182856321334839,\"160\":0.7233259081840515,\"161\":1.1156507730484009,\"162\":1.6097913980484009,\"163\":2.1729910373687744,\"164\":2.744058132171631,\"165\":3.2417216300964355,\"166\":3.5826566219329834,\"167\":3.7040910720825195,\"168\":3.5826566219329834,\"169\":3.2417216300964355,\"170\":2.744058132171631,\"171\":2.1729910373687744,\"172\":1.6097913980484009,\"173\":1.1156507730484009,\"174\":0.7233259081840515,\"175\":0.43871933221817017,\"176\":0.5727941989898682,\"177\":0.883472204208374,\"178\":1.2747769355773926,\"179\":1.720768928527832,\"180\":2.1729910373687744,\"181\":2.5670855045318604,\"182\":2.8370683193206787,\"183\":2.9332311153411865,\"184\":2.8370683193206787,\"185\":2.5670855045318604,\"186\":2.1729910373687744,\"187\":1.720768928527832,\"188\":1.2747769355773926,\"189\":0.883472204208374,\"190\":0.5727941989898682,\"191\":0.34741726517677307,\"192\":0.42433640360832214,\"193\":0.6544923186302185,\"194\":0.9443780183792114,\"195\":1.2747769355773926,\"196\":1.6097913980484009,\"197\":1.901743769645691,\"198\":2.1017518043518066,\"199\":2.1729910373687744,\"200\":2.1017518043518066,\"201\":1.901743769645691,\"202\":1.6097913980484009,\"203\":1.2747769355773926,\"204\":0.9443780183792114,\"205\":0.6544923186302185,\"206\":0.42433640360832214,\"207\":0.25737303495407104,\"208\":0.2940823435783386,\"209\":0.4535897672176361,\"210\":0.6544923186302185,\"211\":0.883472204208374,\"212\":1.1156507730484009,\"213\":1.3179856538772583,\"214\":1.456599473953247,\"215\":1.505971074104309,\"216\":1.456599473953247,\"217\":1.3179856538772583,\"218\":1.1156507730484009,\"219\":0.883472204208374,\"220\":0.6544923186302185,\"221\":0.4535897672176361,\"222\":0.2940823435783386,\"223\":0.17836996912956238,\"224\":0.19066663086414337,\"225\":0.2940823435783386,\"226\":0.42433640360832214,\"227\":0.5727941989898682,\"228\":0.7233259081840515,\"229\":0.8545085787773132,\"230\":0.9443780183792114,\"231\":0.9763877987861633,\"232\":0.9443780183792114,\"233\":0.8545085787773132,\"234\":0.7233259081840515,\"235\":0.5727941989898682,\"236\":0.42433640360832214,\"237\":0.2940823435783386,\"238\":0.19066663086414337,\"239\":0.1156451553106308,\"240\":0.1156451553106308,\"241\":0.17836996912956238,\"242\":0.25737303495407104,\"243\":0.34741726517677307,\"244\":0.43871933221817017,\"245\":0.5182856321334839,\"246\":0.5727941989898682,\"247\":0.5922091603279114,\"248\":0.5727941989898682,\"249\":0.5182856321334839,\"250\":0.43871933221817017,\"251\":0.34741726517677307,\"252\":0.25737303495407104,\"253\":0.17836996912956238,\"254\":0.1156451553106308,\"255\":0.07014233618974686},\"spacing\":[1.6,1.6],\"bounds\":[-12,-12,12,12],\"domain\":[0,5],\"crs\":\"LOCAL\"}}},\"camera\":{\"position\":[24,32,42],\"target\":[0,2,0],\"up\":[0,1,0],\"fovYDegrees\":42,\"near\":0.1,\"far\":500},\"lighting\":{\"name\":\"daylight\"},\"output\":{\"width\":192,\"height\":128},\"reproducibility\":{\"seed\":23},\"runtimeOptions\":{\"clearColor\":[0.02,0.03,0.05,1]},\"layers\":[],\"timeSeconds\":0,\"renderPolicy\":\"continue_on_warning\"}",
+              "width": 192,
+              "height": 128,
+              "sha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5",
+              "coverage": 3384,
+              "changedPixels": 629
+            },
+            {
+              "label": "Running triangle_png.py: triangle…",
+              "kind": "triangle.frame",
+              "triangle": false,
+              "recipeWithoutTriangle": "{\"crs\":\"LOCAL\",\"terrain\":{\"source\":{\"id\":\"dem\",\"format\":\"heightmap\",\"crs\":\"LOCAL\",\"data\":{\"width\":16,\"height\":16,\"heights\":{\"0\":0.19066663086414337,\"1\":0.2940823435783386,\"2\":0.42433640360832214,\"3\":0.5727941989898682,\"4\":0.7233259081840515,\"5\":0.8545085787773132,\"6\":0.9443780183792114,\"7\":0.9763877987861633,\"8\":0.9443780183792114,\"9\":0.8545085787773132,\"10\":0.7233259081840515,\"11\":0.5727941989898682,\"12\":0.42433640360832214,\"13\":0.2940823435783386,\"14\":0.19066663086414337,\"15\":0.1156451553106308,\"16\":0.2940823435783386,\"17\":0.4535897672176361,\"18\":0.6544923186302185,\"19\":0.883472204208374,\"20\":1.1156507730484009,\"21\":1.3179856538772583,\"22\":1.456599473953247,\"23\":1.505971074104309,\"24\":1.456599473953247,\"25\":1.3179856538772583,\"26\":1.1156507730484009,\"27\":0.883472204208374,\"28\":0.6544923186302185,\"29\":0.4535897672176361,\"30\":0.2940823435783386,\"31\":0.17836996912956238,\"32\":0.42433640360832214,\"33\":0.6544923186302185,\"34\":0.9443780183792114,\"35\":1.2747769355773926,\"36\":1.6097913980484009,\"37\":1.901743769645691,\"38\":2.1017518043518066,\"39\":2.1729910373687744,\"40\":2.1017518043518066,\"41\":1.901743769645691,\"42\":1.6097913980484009,\"43\":1.2747769355773926,\"44\":0.9443780183792114,\"45\":0.6544923186302185,\"46\":0.42433640360832214,\"47\":0.25737303495407104,\"48\":0.5727941989898682,\"49\":0.883472204208374,\"50\":1.2747769355773926,\"51\":1.720768928527832,\"52\":2.1729910373687744,\"53\":2.5670855045318604,\"54\":2.8370683193206787,\"55\":2.9332311153411865,\"56\":2.8370683193206787,\"57\":2.5670855045318604,\"58\":2.1729910373687744,\"59\":1.720768928527832,\"60\":1.2747769355773926,\"61\":0.883472204208374,\"62\":0.5727941989898682,\"63\":0.34741726517677307,\"64\":0.7233259081840515,\"65\":1.1156507730484009,\"66\":1.6097913980484009,\"67\":2.1729910373687744,\"68\":2.744058132171631,\"69\":3.2417216300964355,\"70\":3.5826566219329834,\"71\":3.7040910720825195,\"72\":3.5826566219329834,\"73\":3.2417216300964355,\"74\":2.744058132171631,\"75\":2.1729910373687744,\"76\":1.6097913980484009,\"77\":1.1156507730484009,\"78\":0.7233259081840515,\"79\":0.43871933221817017,\"80\":0.8545085787773132,\"81\":1.3179856538772583,\"82\":1.901743769645691,\"83\":2.5670855045318604,\"84\":3.2417216300964355,\"85\":3.829641580581665,\"86\":4.23240852355957,\"87\":4.375866413116455,\"88\":4.23240852355957,\"89\":3.829641580581665,\"90\":3.2417216300964355,\"91\":2.5670855045318604,\"92\":1.901743769645691,\"93\":1.3179856538772583,\"94\":0.8545085787773132,\"95\":0.5182856321334839,\"96\":0.9443780183792114,\"97\":1.456599473953247,\"98\":2.1017518043518066,\"99\":2.8370683193206787,\"100\":3.5826566219329834,\"101\":4.23240852355957,\"102\":4.677535057067871,\"103\":4.836080551147461,\"104\":4.677535057067871,\"105\":4.23240852355957,\"106\":3.5826566219329834,\"107\":2.8370683193206787,\"108\":2.1017518043518066,\"109\":1.456599473953247,\"110\":0.9443780183792114,\"111\":0.5727941989898682,\"112\":0.9763877987861633,\"113\":1.505971074104309,\"114\":2.1729910373687744,\"115\":2.9332311153411865,\"116\":3.7040910720825195,\"117\":4.375866413116455,\"118\":4.836080551147461,\"119\":5,\"120\":4.836080551147461,\"121\":4.375866413116455,\"122\":3.7040910720825195,\"123\":2.9332311153411865,\"124\":2.1729910373687744,\"125\":1.505971074104309,\"126\":0.9763877987861633,\"127\":0.5922091603279114,\"128\":0.9443780183792114,\"129\":1.456599473953247,\"130\":2.1017518043518066,\"131\":2.8370683193206787,\"132\":3.5826566219329834,\"133\":4.23240852355957,\"134\":4.677535057067871,\"135\":4.836080551147461,\"136\":4.677535057067871,\"137\":4.23240852355957,\"138\":3.5826566219329834,\"139\":2.8370683193206787,\"140\":2.1017518043518066,\"141\":1.456599473953247,\"142\":0.9443780183792114,\"143\":0.5727941989898682,\"144\":0.8545085787773132,\"145\":1.3179856538772583,\"146\":1.901743769645691,\"147\":2.5670855045318604,\"148\":3.2417216300964355,\"149\":3.829641580581665,\"150\":4.23240852355957,\"151\":4.375866413116455,\"152\":4.23240852355957,\"153\":3.829641580581665,\"154\":3.2417216300964355,\"155\":2.5670855045318604,\"156\":1.901743769645691,\"157\":1.3179856538772583,\"158\":0.8545085787773132,\"159\":0.5182856321334839,\"160\":0.7233259081840515,\"161\":1.1156507730484009,\"162\":1.6097913980484009,\"163\":2.1729910373687744,\"164\":2.744058132171631,\"165\":3.2417216300964355,\"166\":3.5826566219329834,\"167\":3.7040910720825195,\"168\":3.5826566219329834,\"169\":3.2417216300964355,\"170\":2.744058132171631,\"171\":2.1729910373687744,\"172\":1.6097913980484009,\"173\":1.1156507730484009,\"174\":0.7233259081840515,\"175\":0.43871933221817017,\"176\":0.5727941989898682,\"177\":0.883472204208374,\"178\":1.2747769355773926,\"179\":1.720768928527832,\"180\":2.1729910373687744,\"181\":2.5670855045318604,\"182\":2.8370683193206787,\"183\":2.9332311153411865,\"184\":2.8370683193206787,\"185\":2.5670855045318604,\"186\":2.1729910373687744,\"187\":1.720768928527832,\"188\":1.2747769355773926,\"189\":0.883472204208374,\"190\":0.5727941989898682,\"191\":0.34741726517677307,\"192\":0.42433640360832214,\"193\":0.6544923186302185,\"194\":0.9443780183792114,\"195\":1.2747769355773926,\"196\":1.6097913980484009,\"197\":1.901743769645691,\"198\":2.1017518043518066,\"199\":2.1729910373687744,\"200\":2.1017518043518066,\"201\":1.901743769645691,\"202\":1.6097913980484009,\"203\":1.2747769355773926,\"204\":0.9443780183792114,\"205\":0.6544923186302185,\"206\":0.42433640360832214,\"207\":0.25737303495407104,\"208\":0.2940823435783386,\"209\":0.4535897672176361,\"210\":0.6544923186302185,\"211\":0.883472204208374,\"212\":1.1156507730484009,\"213\":1.3179856538772583,\"214\":1.456599473953247,\"215\":1.505971074104309,\"216\":1.456599473953247,\"217\":1.3179856538772583,\"218\":1.1156507730484009,\"219\":0.883472204208374,\"220\":0.6544923186302185,\"221\":0.4535897672176361,\"222\":0.2940823435783386,\"223\":0.17836996912956238,\"224\":0.19066663086414337,\"225\":0.2940823435783386,\"226\":0.42433640360832214,\"227\":0.5727941989898682,\"228\":0.7233259081840515,\"229\":0.8545085787773132,\"230\":0.9443780183792114,\"231\":0.9763877987861633,\"232\":0.9443780183792114,\"233\":0.8545085787773132,\"234\":0.7233259081840515,\"235\":0.5727941989898682,\"236\":0.42433640360832214,\"237\":0.2940823435783386,\"238\":0.19066663086414337,\"239\":0.1156451553106308,\"240\":0.1156451553106308,\"241\":0.17836996912956238,\"242\":0.25737303495407104,\"243\":0.34741726517677307,\"244\":0.43871933221817017,\"245\":0.5182856321334839,\"246\":0.5727941989898682,\"247\":0.5922091603279114,\"248\":0.5727941989898682,\"249\":0.5182856321334839,\"250\":0.43871933221817017,\"251\":0.34741726517677307,\"252\":0.25737303495407104,\"253\":0.17836996912956238,\"254\":0.1156451553106308,\"255\":0.07014233618974686},\"spacing\":[1.6,1.6],\"bounds\":[-12,-12,12,12],\"domain\":[0,5],\"crs\":\"LOCAL\"}}},\"camera\":{\"position\":[24,32,42],\"target\":[0,2,0],\"up\":[0,1,0],\"fovYDegrees\":42,\"near\":0.1,\"far\":500},\"lighting\":{\"name\":\"daylight\"},\"output\":{\"width\":192,\"height\":128},\"reproducibility\":{\"seed\":23},\"runtimeOptions\":{\"clearColor\":[0.02,0.03,0.05,1]},\"layers\":[],\"timeSeconds\":0,\"renderPolicy\":\"continue_on_warning\"}",
+              "width": 192,
+              "height": 128,
+              "sha256": "c25b37ed9e773d589bb428761e8b9781cb4cdd9ceae5956620492a5484b5cf43",
+              "coverage": 2891,
+              "changedPixels": 629
+            },
+            {
+              "label": "Running triangle_png.py: triangle…",
+              "kind": "download",
+              "name": "triangle_png.py-triangle-triangle.png",
+              "bytes": 5527,
+              "width": 192,
+              "height": 128,
+              "sha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5"
+            }
+          ],
+          "cogEvidence": [
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.open",
+              "datasetId": 571,
+              "source": "http://127.0.0.1:57923/examples/migration/rainier-cog.tif",
+              "overviewCount": 3
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 2,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 2,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 0,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 1,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 1,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 2,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 3,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 2,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 1,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 1,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 0,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.converged",
+              "converged": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "gpu.read",
+              "runtimeId": 161,
+              "coverage": 2530
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "gpu.read",
+              "runtimeId": 161,
+              "coverage": 2530
+            }
+          ],
+          "videoEvidence": [
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.configure",
+              "encoderId": 1,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 1,
+              "timestamp": 0
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 1,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 1,
+              "bytes": 5436,
+              "timestamp": 0
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 1,
+              "bytes": 5753,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 1,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 1,
+              "bytes": 5255,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.flush",
+              "encoderId": 1
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "download",
+              "name": "helsinki_transit_daycycle.py-video-animation.mp4",
+              "bytes": 17190,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.configure",
+              "encoderId": 2,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 2,
+              "timestamp": 0
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 2,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 2,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 2,
+              "bytes": 2041,
+              "timestamp": 0
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 2,
+              "bytes": 2422,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 2,
+              "bytes": 2571,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.flush",
+              "encoderId": 2
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "download",
+              "name": "camera_animation_demo.py-video-animation.mp4",
+              "bytes": 7780,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.configure",
+              "encoderId": 3,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 3,
+              "timestamp": 0
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 3,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 3,
+              "bytes": 3285,
+              "timestamp": 0
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 3,
+              "bytes": 5424,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 3,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 3,
+              "bytes": 3749,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.flush",
+              "encoderId": 3
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "download",
+              "name": "bryce_canyon_storm_timelapse.py-video-animation.mp4",
+              "bytes": 13204,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.configure",
+              "encoderId": 4,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 4,
+              "timestamp": 0
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 4,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 4,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 4,
+              "bytes": 4075,
+              "timestamp": 0
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 4,
+              "bytes": 4621,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 4,
+              "bytes": 4774,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.flush",
+              "encoderId": 4
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "download",
+              "name": "california_wildfire_smoke_video.py-video-animation.mp4",
+              "bytes": 14216,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.configure",
+              "encoderId": 5,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 5,
+              "timestamp": 0
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 5,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 5,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 5,
+              "bytes": 3229,
+              "timestamp": 0
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 5,
+              "bytes": 4015,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 5,
+              "bytes": 3843,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.flush",
+              "encoderId": 5
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "download",
+              "name": "terrain_camera_rigs_demo.py-video-animation.mp4",
+              "bytes": 11833,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.configure",
+              "encoderId": 6,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.encode",
+              "encoderId": 6,
+              "timestamp": 0
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.encode",
+              "encoderId": 6,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.output",
+              "encoderId": 6,
+              "bytes": 5368,
+              "timestamp": 0
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.output",
+              "encoderId": 6,
+              "bytes": 6172,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.encode",
+              "encoderId": 6,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.output",
+              "encoderId": 6,
+              "bytes": 5124,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.flush",
+              "encoderId": 6
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "download",
+              "name": "rotterdam_solar_potential_shadow_study.py-video-animation.mp4",
+              "bytes": 17410,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.configure",
+              "encoderId": 7,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 7,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 7,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 7,
+              "bytes": 3817,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 7,
+              "bytes": 5921,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 7,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 7,
+              "bytes": 4752,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.flush",
+              "encoderId": 7
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "download",
+              "name": "osm_city_daycycle.py-video-animation.mp4",
+              "bytes": 15236,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.configure",
+              "encoderId": 8,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 8,
+              "timestamp": 0
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 8,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 8,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 8,
+              "bytes": 4313,
+              "timestamp": 0
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 8,
+              "bytes": 5500,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 8,
+              "bytes": 4826,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.flush",
+              "encoderId": 8
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "download",
+              "name": "pnoa_river_showcase_video.py-video-animation.mp4",
+              "bytes": 15385,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.configure",
+              "encoderId": 9,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 0
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1237,
+              "timestamp": 0
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1190,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1487,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 1500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1400,
+              "timestamp": 1500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 2000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1547,
+              "timestamp": 2000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 2500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1475,
+              "timestamp": 2500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 3000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1617,
+              "timestamp": 3000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 3500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1404,
+              "timestamp": 3500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.flush",
+              "encoderId": 9
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "download",
+              "name": "khumbu_icefall_sentinel_timelapse.py-video-animation.mp4",
+              "bytes": 12151,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  8
+                ]
+              }
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.configure",
+              "encoderId": 10,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 10,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 10,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 10,
+              "bytes": 5228,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 10,
+              "bytes": 6594,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 10,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 10,
+              "bytes": 6463,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.flush",
+              "encoderId": 10
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "download",
+              "name": "osm_city_flood_daycycle.py-video-animation.mp4",
+              "bytes": 19031,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            }
+          ],
           "evidenceDigests": {
             "forge3d-webgpu-probe.json": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6",
-            "w23-independent-stage-observations.json": "9630d1adba443fc6675d137426c490037ae6ebd71bb897ddd1191883c4ae84b4",
+            "w23-independent-stage-observations.json": "6d2a0ec6788502d5aaf3ccfb0af0b21295213b23d5d315cf1ad04f8cf93642d9",
             "w23-negative-controls.json": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c",
-            "w23-workflows.json": "073b1871ac72610ecf2057e5ca5d06382e004bb1e8914d1b3f0333b8d099955f"
+            "w23-literal-stage-negative-controls.json": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6",
+            "w23-workflows.json": "5094790955a2b1f8db1e40d01596fdced41b55afb9451ad80c3050fb083a6735"
           }
         }
       ]
     },
     "installed": {
       "schemaVersion": 1,
-      "revision": "ddbd1310023727616d2b8bee1f0b8096b1150595",
-      "verifiedAt": "2026-10-19T13:37:24.199Z",
+      "revision": "391c84362ecfc8f54588f45dd38aad8e2f0fc184",
+      "verifiedAt": "2026-10-20T08:13:54.427Z",
       "exitCode": 0,
-      "packageSha256": "77c1639e98ee0532ebd24b911efd21231748ebb820bddd411cf489a69a7e5700",
+      "packageSha256": "c62ac9aac94e1bef511008d501dbee61692302da2732b98cdaa23e4fb9683418",
       "wasmSha256": "50dc3d9a9be830f71d05739820ee5a0e2d5c826c70481a3492edf9d3ac738068",
-      "installed": "D:\\forge3d\\cache\\tmp\\forge3d-w23-consumer-2taXw8\\consumer\\node_modules\\@forge3d\\web",
-      "tarball": "D:\\forge3d\\cache\\tmp\\forge3d-w23-consumer-2taXw8\\pack\\forge3d-web-1.26.3.tgz",
+      "installed": "D:\\forge3d\\cache\\tmp\\forge3d-w23-consumer-h2d6p3\\consumer\\node_modules\\@forge3d\\web",
+      "tarball": "D:\\forge3d\\cache\\tmp\\forge3d-w23-consumer-h2d6p3\\pack\\forge3d-web-1.26.3.tgz",
       "browserLane": "chromium-preflight",
       "assetsVerified": 207,
+      "migrationTextHeadBlobsVerified": 18,
       "documents": 38,
       "requests": [
         "/assets/datasets/mini_dem.npy",
@@ -2547,7 +4729,7 @@
         {
           "title": "W23 dist: all 54 migrated example workflows execute",
           "status": "passed",
-          "durationMs": 83822,
+          "durationMs": 70444,
           "examples": 54,
           "regionalExamples": [
             {
@@ -2707,23 +4889,23 @@
                 "sha256": "b6ce4cec37132e0fb0366c0aedc280496b2ad8b7dda70c2aa66734d1e2c8f3c5"
               },
               "inputs": {
-                "path": "assets/tif/dem_rainier.tif",
+                "path": "assets/tif/Bryce_Canyon.tif",
                 "archive": "original Forge3D example data archive",
-                "sourceSha256": "875b243474b151175f76037acd60c2149ac2e46fba9ba2bbce0c9a6998015dd3",
+                "sourceSha256": "9052ee54f4ef23b56c6981bc2a7672117c6f5ecb430726530f4fe456e6484a39",
                 "window": [
-                  1055,
-                  1055,
+                  2000,
+                  1900,
                   16,
                   16
                 ],
                 "bounds": [
-                  -121.76004836475155,
-                  46.847704258017686,
-                  -121.75777388455316,
-                  46.84997873821608
+                  397998.5,
+                  4163658.5,
+                  398014.5,
+                  4163674.5
                 ],
-                "crs": "EPSG:4326",
-                "convertedSha256": "5a26937644639ee47d984e5dd1acb9a97f30183a72323b965f6732e27a66dda9",
+                "crs": "EPSG:26912",
+                "convertedSha256": "c1cc00ac8e4c4bc697d2ebd93a93c229f7987e5958f77018fbe8d15577fe6be7",
                 "conversion": "Read band 1 in the recorded window; cast to little-endian float32; no geographic resampling or synthetic replacement."
               },
               "operations": [
@@ -3540,6 +5722,34 @@
               "message": "Rig clearance failed: orbit"
             }
           ],
+          "literalStageNegativeControls": {
+            "matchingManifest": true,
+            "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+            "integrityVerified": 17,
+            "outcomes": [
+              {
+                "workflow": "triangle",
+                "name": "triangle_png.py",
+                "rejected": true,
+                "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+                "observedEvents": 0
+              },
+              {
+                "workflow": "cog",
+                "name": "cog_streaming_demo.py",
+                "rejected": true,
+                "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+                "observedEvents": 0
+              },
+              {
+                "workflow": "video",
+                "name": "camera_animation_demo.py",
+                "rejected": true,
+                "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+                "observedEvents": 0
+              }
+            ]
+          },
           "guideExamples": {
             "snapshotBytes": 3194,
             "roundTripBytes": 74,
@@ -3548,7 +5758,7 @@
           "materials": [
             {
               "name": "pnoa_river_showcase.py",
-              "sceneShadowPixels": 227,
+              "sceneShadowPixels": 325,
               "shadowControlPixels": 564
             },
             {
@@ -3618,45 +5828,1013 @@
             }
           ],
           "independentObservations": {
-            "total": 896,
+            "total": 1422,
             "kinds": {
-              "gpu.render": 409,
+              "gpu.render": 411,
+              "gpu.read": 396,
               "scene.frame": 325,
               "oit.mode": 128,
+              "video.configure": 10,
+              "video.encode": 35,
+              "video.output": 35,
+              "video.flush": 10,
+              "download": 11,
               "rig.bake": 3,
               "ibl.prepare": 9,
               "ibl.load": 3,
               "ibl.bind": 3,
               "gpu.rgb": 14,
+              "cog.open": 1,
+              "cog.tile": 15,
+              "cog.upload": 8,
+              "cog.converged": 1,
+              "triangle.frame": 2,
               "vector.report": 1,
               "postfx.report": 1
             },
             "minimumRigClearance": 1.9999999886499236,
             "maximumTaaHistoryFrames": 4
           },
+          "triangleEvidence": [
+            {
+              "label": "Running triangle_png.py: triangle…",
+              "kind": "triangle.frame",
+              "triangle": true,
+              "recipeWithoutTriangle": "{\"crs\":\"LOCAL\",\"terrain\":{\"source\":{\"id\":\"dem\",\"format\":\"heightmap\",\"crs\":\"LOCAL\",\"data\":{\"width\":16,\"height\":16,\"heights\":{\"0\":0.19066663086414337,\"1\":0.2940823435783386,\"2\":0.42433640360832214,\"3\":0.5727941989898682,\"4\":0.7233259081840515,\"5\":0.8545085787773132,\"6\":0.9443780183792114,\"7\":0.9763877987861633,\"8\":0.9443780183792114,\"9\":0.8545085787773132,\"10\":0.7233259081840515,\"11\":0.5727941989898682,\"12\":0.42433640360832214,\"13\":0.2940823435783386,\"14\":0.19066663086414337,\"15\":0.1156451553106308,\"16\":0.2940823435783386,\"17\":0.4535897672176361,\"18\":0.6544923186302185,\"19\":0.883472204208374,\"20\":1.1156507730484009,\"21\":1.3179856538772583,\"22\":1.456599473953247,\"23\":1.505971074104309,\"24\":1.456599473953247,\"25\":1.3179856538772583,\"26\":1.1156507730484009,\"27\":0.883472204208374,\"28\":0.6544923186302185,\"29\":0.4535897672176361,\"30\":0.2940823435783386,\"31\":0.17836996912956238,\"32\":0.42433640360832214,\"33\":0.6544923186302185,\"34\":0.9443780183792114,\"35\":1.2747769355773926,\"36\":1.6097913980484009,\"37\":1.901743769645691,\"38\":2.1017518043518066,\"39\":2.1729910373687744,\"40\":2.1017518043518066,\"41\":1.901743769645691,\"42\":1.6097913980484009,\"43\":1.2747769355773926,\"44\":0.9443780183792114,\"45\":0.6544923186302185,\"46\":0.42433640360832214,\"47\":0.25737303495407104,\"48\":0.5727941989898682,\"49\":0.883472204208374,\"50\":1.2747769355773926,\"51\":1.720768928527832,\"52\":2.1729910373687744,\"53\":2.5670855045318604,\"54\":2.8370683193206787,\"55\":2.9332311153411865,\"56\":2.8370683193206787,\"57\":2.5670855045318604,\"58\":2.1729910373687744,\"59\":1.720768928527832,\"60\":1.2747769355773926,\"61\":0.883472204208374,\"62\":0.5727941989898682,\"63\":0.34741726517677307,\"64\":0.7233259081840515,\"65\":1.1156507730484009,\"66\":1.6097913980484009,\"67\":2.1729910373687744,\"68\":2.744058132171631,\"69\":3.2417216300964355,\"70\":3.5826566219329834,\"71\":3.7040910720825195,\"72\":3.5826566219329834,\"73\":3.2417216300964355,\"74\":2.744058132171631,\"75\":2.1729910373687744,\"76\":1.6097913980484009,\"77\":1.1156507730484009,\"78\":0.7233259081840515,\"79\":0.43871933221817017,\"80\":0.8545085787773132,\"81\":1.3179856538772583,\"82\":1.901743769645691,\"83\":2.5670855045318604,\"84\":3.2417216300964355,\"85\":3.829641580581665,\"86\":4.23240852355957,\"87\":4.375866413116455,\"88\":4.23240852355957,\"89\":3.829641580581665,\"90\":3.2417216300964355,\"91\":2.5670855045318604,\"92\":1.901743769645691,\"93\":1.3179856538772583,\"94\":0.8545085787773132,\"95\":0.5182856321334839,\"96\":0.9443780183792114,\"97\":1.456599473953247,\"98\":2.1017518043518066,\"99\":2.8370683193206787,\"100\":3.5826566219329834,\"101\":4.23240852355957,\"102\":4.677535057067871,\"103\":4.836080551147461,\"104\":4.677535057067871,\"105\":4.23240852355957,\"106\":3.5826566219329834,\"107\":2.8370683193206787,\"108\":2.1017518043518066,\"109\":1.456599473953247,\"110\":0.9443780183792114,\"111\":0.5727941989898682,\"112\":0.9763877987861633,\"113\":1.505971074104309,\"114\":2.1729910373687744,\"115\":2.9332311153411865,\"116\":3.7040910720825195,\"117\":4.375866413116455,\"118\":4.836080551147461,\"119\":5,\"120\":4.836080551147461,\"121\":4.375866413116455,\"122\":3.7040910720825195,\"123\":2.9332311153411865,\"124\":2.1729910373687744,\"125\":1.505971074104309,\"126\":0.9763877987861633,\"127\":0.5922091603279114,\"128\":0.9443780183792114,\"129\":1.456599473953247,\"130\":2.1017518043518066,\"131\":2.8370683193206787,\"132\":3.5826566219329834,\"133\":4.23240852355957,\"134\":4.677535057067871,\"135\":4.836080551147461,\"136\":4.677535057067871,\"137\":4.23240852355957,\"138\":3.5826566219329834,\"139\":2.8370683193206787,\"140\":2.1017518043518066,\"141\":1.456599473953247,\"142\":0.9443780183792114,\"143\":0.5727941989898682,\"144\":0.8545085787773132,\"145\":1.3179856538772583,\"146\":1.901743769645691,\"147\":2.5670855045318604,\"148\":3.2417216300964355,\"149\":3.829641580581665,\"150\":4.23240852355957,\"151\":4.375866413116455,\"152\":4.23240852355957,\"153\":3.829641580581665,\"154\":3.2417216300964355,\"155\":2.5670855045318604,\"156\":1.901743769645691,\"157\":1.3179856538772583,\"158\":0.8545085787773132,\"159\":0.5182856321334839,\"160\":0.7233259081840515,\"161\":1.1156507730484009,\"162\":1.6097913980484009,\"163\":2.1729910373687744,\"164\":2.744058132171631,\"165\":3.2417216300964355,\"166\":3.5826566219329834,\"167\":3.7040910720825195,\"168\":3.5826566219329834,\"169\":3.2417216300964355,\"170\":2.744058132171631,\"171\":2.1729910373687744,\"172\":1.6097913980484009,\"173\":1.1156507730484009,\"174\":0.7233259081840515,\"175\":0.43871933221817017,\"176\":0.5727941989898682,\"177\":0.883472204208374,\"178\":1.2747769355773926,\"179\":1.720768928527832,\"180\":2.1729910373687744,\"181\":2.5670855045318604,\"182\":2.8370683193206787,\"183\":2.9332311153411865,\"184\":2.8370683193206787,\"185\":2.5670855045318604,\"186\":2.1729910373687744,\"187\":1.720768928527832,\"188\":1.2747769355773926,\"189\":0.883472204208374,\"190\":0.5727941989898682,\"191\":0.34741726517677307,\"192\":0.42433640360832214,\"193\":0.6544923186302185,\"194\":0.9443780183792114,\"195\":1.2747769355773926,\"196\":1.6097913980484009,\"197\":1.901743769645691,\"198\":2.1017518043518066,\"199\":2.1729910373687744,\"200\":2.1017518043518066,\"201\":1.901743769645691,\"202\":1.6097913980484009,\"203\":1.2747769355773926,\"204\":0.9443780183792114,\"205\":0.6544923186302185,\"206\":0.42433640360832214,\"207\":0.25737303495407104,\"208\":0.2940823435783386,\"209\":0.4535897672176361,\"210\":0.6544923186302185,\"211\":0.883472204208374,\"212\":1.1156507730484009,\"213\":1.3179856538772583,\"214\":1.456599473953247,\"215\":1.505971074104309,\"216\":1.456599473953247,\"217\":1.3179856538772583,\"218\":1.1156507730484009,\"219\":0.883472204208374,\"220\":0.6544923186302185,\"221\":0.4535897672176361,\"222\":0.2940823435783386,\"223\":0.17836996912956238,\"224\":0.19066663086414337,\"225\":0.2940823435783386,\"226\":0.42433640360832214,\"227\":0.5727941989898682,\"228\":0.7233259081840515,\"229\":0.8545085787773132,\"230\":0.9443780183792114,\"231\":0.9763877987861633,\"232\":0.9443780183792114,\"233\":0.8545085787773132,\"234\":0.7233259081840515,\"235\":0.5727941989898682,\"236\":0.42433640360832214,\"237\":0.2940823435783386,\"238\":0.19066663086414337,\"239\":0.1156451553106308,\"240\":0.1156451553106308,\"241\":0.17836996912956238,\"242\":0.25737303495407104,\"243\":0.34741726517677307,\"244\":0.43871933221817017,\"245\":0.5182856321334839,\"246\":0.5727941989898682,\"247\":0.5922091603279114,\"248\":0.5727941989898682,\"249\":0.5182856321334839,\"250\":0.43871933221817017,\"251\":0.34741726517677307,\"252\":0.25737303495407104,\"253\":0.17836996912956238,\"254\":0.1156451553106308,\"255\":0.07014233618974686},\"spacing\":[1.6,1.6],\"bounds\":[-12,-12,12,12],\"domain\":[0,5],\"crs\":\"LOCAL\"}}},\"camera\":{\"position\":[24,32,42],\"target\":[0,2,0],\"up\":[0,1,0],\"fovYDegrees\":42,\"near\":0.1,\"far\":500},\"lighting\":{\"name\":\"daylight\"},\"output\":{\"width\":192,\"height\":128},\"reproducibility\":{\"seed\":23},\"runtimeOptions\":{\"clearColor\":[0.02,0.03,0.05,1]},\"layers\":[],\"timeSeconds\":0,\"renderPolicy\":\"continue_on_warning\"}",
+              "width": 192,
+              "height": 128,
+              "sha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5",
+              "coverage": 3384,
+              "changedPixels": 629
+            },
+            {
+              "label": "Running triangle_png.py: triangle…",
+              "kind": "triangle.frame",
+              "triangle": false,
+              "recipeWithoutTriangle": "{\"crs\":\"LOCAL\",\"terrain\":{\"source\":{\"id\":\"dem\",\"format\":\"heightmap\",\"crs\":\"LOCAL\",\"data\":{\"width\":16,\"height\":16,\"heights\":{\"0\":0.19066663086414337,\"1\":0.2940823435783386,\"2\":0.42433640360832214,\"3\":0.5727941989898682,\"4\":0.7233259081840515,\"5\":0.8545085787773132,\"6\":0.9443780183792114,\"7\":0.9763877987861633,\"8\":0.9443780183792114,\"9\":0.8545085787773132,\"10\":0.7233259081840515,\"11\":0.5727941989898682,\"12\":0.42433640360832214,\"13\":0.2940823435783386,\"14\":0.19066663086414337,\"15\":0.1156451553106308,\"16\":0.2940823435783386,\"17\":0.4535897672176361,\"18\":0.6544923186302185,\"19\":0.883472204208374,\"20\":1.1156507730484009,\"21\":1.3179856538772583,\"22\":1.456599473953247,\"23\":1.505971074104309,\"24\":1.456599473953247,\"25\":1.3179856538772583,\"26\":1.1156507730484009,\"27\":0.883472204208374,\"28\":0.6544923186302185,\"29\":0.4535897672176361,\"30\":0.2940823435783386,\"31\":0.17836996912956238,\"32\":0.42433640360832214,\"33\":0.6544923186302185,\"34\":0.9443780183792114,\"35\":1.2747769355773926,\"36\":1.6097913980484009,\"37\":1.901743769645691,\"38\":2.1017518043518066,\"39\":2.1729910373687744,\"40\":2.1017518043518066,\"41\":1.901743769645691,\"42\":1.6097913980484009,\"43\":1.2747769355773926,\"44\":0.9443780183792114,\"45\":0.6544923186302185,\"46\":0.42433640360832214,\"47\":0.25737303495407104,\"48\":0.5727941989898682,\"49\":0.883472204208374,\"50\":1.2747769355773926,\"51\":1.720768928527832,\"52\":2.1729910373687744,\"53\":2.5670855045318604,\"54\":2.8370683193206787,\"55\":2.9332311153411865,\"56\":2.8370683193206787,\"57\":2.5670855045318604,\"58\":2.1729910373687744,\"59\":1.720768928527832,\"60\":1.2747769355773926,\"61\":0.883472204208374,\"62\":0.5727941989898682,\"63\":0.34741726517677307,\"64\":0.7233259081840515,\"65\":1.1156507730484009,\"66\":1.6097913980484009,\"67\":2.1729910373687744,\"68\":2.744058132171631,\"69\":3.2417216300964355,\"70\":3.5826566219329834,\"71\":3.7040910720825195,\"72\":3.5826566219329834,\"73\":3.2417216300964355,\"74\":2.744058132171631,\"75\":2.1729910373687744,\"76\":1.6097913980484009,\"77\":1.1156507730484009,\"78\":0.7233259081840515,\"79\":0.43871933221817017,\"80\":0.8545085787773132,\"81\":1.3179856538772583,\"82\":1.901743769645691,\"83\":2.5670855045318604,\"84\":3.2417216300964355,\"85\":3.829641580581665,\"86\":4.23240852355957,\"87\":4.375866413116455,\"88\":4.23240852355957,\"89\":3.829641580581665,\"90\":3.2417216300964355,\"91\":2.5670855045318604,\"92\":1.901743769645691,\"93\":1.3179856538772583,\"94\":0.8545085787773132,\"95\":0.5182856321334839,\"96\":0.9443780183792114,\"97\":1.456599473953247,\"98\":2.1017518043518066,\"99\":2.8370683193206787,\"100\":3.5826566219329834,\"101\":4.23240852355957,\"102\":4.677535057067871,\"103\":4.836080551147461,\"104\":4.677535057067871,\"105\":4.23240852355957,\"106\":3.5826566219329834,\"107\":2.8370683193206787,\"108\":2.1017518043518066,\"109\":1.456599473953247,\"110\":0.9443780183792114,\"111\":0.5727941989898682,\"112\":0.9763877987861633,\"113\":1.505971074104309,\"114\":2.1729910373687744,\"115\":2.9332311153411865,\"116\":3.7040910720825195,\"117\":4.375866413116455,\"118\":4.836080551147461,\"119\":5,\"120\":4.836080551147461,\"121\":4.375866413116455,\"122\":3.7040910720825195,\"123\":2.9332311153411865,\"124\":2.1729910373687744,\"125\":1.505971074104309,\"126\":0.9763877987861633,\"127\":0.5922091603279114,\"128\":0.9443780183792114,\"129\":1.456599473953247,\"130\":2.1017518043518066,\"131\":2.8370683193206787,\"132\":3.5826566219329834,\"133\":4.23240852355957,\"134\":4.677535057067871,\"135\":4.836080551147461,\"136\":4.677535057067871,\"137\":4.23240852355957,\"138\":3.5826566219329834,\"139\":2.8370683193206787,\"140\":2.1017518043518066,\"141\":1.456599473953247,\"142\":0.9443780183792114,\"143\":0.5727941989898682,\"144\":0.8545085787773132,\"145\":1.3179856538772583,\"146\":1.901743769645691,\"147\":2.5670855045318604,\"148\":3.2417216300964355,\"149\":3.829641580581665,\"150\":4.23240852355957,\"151\":4.375866413116455,\"152\":4.23240852355957,\"153\":3.829641580581665,\"154\":3.2417216300964355,\"155\":2.5670855045318604,\"156\":1.901743769645691,\"157\":1.3179856538772583,\"158\":0.8545085787773132,\"159\":0.5182856321334839,\"160\":0.7233259081840515,\"161\":1.1156507730484009,\"162\":1.6097913980484009,\"163\":2.1729910373687744,\"164\":2.744058132171631,\"165\":3.2417216300964355,\"166\":3.5826566219329834,\"167\":3.7040910720825195,\"168\":3.5826566219329834,\"169\":3.2417216300964355,\"170\":2.744058132171631,\"171\":2.1729910373687744,\"172\":1.6097913980484009,\"173\":1.1156507730484009,\"174\":0.7233259081840515,\"175\":0.43871933221817017,\"176\":0.5727941989898682,\"177\":0.883472204208374,\"178\":1.2747769355773926,\"179\":1.720768928527832,\"180\":2.1729910373687744,\"181\":2.5670855045318604,\"182\":2.8370683193206787,\"183\":2.9332311153411865,\"184\":2.8370683193206787,\"185\":2.5670855045318604,\"186\":2.1729910373687744,\"187\":1.720768928527832,\"188\":1.2747769355773926,\"189\":0.883472204208374,\"190\":0.5727941989898682,\"191\":0.34741726517677307,\"192\":0.42433640360832214,\"193\":0.6544923186302185,\"194\":0.9443780183792114,\"195\":1.2747769355773926,\"196\":1.6097913980484009,\"197\":1.901743769645691,\"198\":2.1017518043518066,\"199\":2.1729910373687744,\"200\":2.1017518043518066,\"201\":1.901743769645691,\"202\":1.6097913980484009,\"203\":1.2747769355773926,\"204\":0.9443780183792114,\"205\":0.6544923186302185,\"206\":0.42433640360832214,\"207\":0.25737303495407104,\"208\":0.2940823435783386,\"209\":0.4535897672176361,\"210\":0.6544923186302185,\"211\":0.883472204208374,\"212\":1.1156507730484009,\"213\":1.3179856538772583,\"214\":1.456599473953247,\"215\":1.505971074104309,\"216\":1.456599473953247,\"217\":1.3179856538772583,\"218\":1.1156507730484009,\"219\":0.883472204208374,\"220\":0.6544923186302185,\"221\":0.4535897672176361,\"222\":0.2940823435783386,\"223\":0.17836996912956238,\"224\":0.19066663086414337,\"225\":0.2940823435783386,\"226\":0.42433640360832214,\"227\":0.5727941989898682,\"228\":0.7233259081840515,\"229\":0.8545085787773132,\"230\":0.9443780183792114,\"231\":0.9763877987861633,\"232\":0.9443780183792114,\"233\":0.8545085787773132,\"234\":0.7233259081840515,\"235\":0.5727941989898682,\"236\":0.42433640360832214,\"237\":0.2940823435783386,\"238\":0.19066663086414337,\"239\":0.1156451553106308,\"240\":0.1156451553106308,\"241\":0.17836996912956238,\"242\":0.25737303495407104,\"243\":0.34741726517677307,\"244\":0.43871933221817017,\"245\":0.5182856321334839,\"246\":0.5727941989898682,\"247\":0.5922091603279114,\"248\":0.5727941989898682,\"249\":0.5182856321334839,\"250\":0.43871933221817017,\"251\":0.34741726517677307,\"252\":0.25737303495407104,\"253\":0.17836996912956238,\"254\":0.1156451553106308,\"255\":0.07014233618974686},\"spacing\":[1.6,1.6],\"bounds\":[-12,-12,12,12],\"domain\":[0,5],\"crs\":\"LOCAL\"}}},\"camera\":{\"position\":[24,32,42],\"target\":[0,2,0],\"up\":[0,1,0],\"fovYDegrees\":42,\"near\":0.1,\"far\":500},\"lighting\":{\"name\":\"daylight\"},\"output\":{\"width\":192,\"height\":128},\"reproducibility\":{\"seed\":23},\"runtimeOptions\":{\"clearColor\":[0.02,0.03,0.05,1]},\"layers\":[],\"timeSeconds\":0,\"renderPolicy\":\"continue_on_warning\"}",
+              "width": 192,
+              "height": 128,
+              "sha256": "c25b37ed9e773d589bb428761e8b9781cb4cdd9ceae5956620492a5484b5cf43",
+              "coverage": 2891,
+              "changedPixels": 629
+            },
+            {
+              "label": "Running triangle_png.py: triangle…",
+              "kind": "download",
+              "name": "triangle_png.py-triangle-triangle.png",
+              "bytes": 5527,
+              "width": 192,
+              "height": 128,
+              "sha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5"
+            }
+          ],
+          "cogEvidence": [
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.open",
+              "datasetId": 571,
+              "source": "http://127.0.0.1:62245/examples/migration/rainier-cog.tif",
+              "overviewCount": 3
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 2,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 2,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 0,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 1,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 1,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 2,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 3,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 2,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 1,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 1,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 1,
+              "y": 0,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 0,
+              "overview": 1,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 1,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.tile",
+              "datasetId": 571,
+              "x": 0,
+              "y": 3,
+              "overview": 0,
+              "samples": 65536
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.upload",
+              "runtimeId": 161,
+              "lod": 0,
+              "samples": 65536,
+              "accepted": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "cog.converged",
+              "converged": true
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "gpu.read",
+              "runtimeId": 161,
+              "coverage": 2530
+            },
+            {
+              "label": "Running cog_streaming_demo.py: cog…",
+              "kind": "gpu.read",
+              "runtimeId": 161,
+              "coverage": 2530
+            }
+          ],
+          "videoEvidence": [
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.configure",
+              "encoderId": 1,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 1,
+              "timestamp": 0
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 1,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 1,
+              "bytes": 5436,
+              "timestamp": 0
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 1,
+              "bytes": 5753,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 1,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 1,
+              "bytes": 5255,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "video.flush",
+              "encoderId": 1
+            },
+            {
+              "label": "Running helsinki_transit_daycycle.py: video…",
+              "kind": "download",
+              "name": "helsinki_transit_daycycle.py-video-animation.mp4",
+              "bytes": 17190,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.configure",
+              "encoderId": 2,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 2,
+              "timestamp": 0
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 2,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 2,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 2,
+              "bytes": 2041,
+              "timestamp": 0
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 2,
+              "bytes": 2422,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 2,
+              "bytes": 2571,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "video.flush",
+              "encoderId": 2
+            },
+            {
+              "label": "Running camera_animation_demo.py: video…",
+              "kind": "download",
+              "name": "camera_animation_demo.py-video-animation.mp4",
+              "bytes": 7780,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.configure",
+              "encoderId": 3,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 3,
+              "timestamp": 0
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 3,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 3,
+              "bytes": 3285,
+              "timestamp": 0
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 3,
+              "bytes": 5424,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 3,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 3,
+              "bytes": 3749,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "video.flush",
+              "encoderId": 3
+            },
+            {
+              "label": "Running bryce_canyon_storm_timelapse.py: video…",
+              "kind": "download",
+              "name": "bryce_canyon_storm_timelapse.py-video-animation.mp4",
+              "bytes": 13204,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.configure",
+              "encoderId": 4,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 4,
+              "timestamp": 0
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 4,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 4,
+              "bytes": 4075,
+              "timestamp": 0
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 4,
+              "bytes": 4621,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 4,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 4,
+              "bytes": 4774,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "video.flush",
+              "encoderId": 4
+            },
+            {
+              "label": "Running california_wildfire_smoke_video.py: video…",
+              "kind": "download",
+              "name": "california_wildfire_smoke_video.py-video-animation.mp4",
+              "bytes": 14216,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.configure",
+              "encoderId": 5,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 5,
+              "timestamp": 0
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 5,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.encode",
+              "encoderId": 5,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 5,
+              "bytes": 3229,
+              "timestamp": 0
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 5,
+              "bytes": 4015,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.output",
+              "encoderId": 5,
+              "bytes": 3843,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "video.flush",
+              "encoderId": 5
+            },
+            {
+              "label": "Running terrain_camera_rigs_demo.py: video…",
+              "kind": "download",
+              "name": "terrain_camera_rigs_demo.py-video-animation.mp4",
+              "bytes": 11833,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.configure",
+              "encoderId": 6,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.encode",
+              "encoderId": 6,
+              "timestamp": 0
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.encode",
+              "encoderId": 6,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.output",
+              "encoderId": 6,
+              "bytes": 5368,
+              "timestamp": 0
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.output",
+              "encoderId": 6,
+              "bytes": 6172,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.encode",
+              "encoderId": 6,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.output",
+              "encoderId": 6,
+              "bytes": 5124,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "video.flush",
+              "encoderId": 6
+            },
+            {
+              "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+              "kind": "download",
+              "name": "rotterdam_solar_potential_shadow_study.py-video-animation.mp4",
+              "bytes": 17410,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.configure",
+              "encoderId": 7,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 7,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 7,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 7,
+              "bytes": 3817,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 7,
+              "bytes": 5921,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 7,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 7,
+              "bytes": 4752,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "video.flush",
+              "encoderId": 7
+            },
+            {
+              "label": "Running osm_city_daycycle.py: video…",
+              "kind": "download",
+              "name": "osm_city_daycycle.py-video-animation.mp4",
+              "bytes": 15236,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.configure",
+              "encoderId": 8,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 8,
+              "timestamp": 0
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 8,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 8,
+              "bytes": 4313,
+              "timestamp": 0
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 8,
+              "bytes": 5500,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.encode",
+              "encoderId": 8,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.output",
+              "encoderId": 8,
+              "bytes": 4826,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "video.flush",
+              "encoderId": 8
+            },
+            {
+              "label": "Running pnoa_river_showcase_video.py: video…",
+              "kind": "download",
+              "name": "pnoa_river_showcase_video.py-video-animation.mp4",
+              "bytes": 15385,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.configure",
+              "encoderId": 9,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 0
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1237,
+              "timestamp": 0
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1190,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1487,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 1500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1400,
+              "timestamp": 1500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 2000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1547,
+              "timestamp": 2000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 2500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1475,
+              "timestamp": 2500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 3000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1617,
+              "timestamp": 3000000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.encode",
+              "encoderId": 9,
+              "timestamp": 3500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.output",
+              "encoderId": 9,
+              "bytes": 1404,
+              "timestamp": 3500000
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "video.flush",
+              "encoderId": 9
+            },
+            {
+              "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+              "kind": "download",
+              "name": "khumbu_icefall_sentinel_timelapse.py-video-animation.mp4",
+              "bytes": 12151,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  8
+                ]
+              }
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.configure",
+              "encoderId": 10,
+              "codec": "avc1.640028"
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 10,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 10,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 10,
+              "bytes": 5228,
+              "timestamp": 0
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 10,
+              "bytes": 6594,
+              "timestamp": 500000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.encode",
+              "encoderId": 10,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.output",
+              "encoderId": 10,
+              "bytes": 6463,
+              "timestamp": 1000000
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "video.flush",
+              "encoderId": 10
+            },
+            {
+              "label": "Running osm_city_flood_daycycle.py: video…",
+              "kind": "download",
+              "name": "osm_city_flood_daycycle.py-video-animation.mp4",
+              "bytes": 19031,
+              "mp4": {
+                "ftyp": true,
+                "avc1": true,
+                "sampleCounts": [
+                  3
+                ]
+              }
+            }
+          ],
           "evidenceDigests": {
             "forge3d-webgpu-probe.json": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6",
-            "w23-independent-stage-observations.json": "9630d1adba443fc6675d137426c490037ae6ebd71bb897ddd1191883c4ae84b4",
+            "w23-independent-stage-observations.json": "f706c4243968b26e452fdced5e5d63b957f7bb1eb990393a06828e29bcb9ee09",
             "w23-negative-controls.json": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c",
-            "w23-workflows.json": "fbaba5c71eb8638fb0f1ed9f634fbe7926dae8263810ed70632c0cb4420a84fc"
+            "w23-literal-stage-negative-controls.json": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6",
+            "w23-workflows.json": "85fac0edc8eb589b0018000ccc257be5b1ac1cfe4435ea472e90077464c07366"
           }
         }
       ]
     },
     "logDigests": {
-      "verify": "b050826bff23d9ba38b4af959ae66b95290ce77223b2c3b359bf834237f671aa",
-      "parity": "12d179b96c48a185fd3bb6b24175f6c49b23dbbe6f002608f8773ac1716273de",
-      "api": "3e27b8ef8a390f846a40988337e35c1b82ec1c17ff87f389b64586e1df03331c",
-      "native-audit": "0672845d937280a57e8d4aac6ccecc51c13e7b772b3f363d09bb3eb89f014d94",
-      "semantic-audit": "ee8fef52badf4cd200f7429b4165b563110cdc11d81e24dbbea9d6b647942b73",
+      "verify": "dd79cc253ba6b00692a25f1e13c4ff193d0aaca2078ee99fc652aa3791465710",
+      "parity": "4790dc0eb01b87dd8b1f8d7e87338de1876329e22cae99784110d5ad0b526d9f",
+      "api": "7400eb2e75890505b9c2aea600711378db12d52db4385ac97e9530a338a0f2d0",
+      "unit-1": "2967c2455cd7e7d65ee267b5301778a0c1e1932ebc220be271933964a2708bfe",
+      "unit-2": "5b82c13c90a621be10b83782c458c003910caed15bfaa561f34ea3e5ef43d074",
+      "unit-3": "c9175c5e06c89e6ea4a47c493e3d2b4d7a9851e133e7964f4dec19cf4fce0e5d",
+      "example-build": "9477a81059dd00ae48eaa3bca7ee5fec5af3ce30eaa1f66baa999da4196758d7",
+      "package": "266617e81a0f3d57bfff142206a4ad643688319ab6c646d28e0f19f60498f2e3",
+      "browser": "c824b5359a36cedfadc9f0f7513dd986272e540a77c1f4f27483b046fd71da57",
+      "installed": "d8d9e3c608a2c999482cffbe95d5eccf00f4891b293d077a91ff6a9b73f2f6dc",
       "single-tile-oracle": "67b6cd00347972bb347a8b49a197c0a37e1f5a0e93addf8e5d942ae9daf5f8e0",
       "regional-oracle": "7ee061d9f8ce34b9290c6cc071c4f893dd54c3ed2f3e4a1c8007a47a3c759a8c",
-      "unit": "23ad5ab6f2f161171a1e2a2ab56c5e2bad4011e3fe99ad0819e55d1ac18518ba",
-      "unit-initial": "06beb16805b019d95d36b8bb5558ef6636b269e415619dea0bdcba7cbcc88db7",
-      "unit-focused": "0af9a50c378aaf71776f3cd6b284330ab00b2cd703ab3d7e02e3daa3e80972cb",
-      "package": "1e057aa51dedae5f5f8046b701814be8ad6c53f2753dfa5011f2753e7d659fc4",
-      "example-build": "11784378752c8e0ef159dc2f2f3b6b9b7a793453dc67af1947e8ff9b496b1c25",
-      "installed": "0446d537980a7174688ac866451aedf5c8bb27b322baabc866f7316b18458b55"
+      "native-audit": "0672845d937280a57e8d4aac6ccecc51c13e7b772b3f363d09bb3eb89f014d94",
+      "semantic-audit": "63c6c51d1818dd7c8cc9a53a1a2781cf6ad76c5e3262f52563ae6628f5666dd8"
     }
   },
   "integrity": {

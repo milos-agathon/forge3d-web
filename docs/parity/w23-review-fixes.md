@@ -1,37 +1,73 @@
-# W23 review corrections
+# W23 remaining review corrections
 
-This ledger addresses the reviews of `3f11974f` and `efba9305` against
-[W23](../superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w23--restore-documentation-examples-goldens-and-migration-guides).
-Acceptance requirements are unchanged. Changes are confined to
-`D:/forge3d-web/.worktrees/w23`, branch `codex/w23-documentation`.
-Other active worktrees and branches are preserved; no subagents were used.
+All six findings against `5b3d1025` are fixed. Acceptance remains **W23 as written at `d5cf3b57`** in the [plan](../superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w23--restore-documentation-examples-goldens-and-migration-guides). No acceptance criterion, existing assertion, timeout, or threshold was weakened.
 
-The earlier verification record demonstrated passing gates but overstated
-regional computation coverage and stage-execution evidence. The current
-record supersedes those claims rather than inheriting its verdict.
+Implementation: `391c84362ecfc8f54588f45dd38aad8e2f0fc184`. All final commands ran sequentially on that clean committed revision, with `CARGO_TARGET_DIR=C:\devin-target\forge3d-web`. Changes are confined to `D:/forge3d-web/.worktrees/w23`, branch `codex/w23-documentation`; no other worktree or branch was edited and nothing was pushed. This ledger and the [verification record](w23-verification.json) are committed separately from the implementation.
 
-| Finding at efba9305 | Correction and check |
+| Finding | Status | Reproduction and verification evidence |
+| --- | --- | --- |
+| 1. Triangle, COG and MP4 were self-reported | Fixed | The observer outside `workflows.js` pairs the actual MapScene mesh `triangle` recipe with its removal control: **629 changed RGB pixels**, exceeding 8. Decoding the downloaded PNG produces the same dimensions and SHA-256 as that rendered frame. COG observation records open/readTile at actual overview levels **0, 1, 2**, **8 accepted runtime uploads**, convergence and covered readback inside the COG stage. VideoEncoder configure/encode/output/flush calls are observed per step; **10 MP4 downloads per lane**, each parsed for ftyp, an avc1 sample entry, and stsz matching the actual frame count: 3 each, 8 for Khumbu. Results agree in source, dist and installed lanes. A served literal-only replacement with its matching manifest hash passes startup integrity but each triangle/COG/video stage independently fails `assertStageEvidence`, with zero observed stage events: **3 rejections per lane, 9 total**. Existing no-op controls and all six observation-erasure controls also pass. |
+| 2. Generator provenance named unrelated scripts | Fixed | `validateAssets` requires an output declaration in the named generator, or the adjacent manifest's matching generator plus an explicitly listed file. **2,037 generated-control assets** pass output proof. W10/native uses `generate-w10-render-goldens.py` and native-derived origin; the five W18 resources are explicitly authored contract inputs. Substituting the existing `generate-w18-native.py`, with its correct current digest, for the glacier generator fails with `Generator does not declare asset output`. Manifest tests also reject a wrong generator and an unlisted filename. |
+| 3. Incorrect routing | Fixed | Own subjects precede supporting clauses, containing bullets and release titles. The audit asserts every requested changelog subject and both Rotterdam definitions. All **175 corrections against efba9305** were re-reviewed using excerpts from **29 pinned native files**; there are **31 changes from 5b3d1025**. The audit has **27 exact changelog expectations and 2 Rotterdam expectations**. The [routing review](w23-routing-review.json) records source lines, hashes, previous routes and new routes. |
+| 4. PNOA used Rainier instead of its original DEM | Fixed | Native `1f4084a:examples/pnoa_river_showcase.py:25` names `assets/tif/Bryce_Canyon.tif`. The capture script now agrees. Recaptured from `D:/forge3d`: window `[2000,1900,16,16]`, EPSG:26912; original-file SHA-256 `9052ee54f4ef23b56c6981bc2a7672117c6f5ecb430726530f4fe456e6484a39`, converted float32 SHA-256 `c1cc00ac8e4c4bc697d2ebd93a93c229f7987e5958f77018fbe8d15577fe6be7`. Application fixtures, migrated inputs, source snapshots and manifests were regenerated. The new source assertion, Python check and all three browser lanes pass. The separate PNOA video input retains its own source. |
+| 5. CRLF checkout drift | Fixed | `workflows.js`, `application-analysis.js` and `regional-kernels.js` have LF checkout bytes. The installed consumer checks raw bytes of **all 18 shipped migration text files** against their HEAD blobs, for both checkout and installed files, in addition to existing normalized digest checks. All pass; **207 shipped assets** are digest-verified. |
+| 6. Font-shaping unit timeout | Fixed | The async fontkit mock's `importOriginal` and lazy pdf-lib load formerly ran inside the timed test. Both real backends now load during test collection; the shaping-error and cancellation assertions remain unchanged. A focused run measured **6.99 s collection / 23 ms assertion**. Three consecutive default full runs each passed **1,960 tests / 92 files**; shaping assertions took **19, 21, 24 ms**. The **5 s timeout remains unchanged**. |
+
+The observer also uncovered swapped COG arguments: `readTile` takes `(x, y, lod)`. The workflow now reads `(0, 0, overview)` and `(x, y, 0)`, and observation records `selectOverview(lod)` rather than mislabeling x as the overview.
+
+## Further corrections found during review
+
+Beyond the requested routing subjects, source context required:
+
+- Terrain-pipeline reuse → T02; both GL/WGPU camera matrix helpers → C01.
+- Atmospheric Depth feature/release/subsection headings and jittered fog marching → P09; texture-size accounting → R07.
+- Python PBR math → P04; texture setters and TBN generation → P05; point/spot-light shader fix → P01.
+- MapScene introduction → M02a; B3DM, tileset parser and hierarchical traversal → G04; CopcDataset asset management → G02.
+- Both preset acceptance commands → R04; numpy_to_png RGB-array support → E07.
+
+Tightened provenance also corrected W10 shader JSON to its native-fixture generator, browser frames to browser observations and W09 preservation to its real capture script; W15 mesh/audit outputs to their actual writers; unsupported W10 harness/volume, W11/W12 provenance, W14 contract, W16 upstream metadata and adapted W20 claims to authored inputs; and the W22 Basis input to upstream dependency provenance. These are explicit provenance corrections, not removals from coverage.
+
+## Commands and results
+
+Preparation included `python scripts/capture-w23-dem-inputs.py` (7 original DEM windows), `python scripts/generate-w23-application-fixtures.py` (24 examples / 29 operations), `node scripts/generate-w23.mjs`, `node scripts/audit-w23-semantics.mjs --capture`, and `node scripts/capture-w23-routing-lock.mjs --capture`. The routing lock was recaptured byte-identical: it locks row APIs/tests/examples, while artifact route changes live in the reviewed source-context record.
+
+The clean gate runner was `node scripts/run-w23-review-verification.mjs` from the repository root. It ran these commands sequentially from `crates/forge3d-web`:
+
+```text
+npm run verify:w23
+npm run verify:parity
+npm run test:api
+npm run test:unit
+npm run test:unit
+npm run test:unit
+npm run build:example
+npm run test:package
+npm run test:w23 -- --reporter=list,json --output=test-results/w23-review3-browser-output
+npm run test:package-consumer:w23
+python scripts/generate-w23-goldens.py --check
+python scripts/generate-w23-application-fixtures.py --check
+```
+
+Then, from the repository root:
+
+```text
+python scripts/audit-w23-native.py
+node scripts/audit-w23-semantics.mjs
+```
+
+All **14 commands exited 0** on the recorded implementation. Browser commands use the `chromium-preflight` project; only the source/dist command receives `FORGE3D_TEST_PORT=57923`. Installed JSON reporting has a separate output path. Exact working directories, start/end times and SHA-256 of every command log are in `validation.commands` in [w23-verification.json](w23-verification.json).
+
+W23 checks: **66/66**; source/dist browser cases **2/2**; installed browser case **1/1**. Package Node suites: **97/97**, **118/118**, and infrastructure **628 passed / 1 existing platform skip / 0 failed** (the real Unix-UID ACL case on Windows). Documentation: **33 compiled fences**, including **2 strict complete examples**, 38 shipped documents and 1,216 checked links. Coverage remains **91 rows / 6,531 artifacts / zero unmapped**. The independent native audit retains **54 examples, 88 documentation assets, 53 Markdown/RST pages, 191 named test files and 1,792 test definitions**.
+
+| Recorded input/output | SHA-256 |
 | --- | --- |
-| High 1: shared terrain, missing or incorrect regional computations | Each of 24 examples now names its original source and actual native helpers/dependencies. Python executes unchanged helper ASTs for 29 operations; browser implementations consume inputs and compare independent expected values. Platte retains its distinct one-metre rule; PNOA uses masks/crop/sun, Helsinki uses GTFS, city examples use building/sun/flood computations. Smoke, storm, landcover, population, basin, railway and lighthouse operations have explicit controls and render dataflow. Erasing a computation or damaging expectations fails each case. Seven captured original DEM windows retain original-file and float32-window digests, CRS and bounds; remaining inputs are labeled bounded controls. |
-| High 2: erased IBL/effects/rig stages passed through literal results | All migration JS/HTML enters the asset gate. Browser startup checks served program/control-JSON bytes; request-intercepted erased workflow code must fail before ready. Independent instrumentation outside workflows.js records actual IBL calls/readback, OIT/TAA history/draws and all three rig paths/clearance. Erasing observation sets fails the verdict. Live no-op controls cover ten features, including shadows, IBL, TAA, OIT and rigs. |
-| Medium 1: substring misrouting | Whole-word EPT/IBL/scatter rules and native file/name ownership replace accidental accepts/depth/constructible/scattering matches. Point-cloud headings/names, temporal textures, style/city water and native SDF tests receive their proper owners. The source-context audit records 171 corrections against efba9305 in w23-routing-review.json. |
-| Medium 2: self-referential provenance | Native matching scans python/src/assets as well as tests/examples/docs. MiniDEM matches its native blob. Derived assets record actual authoring generators, input hashes and recipes separately from storage history; missing derivations and substituted kernel sources fail. EPT children, material/environment goldens, labels/CRS and regional controls have concrete generators or historical kernels. Rainier names its source DEM/crop/COG conversion. W09 captures retain source kernels/parameters and explicitly disclose the missing original authoring harness. |
-| Low 1: wrong tree link | The remaining wrong-repository URL is corrected. Both blob and tree links require the correct repository and resolvable Git object type. |
-| Low 2: API row IDs | Fourteen dataset exports route to E06 and three PNG exports to E07; generated API map and coverage agree. |
-| Low 3: disconnected quickstart/shadow checks | PNG consumes the actual viewer snapshot. Materials record the actual scene shadow delta and require visible RGB changes on a separate explicit occluding-ridge control, since a planar regional crop may cast no shadow. Suppressing shadow configuration fails that control. |
-| Low 4: purported independent source contract | The contract now honestly identifies itself as a generated reviewed routing-intent lock, with a capture command and source-context audit record. It is not advertised as independent correctness proof. |
-| Low 5: CRLF drift | Rainier truth JSON and fontkit.LICENSE have LF bytes. Attributes and the restore generator retain LF. |
-| Low 6: untested blocked license | Browser tests first run protected style and bundle examples without an issuer/key and require blocked-license plus LICENSE_REQUIRED, before configuring the isolated test issuer. |
+| Coverage manifest | `7ad44138bf42401c4a03b358605b9ab03f741cd16de323cce8751d44466b355d` |
+| Asset manifest (2,582 assets) | `3d4f689f0e29646c981b013d9b0c39706ae6e2cf820a3087f7d286269a4575e1` |
+| Installed tarball | `c62ac9aac94e1bef511008d501dbee61692302da2732b98cdaa23e4fb9683418` |
+| Installed WASM | `50dc3d9a9be830f71d05739820ee5a0e2d5c826c70481a3492edf9d3ac738068` |
 
-The original remediation also retains real triangle rendering, single-tile
-native normalization, streamed COG convergence, style/preset consumption,
-actual MP4 encoding, strict code-fence checks, installed-package isolation,
-interactive controls, cancellation, URL revocation and resource disposal.
+The JSON record additionally retains per-lane frame/download hashes, COG calls, encoder calls, parsed MP4 counts, negative-control outcomes and attachment digests. Earlier exploratory attempts included a Vite reload and a disk-full startup failure; neither supplied an acceptance verdict. An earlier runner attempt failed the existing default-port unit assertion because the runner leaked its browser override; that was corrected without changing the test. A later report-path collision was corrected and the complete clean sequence repeated, preserving both source/dist and installed evidence.
 
-Exact commands, counts, digests and browser observations are recorded in
-[w23-verification.json](w23-verification.json). The browser lane is Chromium
-preflight. These bounded workflow migrations do not claim full publication
-geography, native GPU visual parity, physical-browser qualification or W24
-release completion. Historical test routes identify capability evidence,
-without claiming execution of every original Python assertion. W09 historical
-capture provenance does not recover its missing authoring harness.
+## Declared limits retained
+
+These bounded offline workflow migrations do not reproduce the full geographic publications or establish native GPU visual parity. Historical test routes identify capability evidence, without claiming execution of every original Python assertion. W09 historical captures retain kernel hashes and parameters; their original authoring harness remains unarchived. The browser lane is Chromium preflight, not physical-browser qualification. Physical browser/GPU evidence and final functional/visual release closure remain W24 work. Prior regional-kernel, IBL/effects/rig, license, shadow, guide, disposal and integrity checks remain in force.
