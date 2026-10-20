@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "a59cfb70a6a00ac3cd57607e200c2421aa12170932fb11424c56362fcbd37769",
+      "sha256": "8a1fadd28a010864cd9f950f617532ce8f06246915c3c4af75a1f58b10954009",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -1907,7 +1907,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:ddbd1310023727616d2b8bee1f0b8096b1150595:crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/provenance.json"
       ]
     },
     {
@@ -1932,7 +1932,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/scripts/capture-w23-dem-inputs.py",
-        "git:ddbd1310023727616d2b8bee1f0b8096b1150595:crates/forge3d-web/docs/evidence-sources/scripts/capture-w23-dem-inputs.py.txt"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/scripts/capture-w23-dem-inputs.py.txt"
       ]
     },
     {
@@ -1957,7 +1957,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/scripts/generate-w05-camera-fixture.py",
-        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/scripts/generate-w05-camera-fixture.py.txt"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/scripts/generate-w05-camera-fixture.py.txt"
       ]
     },
     {
@@ -1982,13 +1982,13 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/scripts/generate-w06-aov-fixture.py",
-        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/scripts/generate-w06-aov-fixture.py.txt"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/scripts/generate-w06-aov-fixture.py.txt"
       ]
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-application-fixtures.py.txt",
-      "sha256": "6199a83d6949c2b3519d7d2685006a0216bde54414ecd7c93332ed44fcb1f247",
-      "bytes": 6570,
+      "sha256": "63f511bc23407f5140627ec07026850045e0b24ec2ced280a38780b805c9b2a3",
+      "bytes": 8081,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -1998,7 +1998,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
-            "sha256": "6199a83d6949c2b3519d7d2685006a0216bde54414ecd7c93332ed44fcb1f247",
+            "sha256": "63f511bc23407f5140627ec07026850045e0b24ec2ced280a38780b805c9b2a3",
             "hashMode": "utf8-lf"
           }
         ],
@@ -2007,7 +2007,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
-        "git:ddbd1310023727616d2b8bee1f0b8096b1150595:crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-application-fixtures.py.txt"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-application-fixtures.py.txt"
       ]
     },
     {
@@ -2032,7 +2032,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/scripts/generate-w23-goldens.py",
-        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-goldens.py.txt"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-goldens.py.txt"
       ]
     },
     {
@@ -2082,7 +2082,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/browser/w23-stage-observer.ts",
-        "git:ddbd1310023727616d2b8bee1f0b8096b1150595:crates/forge3d-web/docs/evidence-sources/tests/browser/w23-stage-observer.ts.txt"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/tests/browser/w23-stage-observer.ts.txt"
       ]
     },
     {
@@ -2107,7 +2107,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/parity/w23-application-analysis.test.mjs",
-        "git:ddbd1310023727616d2b8bee1f0b8096b1150595:crates/forge3d-web/docs/evidence-sources/tests/parity/w23-application-analysis.test.mjs.txt"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/tests/parity/w23-application-analysis.test.mjs.txt"
       ]
     },
     {
@@ -2157,7 +2157,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/parity/w23-review-regressions.test.mjs",
-        "git:ddbd1310023727616d2b8bee1f0b8096b1150595:crates/forge3d-web/docs/evidence-sources/tests/parity/w23-review-regressions.test.mjs.txt"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/tests/parity/w23-review-regressions.test.mjs.txt"
       ]
     },
     {
@@ -2832,7 +2832,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/playwright/w23_migration.spec.ts",
-        "git:ddbd1310023727616d2b8bee1f0b8096b1150595:crates/forge3d-web/docs/evidence-sources/tests/playwright/w23_migration.spec.ts.txt"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/tests/playwright/w23_migration.spec.ts.txt"
       ]
     },
     {
@@ -4761,7 +4761,7 @@
         "kind": "generated-control",
         "generator": {
           "path": "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
-          "sha256": "6199a83d6949c2b3519d7d2685006a0216bde54414ecd7c93332ed44fcb1f247",
+          "sha256": "63f511bc23407f5140627ec07026850045e0b24ec2ced280a38780b805c9b2a3",
           "hashMode": "utf8-lf"
         },
         "inputs": [
@@ -4803,7 +4803,7 @@
         "kind": "generated-control",
         "generator": {
           "path": "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
-          "sha256": "6199a83d6949c2b3519d7d2685006a0216bde54414ecd7c93332ed44fcb1f247",
+          "sha256": "63f511bc23407f5140627ec07026850045e0b24ec2ced280a38780b805c9b2a3",
           "hashMode": "utf8-lf"
         },
         "inputs": [
@@ -4831,7 +4831,7 @@
         "crates/forge3d-web/assets/datasets/mini_dem.npy",
         "crates/forge3d-web/scripts/w23_regional_fixtures.py",
         "crates/forge3d-web/tests/fixtures/w23/regional-dem-inputs.json",
-        "git:ddbd1310023727616d2b8bee1f0b8096b1150595:crates/forge3d-web/examples/migration/applications.json"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/examples/migration/applications.json"
       ]
     },
     {
@@ -5395,7 +5395,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:ddbd1310023727616d2b8bee1f0b8096b1150595:crates/forge3d-web/examples/migration/workflows.js"
+        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/examples/migration/workflows.js"
       ]
     }
   ]

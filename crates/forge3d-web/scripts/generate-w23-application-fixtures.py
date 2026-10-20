@@ -28,7 +28,36 @@ CHECK = '--check' in sys.argv
 def save(path, value):
     data = (json.dumps(value, indent=2) + '\n').encode('utf8')
     if CHECK:
-        assert path.read_bytes() == data, f'Stale native application oracle: {path}'
+        expected = path.read_bytes()
+        if expected != data:
+            diagnostic = ROOT / 'test-results/w23-oracle-diff' / path.name
+            diagnostic.parent.mkdir(parents=True, exist_ok=True)
+            diagnostic.write_bytes(data)
+            differences = []
+
+            def compare(before, after, location='$'):
+                if len(differences) >= 20:
+                    return
+                if type(before) is not type(after):
+                    differences.append((location, before, after))
+                elif isinstance(before, dict):
+                    if list(before) != list(after):
+                        differences.append((location + '.keys', list(before), list(after)))
+                    for key in before:
+                        if key in after:
+                            compare(before[key], after[key], location + '.' + key)
+                elif isinstance(before, list):
+                    if len(before) != len(after):
+                        differences.append((location + '.length', len(before), len(after)))
+                    for index, (left, right) in enumerate(zip(before, after)):
+                        compare(left, right, f'{location}[{index}]')
+                elif before != after:
+                    differences.append((location, before, after))
+
+            compare(json.loads(expected), value)
+            print(json.dumps({'oracle': path.name, 'firstDifferences': differences,
+                              'candidate': str(diagnostic)}, indent=2))
+        assert expected == data, f'Stale native application oracle: {path}'
     else:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
