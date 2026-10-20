@@ -11,11 +11,18 @@ import hashlib
 import heapq
 import json
 import math
+import os
 from pathlib import Path
 import subprocess
 import sys
 from types import SimpleNamespace
 
+# The original float32 hillshade ends in a BLAS matrix/vector product. Host
+# autodetection selects a fused GEMV kernel on AVX-512 runners, changing 78
+# committed shade values by one ULP. Select the original generation backend
+# before NumPy loads; do not round outputs or relax the raw-byte comparison.
+os.environ['OPENBLAS_CORETYPE'] = 'Haswell'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -82,6 +89,13 @@ def helpers(filename, names, constants=()):
 
 
 def main():
+    # A real hillshade normal/light pair that distinguished the two CI kernels.
+    # Check every row because GEMV vector blocks and tails can use different code.
+    normal = np.tile(np.array([-0.9749247431755066, 0.03380013629794121, 0.21995314955711365], dtype=np.float32), (16, 1))
+    light = np.array([-0.6669602394104004, 0.37460657954216003, 0.6440760493278503], dtype=np.float32)
+    probe = normal @ light
+    assert np.all(probe.view(np.uint32) == 1062074350), f'W23 numerical backend differs from the captured non-fused GEMV: {probe.tolist()}'
+    print(json.dumps({'OPENBLAS_CORETYPE': os.environ['OPENBLAS_CORETYPE'], 'OPENBLAS_NUM_THREADS': os.environ['OPENBLAS_NUM_THREADS'], 'gemvProbeFloat32Bits': int(probe.view(np.uint32)[0])}))
     out = {}
     b = helpers('belgium_bivariate_climate_map.py', ['_quantile_breaks', '_classify', '_bivariate_palette_color'], ['BLUEGOLD_4X4'])
     temperature = np.array([4, 8, 9, 7, 12, 13, 15, 18, 17, 19, 20, 22, 21, 23, 26, 28], dtype=np.float32)
@@ -122,7 +136,7 @@ def main():
     SOURCES.update(regional_sources)
     target = ROOT / 'tests/golden/w23'
     save(target / 'applications.json', out)
-    save(target / 'applications-provenance.json', {'generator': 'crates/forge3d-web/scripts/generate-w23-application-fixtures.py', 'method': 'Original Python AST helper bodies executed with bounded typed data; independent of browser implementation.', 'sources': SOURCES})
+    save(target / 'applications-provenance.json', {'generator': 'crates/forge3d-web/scripts/generate-w23-application-fixtures.py', 'method': 'Original Python AST helper bodies executed with bounded typed data; independent of browser implementation.', 'numericalEnvironment': {'numpy': np.__version__, 'OPENBLAS_CORETYPE': 'Haswell', 'OPENBLAS_NUM_THREADS': '1', 'gemvProbeFloat32Bits': 1062074350}, 'sources': SOURCES})
     print(json.dumps({'legacyKernels': 5, 'examples':len(out['examples']),'operations':sum(len(v['operations'])for v in out['examples'].values()), 'sources': len(SOURCES)}))
 
 

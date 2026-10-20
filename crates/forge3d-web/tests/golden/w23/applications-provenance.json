@@ -1,6 +1,12 @@
 {
   "generator": "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
   "method": "Original Python AST helper bodies executed with bounded typed data; independent of browser implementation.",
+  "numericalEnvironment": {
+    "numpy": "2.5.1",
+    "OPENBLAS_CORETYPE": "Haswell",
+    "OPENBLAS_NUM_THREADS": "1",
+    "gemvProbeFloat32Bits": 1062074350
+  },
   "sources": {
     "belgium_bivariate_climate_map.py": {
       "ref": "1f4084af428dc699bdcd108b029736cb73903926",

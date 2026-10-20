@@ -14,7 +14,7 @@ export async function observeStages(page:Page){
     // workflow or contributing any execution evidence to the verdict.
     let previousStage=stage(),started=performance.now();
     new MutationObserver(()=>{const current=stage();if(current!==previousStage){
-      console.info('W23 stage timing: '+JSON.stringify({stage:previousStage,milliseconds:Math.round(performance.now()-started),next:current}));
+      console.info('W23 stage timing: '+JSON.stringify({stage:previousStage.startsWith('Running ')?previousStage:'idle',milliseconds:Math.round(performance.now()-started),next:current.startsWith('Running ')?current:'idle'}));
       previousStage=current;started=performance.now();
     }}).observe(document.querySelector('#status')!,{childList:true,characterData:true,subtree:true});
     const record=(kind:string,data:any={},label=stage())=>{if(label.startsWith('Running ')){const event={label,kind,...data};events.push(event);return event;}};

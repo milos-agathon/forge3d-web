@@ -534,7 +534,7 @@
     },
     {
       "path": "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
-      "sha256": "63f511bc23407f5140627ec07026850045e0b24ec2ced280a38780b805c9b2a3",
+      "sha256": "1dfe2c62866c73c5618ce9e5e0fa72bb3d69b01f429688ce393ed7c42c5fac21",
       "snapshot": "evidence-sources/scripts/generate-w23-application-fixtures.py.txt"
     },
     {
@@ -554,7 +554,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/browser/w23-stage-observer.ts",
-      "sha256": "86a59745a7416095fcc04f0412b864d3ca0247f07575a66b358a9214374d9f70",
+      "sha256": "d44590c38bc817f5671fb281b2e698f46c8dcca2e2cfd6c9edfbdbd253b3ed9e",
       "snapshot": "evidence-sources/tests/browser/w23-stage-observer.ts.txt"
     },
     {
