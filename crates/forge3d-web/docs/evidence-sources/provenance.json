@@ -534,7 +534,7 @@
     },
     {
       "path": "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
-      "sha256": "1dfe2c62866c73c5618ce9e5e0fa72bb3d69b01f429688ce393ed7c42c5fac21",
+      "sha256": "df66cb39bc0cf499b5970a2a40714649783702259c4f4dc1492176364969595c",
       "snapshot": "evidence-sources/scripts/generate-w23-application-fixtures.py.txt"
     },
     {

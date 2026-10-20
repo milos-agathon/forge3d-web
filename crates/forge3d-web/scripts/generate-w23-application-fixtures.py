@@ -19,7 +19,7 @@ from types import SimpleNamespace
 
 # The original float32 hillshade ends in a BLAS matrix/vector product. Host
 # autodetection selects a fused GEMV kernel on AVX-512 runners, changing 78
-# committed shade values by one ULP. Select the original generation backend
+# committed float32 shade values. Select the original generation backend
 # before NumPy loads; do not round outputs or relax the raw-byte comparison.
 os.environ['OPENBLAS_CORETYPE'] = 'Haswell'
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
