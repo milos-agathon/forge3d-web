@@ -1907,7 +1907,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:c79ce62fb068bc3fd59c0d5316be431de4a3d72c:crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "git:a090c9caf943f6dd1e778978fb12eb1cf9d4ac26:crates/forge3d-web/docs/evidence-sources/provenance.json"
       ]
     },
     {
@@ -2332,7 +2332,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/playwright/w06_capture.spec.ts",
-        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w06_capture.spec.ts.txt"
+        "git:a090c9caf943f6dd1e778978fb12eb1cf9d4ac26:crates/forge3d-web/docs/evidence-sources/tests/playwright/w06_capture.spec.ts.txt"
       ]
     },
     {
