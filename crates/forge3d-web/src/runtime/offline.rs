@@ -703,6 +703,7 @@ fn encode_capture(
             surface: session.surface,
             overlay: session.overlay,
             realtime: false,
+            depth_reference: false,
             vector_view_projection,
         },
         encoder,
@@ -721,6 +722,7 @@ pub(super) struct CaptureView<'a> {
     pub surface: bool,
     pub overlay: bool,
     pub realtime: bool,
+    pub depth_reference: bool,
     pub vector_view_projection: Option<[[f32; 4]; 4]>,
 }
 pub(super) fn encode_capture_view(
@@ -736,7 +738,11 @@ pub(super) fn encode_capture_view(
     ) else {
         return;
     };
-    if let Some(e) = &runtime.environment {
+    if let Some(e) = runtime
+        .environment
+        .as_ref()
+        .filter(|_| !session.depth_reference)
+    {
         e.reflection.encode(runtime, encoder);
     }
     let targets = &session.targets;
@@ -822,26 +828,30 @@ pub(super) fn encode_capture_view(
         session.vector_view_projection,
     );
     if let (Some(e), Some(source)) = (&runtime.environment, &session.environment_source) {
-        encoder.copy_texture_to_texture(
-            targets.color.texture.as_image_copy(),
-            source.texture.as_image_copy(),
-            wgpu::Extent3d {
-                width: session.width,
-                height: session.height,
-                depth_or_array_layers: 1,
-            },
-        );
-        if !session.realtime {
-            e.history_valid.set(false);
+        // The private map reference consumes depth only. Water still contributes
+        // geometric AOVs; sky, fog, clouds and reflections only affect color.
+        if !session.depth_reference {
+            encoder.copy_texture_to_texture(
+                targets.color.texture.as_image_copy(),
+                source.texture.as_image_copy(),
+                wgpu::Extent3d {
+                    width: session.width,
+                    height: session.height,
+                    depth_or_array_layers: 1,
+                },
+            );
+            if !session.realtime {
+                e.history_valid.set(false);
+            }
+            e.encode(
+                runtime,
+                encoder,
+                &source.view,
+                &targets.depth_stencil.view,
+                &targets.color.view,
+                targets.color.texture.format(),
+            );
         }
-        e.encode(
-            runtime,
-            encoder,
-            &source.view,
-            &targets.depth_stencil.view,
-            &targets.color.view,
-            targets.color.texture.format(),
-        );
         e.encode_water_aovs(
             runtime,
             encoder,
@@ -849,7 +859,7 @@ pub(super) fn encode_capture_view(
             targets,
             surface && session.surface,
         );
-        if !session.realtime {
+        if !session.realtime && !session.depth_reference {
             e.history_valid.set(false);
         }
     }

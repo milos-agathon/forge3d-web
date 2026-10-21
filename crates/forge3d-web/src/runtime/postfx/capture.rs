@@ -150,6 +150,7 @@ impl CaptureFrame {
                 surface: self.surface,
                 overlay: false,
                 realtime,
+                depth_reference: !realtime,
                 vector_view_projection,
             },
             encoder,

@@ -5408,7 +5408,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-      "sha256": "f9046d00ec46034866a75f71b13d9fc3fe17d7641dfd903ecd3b29183132e0e8",
+      "sha256": "f3cc4eb74bf05bf3942bc88ff200b83825ca3c2dc05d4b7cd1c1feccc6a6e1a5",
       "declarations": [
         "W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output",
         "W18 ${label}: opaque readback preserves exact pixels and coverage without an offline capture",

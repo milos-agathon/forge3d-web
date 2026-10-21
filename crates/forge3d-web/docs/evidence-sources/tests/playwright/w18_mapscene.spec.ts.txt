@@ -12,9 +12,22 @@ for (const dist of [false, true]) {
             test.setTimeout(60000);
             await page.addInitScript(() => {
                 (window as any).__mapOfflineCompilations = [];
+                (window as any).__mapReferencePasses = [];
+                (window as any).__mapEnvironmentCompilations = [];
+                const renderPipeline = GPUDevice.prototype.createRenderPipeline;
+                GPUDevice.prototype.createRenderPipeline = function (descriptor) {
+                    if (descriptor.label === 'environment-water-aov-pipeline') (window as any).__mapEnvironmentCompilations.push(descriptor.fragment?.entryPoint);
+                    return renderPipeline.call(this, descriptor);
+                };
+                const renderPass = GPUCommandEncoder.prototype.beginRenderPass;
+                GPUCommandEncoder.prototype.beginRenderPass = function (descriptor) {
+                    if (this.label === 'forge3d-web-map-depth-reference') (window as any).__mapReferencePasses.push(descriptor.label);
+                    return renderPass.call(this, descriptor);
+                };
                 const original = GPUDevice.prototype.createComputePipeline;
                 GPUDevice.prototype.createComputePipeline = function (descriptor) {
                     if (descriptor.label?.startsWith('forge3d-web-offline-')) (window as any).__mapOfflineCompilations.push(descriptor.label);
+                    if (descriptor.label === 'environment-froxel-pipeline') (window as any).__mapEnvironmentCompilations.push(descriptor.compute.entryPoint);
                     return original.call(this, descriptor);
                 };
             });
@@ -31,16 +44,22 @@ for (const dist of [false, true]) {
                 try {
                     const before = await baseline.render({ canvas: document.createElement('canvas') });
                     (window as any).__mapOfflineCompilations.length = 0;
+                    (window as any).__mapEnvironmentCompilations.length = 0;
+                    (window as any).__mapReferencePasses.length = 0;
                     const after = await candidate.render();
                     return { kind, same: before.frame.data.every((v: number, i: number) => v === after.frame.data[i]),
                         beforeCoverage: before.metrics.coveragePixels, afterCoverage: after.metrics.coveragePixels,
-                        offlineCompilations: [...(window as any).__mapOfflineCompilations], gpuBytes: candidate.getMemoryReport().gpuBytes };
+                        offlineCompilations: [...(window as any).__mapOfflineCompilations], gpuBytes: candidate.getMemoryReport().gpuBytes,
+                        referencePasses: [...(window as any).__mapReferencePasses], environmentCompilations: [...(window as any).__mapEnvironmentCompilations] };
                 } finally { baseline.dispose(); candidate.dispose(); }
             }, kind);
             await info.attach('map-reference-depth.json', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
             expect(result.same).toBe(true); expect(result.afterCoverage).toBe(result.beforeCoverage);
             expect(result.afterCoverage).toBeGreaterThan(1000); expect(result.gpuBytes).toBe(0);
             expect(result.offlineCompilations).toEqual([]);
+            expect(result.referencePasses).not.toContain('forge3d-environment-pass');
+            expect(result.environmentCompilations).toEqual(kind === 'water' ? ['fs_water_primary'] : []);
+            if (kind === 'water') expect(result.referencePasses).toContain('environment-water-aov-pass');
         });
         test(`W18 ${label}: opaque readback preserves exact pixels and coverage without an offline capture`, async ({ page }, info) => {
             await page.addInitScript(() => {

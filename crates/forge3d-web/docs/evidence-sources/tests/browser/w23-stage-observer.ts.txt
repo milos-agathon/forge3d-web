@@ -12,10 +12,20 @@ export async function observeStages(page:Page){
     const stage=()=>document.querySelector('#status')?.textContent??'';
     // Independent timing diagnostics survive a run timeout without changing the
     // workflow or contributing any execution evidence to the verdict.
-    let previousStage=stage(),started=performance.now();
+    let previousStage=stage(),started=performance.now(),pipelineTimings:Record<string,{count:number,milliseconds:number}>={};
+    for(const method of ['createRenderPipeline','createComputePipeline'] as const){
+      const original=GPUDevice.prototype[method];
+      (GPUDevice.prototype as any)[method]=function(descriptor:any){
+        const start=performance.now();
+        try{return original.call(this,descriptor);}finally{
+          const key=descriptor.fragment?.entryPoint??descriptor.compute?.entryPoint??descriptor.label??method;
+          const row=pipelineTimings[key]??={count:0,milliseconds:0};row.count++;row.milliseconds+=performance.now()-start;
+        }
+      };
+    }
     new MutationObserver(()=>{const current=stage();if(current!==previousStage){
-      console.info('W23 stage timing: '+JSON.stringify({stage:previousStage.startsWith('Running ')?previousStage:'idle',milliseconds:Math.round(performance.now()-started),next:current.startsWith('Running ')?current:'idle'}));
-      previousStage=current;started=performance.now();
+      console.info('W23 stage timing: '+JSON.stringify({stage:previousStage.startsWith('Running ')?previousStage:'idle',milliseconds:Math.round(performance.now()-started),pipelines:pipelineTimings,next:current.startsWith('Running ')?current:'idle'}));
+      previousStage=current;started=performance.now();pipelineTimings={};
     }}).observe(document.querySelector('#status')!,{childList:true,characterData:true,subtree:true});
     const record=(kind:string,data:any={},label=stage())=>{if(label.startsWith('Running ')){const event={label,kind,...data};events.push(event);return event;}};
     const runtimeId=(self:object)=>{if(!runtimeIds.has(self))runtimeIds.set(self,++runtimeCounter);return runtimeIds.get(self);};

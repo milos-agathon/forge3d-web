@@ -2,7 +2,7 @@ pub(super) struct Froxel {
     pub _texture: wgpu::Texture,
     pub view: wgpu::TextureView,
     layout: wgpu::BindGroupLayout,
-    pipeline: wgpu::ComputePipeline,
+    pipeline: Option<wgpu::ComputePipeline>,
     pub dims: [u32; 3],
 }
 impl Froxel {
@@ -76,13 +76,15 @@ impl Froxel {
             bind_group_layouts: &[Some(&layout), Some(shadow_layout)],
             immediate_size: 0,
         });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("environment-froxel-pipeline"),
-            layout: Some(&pl),
-            module: shader,
-            entry_point: Some("cs_froxel"),
-            compilation_options: Default::default(),
-            cache: None,
+        let pipeline = enabled.then(|| {
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("environment-froxel-pipeline"),
+                layout: Some(&pl),
+                module: shader,
+                entry_point: Some("cs_froxel"),
+                compilation_options: Default::default(),
+                cache: None,
+            })
         });
         Self {
             _texture: texture,
@@ -122,7 +124,7 @@ impl Froxel {
             label: Some("environment-froxel-injection"),
             timestamp_writes: None,
         });
-        pass.set_pipeline(&self.pipeline);
+        pass.set_pipeline(self.pipeline.as_ref().expect("enabled froxel pipeline"));
         pass.set_bind_group(0, &group, &[]);
         pass.set_bind_group(1, shadow, &[]);
         pass.dispatch_workgroups(
