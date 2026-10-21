@@ -9,7 +9,7 @@ import { SdfScene } from './sdf.js';
 import { mapCamera } from './map-recipe.js';
 import { mapCancelled } from './map-resource-loader.js';
 import { MAP_SCENE_DEFAULT_BUDGET } from './map-validation.js';
-import { tryReadMapFrame } from './runtime-internals.js';
+import { tryReadMapFrame, createMapRuntime, configureMapRuntime } from './runtime-internals.js';
 import type { PreparedMapLayers } from './map-layer-adapters.js';
 import type { SceneRecipeInput, MapSceneRenderOptions, MapFrameMetrics } from './map-scene-types.js';
 /** Convert the point renderer's hardware depth to W06 normalized view-space depth. */
@@ -98,15 +98,24 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
                     scene.removeNode(n.id);
                 }
         }
-        const runtime = await Forge3DRuntime.create(options.canvas ?? mapCanvas(width, height), settings);
+        const optionsCanvas = options.canvas;
+        const createRuntime = (canvas: HTMLCanvasElement | OffscreenCanvas, options: Forge3DRuntimeOptions) =>
+            optionsCanvas ? Forge3DRuntime.create(canvas, options) : createMapRuntime(canvas, options, (canvas, options) => Forge3DRuntime.create(canvas, options));
+        const runtime = await createRuntime(options.canvas ?? mapCanvas(width, height), settings);
         releases.push(() => runtime.dispose());
         mapCancelled(signal);
         const snapshot = scene.snapshot(), terrainNode = snapshot.nodes.find(n => n.node.kind === 'terrain')?.node;
-        // Scene terrain nodes are topology markers; heightmap uploads use the terrain API.
-        if (terrainNode?.kind === 'terrain')
-            runtime.setTerrain(terrainNode.terrain);
-        runtime.setScene(snapshot);
-        runtime.setCamera(camera);
+        // Explicit canvases retain the original public bootstrap. Offscreen
+        // maps apply their final scene settings before compiling terrain, and
+        // validate the actual setup instead of an unused default variant.
+        if (options.canvas) {
+            if (terrainNode?.kind === 'terrain') runtime.setTerrain(terrainNode.terrain);
+            runtime.setScene(snapshot); runtime.setCamera(camera);
+        } else await configureMapRuntime(runtime, () => {
+            mapCancelled(signal);
+            runtime.setCamera(camera); runtime.setScene(snapshot);
+            if (terrainNode?.kind === 'terrain') runtime.setTerrain(terrainNode.terrain);
+        });
         // Default offscreen output is drawn by readback itself. Explicit canvas
         // presentation and temporal effects still need their display lifecycle.
         // Display depth includes nodata's clear-colored placeholder triangles;
@@ -157,11 +166,11 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
         }
             if (overlayScene.snapshot().nodes.length) {
                 const remaining = budget - baseBytes - pointBytes;
-                const overlay = await Forge3DRuntime.create(mapCanvas(width, height), { ...settings, memoryBudgetBytes: remaining, clearColor: [0, 0, 0, 0], alphaMode: 'premultiplied' });
+                const overlay = await createRuntime(mapCanvas(width, height), { ...settings, memoryBudgetBytes: remaining, clearColor: [0, 0, 0, 0], alphaMode: 'premultiplied' });
                 releases.push(() => overlay.dispose());
                 mapCancelled(signal);
-                overlay.setScene(overlayScene.snapshot());
-                overlay.setCamera(camera);
+                if (options.canvas) { overlay.setScene(overlayScene.snapshot()); overlay.setCamera(camera); }
+                else await configureMapRuntime(overlay, () => { mapCancelled(signal); overlay.setCamera(camera); overlay.setScene(overlayScene.snapshot()); });
                 if (!direct && !overlay.render())
                     throw Error('Overlay render declined');
                 const overlayFrame = direct ? await tryReadMapFrame(overlay) : undefined;

@@ -1,12 +1,25 @@
 export type RuntimeDeviceLostHandler = (error: unknown) => void;
+import type { Forge3DRuntime, Forge3DRuntimeOptions } from './index.js';
+type RuntimeFactory = (canvas: HTMLCanvasElement | OffscreenCanvas, options: Forge3DRuntimeOptions) => Promise<Forge3DRuntime>;
+let mapRuntimeFactory: RuntimeFactory | undefined;
+export function registerMapRuntimeFactory(factory: RuntimeFactory): void { mapRuntimeFactory = factory; }
+/** Keep MapScene's bootstrap private, with the original path for older facades. */
+export function createMapRuntime(canvas: HTMLCanvasElement | OffscreenCanvas, options: Forge3DRuntimeOptions, fallback: RuntimeFactory): Promise<Forge3DRuntime> {
+  return (mapRuntimeFactory ?? fallback)(canvas, options);
+}
 
 interface RuntimeInternalAccess {
+  configureMap?(setup: () => void): Promise<void>;
   readMapFrame?(): Promise<MapFrameReadback | undefined>;
   setDeviceLostHandler(handler: RuntimeDeviceLostHandler | undefined): void;
   simulateDeviceLossForTests(): void;
 }
 
 const runtimeInternals = new WeakMap<object, RuntimeInternalAccess>();
+export async function configureMapRuntime(runtime: object, setup: () => void): Promise<void> {
+  const configure = runtimeInternals.get(runtime)?.configureMap;
+  if (configure) await configure(setup); else setup();
+}
 
 export interface MapFrameReadback { rgba: Uint8Array; coverage: Uint8Array }
 

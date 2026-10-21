@@ -40,15 +40,19 @@ for (const dist of [false, true]) {
                 (window as any).__mapScenePipelines = [];
                 const original = GPUDevice.prototype.createRenderPipeline;
                 GPUDevice.prototype.createRenderPipeline = function (descriptor) {
-                    if (descriptor.label === 'forge3d-web-scene-world-pipeline' || descriptor.label === 'forge3d-web-scene-overlay-pipeline') (window as any).__mapScenePipelines.push(descriptor.label);
+                    if (['forge3d-web-scene-world-pipeline', 'forge3d-web-scene-overlay-pipeline', 'forge3d-web-terrain-pipeline'].includes(descriptor.label ?? '')) (window as any).__mapScenePipelines.push(descriptor.label);
                     return original.call(this, descriptor);
                 };
             });
             await page.reload(); await page.waitForFunction(() => window.__w18?.ready);
             const rows = await page.evaluate(async () => {
                 const { api, baseRecipe } = window.__w18, rows = [];
-                for (const kind of ['terrain', 'mesh', 'overlay']) {
+                for (const kind of ['terrain', 'configured-terrain', 'mesh', 'overlay']) {
                     const recipe = baseRecipe(); recipe.layers = [];
+                    if (kind === 'configured-terrain') {
+                        recipe.terrain.source.data.material = { ...api.getTerrainMaterialDefaults(), pom: { enabled: true }, layers: { snow: { enabled: true, altitudeMin: .3, altitudeBlend: .2 } } };
+                        recipe.shadows = { enabled: true, filter: 'pcf' };
+                    }
                     if (kind === 'mesh') recipe.layers = [{ kind: 'nodes', layerId: 'ground', nodes: [{ kind: 'ground-plane', name: 'ground', size: [20, 20], height: 0, color: [.25, .4, .6, 1] }] }];
                     if (kind === 'overlay') { delete recipe.terrain; recipe.layers = [{ kind: 'nodes', layerId: 'panel', nodes: [{ kind: 'overlay', name: 'panel', bounds: [20, 20, 30, 20], color: [1, .2, .1, 1] }] }]; }
                     const scene = new api.MapScene(recipe);
@@ -68,7 +72,33 @@ for (const dist of [false, true]) {
                 else expect(row.pipelines).toContain('forge3d-web-scene-world-pipeline');
                 if (row.kind !== 'overlay') expect(row.pipelines).not.toContain('forge3d-web-scene-overlay-pipeline');
                 else expect(row.pipelines).toContain('forge3d-web-scene-overlay-pipeline');
+                expect(row.pipelines.filter((label: string) => label === 'forge3d-web-terrain-pipeline')).toHaveLength(row.kind === 'overlay' ? 0 : 1);
             }
+        });
+        test(`W18 ${label}: public and map bootstrap preserve structured shader failures`, async ({ page }) => {
+            test.setTimeout(60000);
+            await page.addInitScript(() => {
+                const original = GPUDevice.prototype.createShaderModule;
+                GPUDevice.prototype.createShaderModule = function (descriptor) {
+                    return original.call(this, descriptor.label === 'forge3d-web-terrain-shader'
+                        ? { ...descriptor, code: descriptor.code + '\ninvalid shader source;' } : descriptor);
+                };
+            });
+            await page.reload(); await page.waitForFunction(() => window.__w18?.ready);
+            const result = await page.evaluate(async () => {
+                const { api, baseRecipe } = window.__w18;
+                let publicCode, mapCode, runtime;
+                try { runtime = await api.Forge3DRuntime.create(document.createElement('canvas'), { width: 96, height: 96 }); }
+                catch (error: any) { publicCode = error.code; }
+                finally { runtime?.dispose(); }
+                const scene = new api.MapScene(baseRecipe());
+                try { await scene.render(); } catch (error: any) { mapCode = error.code; }
+                const review = await scene.reviewRecord(); scene.dispose();
+                return { publicCode, mapCode, lastRender: review.last_render, memory: scene.getMemoryReport().gpuBytes };
+            });
+            expect(result.publicCode).toBe('SHADER_COMPILATION_FAILED');
+            expect(result.mapCode).toBe('SHADER_COMPILATION_FAILED');
+            expect(result.lastRender).toBeNull(); expect(result.memory).toBe(0);
         });
         for (const kind of ['layers', 'vector-alpha', 'vector-clipped', 'scatter-alpha', 'effects', 'water', 'environment', 'terrain-environment']) test(`W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output`, async ({ page }, info) => {
             test.setTimeout(60000);

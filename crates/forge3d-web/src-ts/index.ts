@@ -88,6 +88,7 @@ export type * from "./environment.js";
 import {
   registerOfflineWasmLoader,
   registerRuntimeInternals,
+  registerMapRuntimeFactory,
   getSceneVectorPacket,
   type OfflineWasmExports,
 } from "./runtime-internals.js";
@@ -2666,6 +2667,7 @@ export interface Forge3DNotebookAdapter {
 }
 
 interface WasmRuntime {
+  configureMap?(setup: () => void): Promise<void>;
   readonly disposed: boolean;
   readonly width: number;
   readonly height: number;
@@ -2753,6 +2755,8 @@ interface WasmRuntime {
 }
 
 interface WasmRuntimeConstructor {
+  createMap?(canvas: HTMLCanvasElement, options: unknown): Promise<WasmRuntime>;
+  createMapOffscreen?(canvas: OffscreenCanvas, options: unknown): Promise<WasmRuntime>;
   create(canvas: HTMLCanvasElement, options: unknown): Promise<WasmRuntime>;
   createOffscreen?(
     canvas: OffscreenCanvas,
@@ -2896,6 +2900,11 @@ export class Forge3DRuntime {
       };
     }
     registerRuntimeInternals(this, {
+      configureMap: async setup => {
+        this.#assertNotDisposed();
+        try { if (this.#inner.configureMap) await this.#inner.configureMap(setup); else setup(); }
+        catch (error) { throw Forge3DError.from(error); }
+      },
       readMapFrame: async () => {
         this.#assertNotDisposed();
         this.#assertNoOffline();
@@ -2945,6 +2954,12 @@ export class Forge3DRuntime {
     canvas: HTMLCanvasElement | OffscreenCanvas,
     options: Forge3DRuntimeOptions = {},
   ): Promise<Forge3DRuntime> {
+    return Forge3DRuntime.#createRuntime(canvas, options, false);
+  }
+
+  static { registerMapRuntimeFactory((canvas, options) => Forge3DRuntime.#createRuntime(canvas, options, true)); }
+
+  static async #createRuntime(canvas: HTMLCanvasElement | OffscreenCanvas, options: Forge3DRuntimeOptions, forMap: boolean): Promise<Forge3DRuntime> {
     if (globalThis.isSecureContext === false) {
       throw new Forge3DError(
         "INSECURE_CONTEXT",
@@ -2966,12 +2981,14 @@ export class Forge3DRuntime {
             "The Forge3D WASM bridge does not support OffscreenCanvas",
           );
         }
-        runtime = await bridge.Forge3DRuntime.createOffscreen(
+        const create = (forMap ? bridge.Forge3DRuntime.createMapOffscreen : undefined) ?? bridge.Forge3DRuntime.createOffscreen;
+        runtime = await create.call(bridge.Forge3DRuntime,
           canvas,
           normalized,
         );
       } else {
-        runtime = await bridge.Forge3DRuntime.create(
+        const create = (forMap ? bridge.Forge3DRuntime.createMap : undefined) ?? bridge.Forge3DRuntime.create;
+        runtime = await create.call(bridge.Forge3DRuntime,
           canvas as HTMLCanvasElement,
           normalized,
         );
