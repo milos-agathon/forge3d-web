@@ -2734,6 +2734,7 @@ interface WasmRuntime {
   screenshot(): Promise<Blob>;
   readRgba?(): Promise<Uint8Array>;
   readMapFrame?(): Promise<{ rgba: Uint8Array; coverage: Uint8Array } | undefined>;
+  createMapContext?(): WasmMapContext;
   readTerrainHeights?(): Promise<Float32Array>;
   computeTerrainAnalysis?(
     terrain: TerrainHeightmapInput,
@@ -2762,6 +2763,12 @@ interface WasmRuntimeConstructor {
     canvas: OffscreenCanvas,
     options: unknown,
   ): Promise<WasmRuntime>;
+}
+
+interface WasmMapContext {
+  create(canvas: HTMLCanvasElement, options: unknown): Promise<WasmRuntime>;
+  createOffscreen(canvas: OffscreenCanvas, options: unknown): Promise<WasmRuntime>;
+  dispose(): void;
 }
 
 interface WasmBridge extends Partial<OfflineWasmExports> {
@@ -2900,6 +2907,23 @@ export class Forge3DRuntime {
       };
     }
     registerRuntimeInternals(this, {
+      createMapContext: () => {
+        this.#assertNotDisposed(); this.#assertNoOffline();
+        const context = this.#inner.createMapContext?.();
+        if (!context) return undefined;
+        const loadTerrain = this.#loadTerrainHeightmapSource;
+        return {
+          create: async (canvas, options) => {
+            try {
+              const offscreen = typeof OffscreenCanvas !== 'undefined' && canvas instanceof OffscreenCanvas;
+              const native = offscreen ? await context.createOffscreen(canvas, normalizeRuntimeOptions(options))
+                : await context.create(canvas as HTMLCanvasElement, normalizeRuntimeOptions(options));
+              return new Forge3DRuntime(native, loadTerrain);
+            } catch (error) { throw Forge3DError.from(error); }
+          },
+          dispose: () => context.dispose(),
+        };
+      },
       configureMap: async setup => {
         this.#assertNotDisposed();
         try { if (this.#inner.configureMap) await this.#inner.configureMap(setup); else setup(); }

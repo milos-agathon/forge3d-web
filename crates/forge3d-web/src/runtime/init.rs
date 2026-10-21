@@ -64,6 +64,16 @@ pub(super) async fn create_runtime(
     options: JsValue,
     prime_terrain: bool,
 ) -> Result<Forge3DRuntime, WebError> {
+    create_runtime_with_context(canvas, options, prime_terrain, None).await
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(super) async fn create_runtime_with_context(
+    canvas: RuntimeCanvas,
+    options: JsValue,
+    prime_terrain: bool,
+    shared: Option<(GpuRuntime, GpuContext)>,
+) -> Result<Forge3DRuntime, WebError> {
     check_webgpu_environment()?;
 
     let options = RuntimeOptions::from_js_value(options)?;
@@ -71,10 +81,13 @@ pub(super) async fn create_runtime(
     canvas.set_width(width);
     canvas.set_height(height);
 
-    let mut instance_descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
-    instance_descriptor.backends = wgpu::Backends::BROWSER_WEBGPU;
-    let instance = wgpu::Instance::new(instance_descriptor);
-    let gpu_runtime = GpuRuntime::new(instance);
+    let gpu_runtime = if let Some((gpu, _)) = &shared {
+        gpu.clone()
+    } else {
+        let mut descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
+        descriptor.backends = wgpu::Backends::BROWSER_WEBGPU;
+        GpuRuntime::new(wgpu::Instance::new(descriptor))
+    };
     let surface = gpu_runtime
         .instance
         .create_surface(canvas.surface_target())
@@ -100,10 +113,15 @@ pub(super) async fn create_runtime(
         required_limits: wgpu::Limits::downlevel_webgl2_defaults(),
         label: Some("forge3d-web-device".to_string()),
     };
-    let context = gpu_runtime
-        .request_context(Some(&surface), &context_options)
-        .await
-        .map_err(map_core_error)?;
+    let context = if let Some((_, context)) = shared {
+        context.health.check().map_err(map_core_error)?;
+        context
+    } else {
+        gpu_runtime
+            .request_context(Some(&surface), &context_options)
+            .await
+            .map_err(map_core_error)?
+    };
     let limits = context.device.limits();
     if width > limits.max_texture_dimension_2d || height > limits.max_texture_dimension_2d {
         return Err(WebError::new(

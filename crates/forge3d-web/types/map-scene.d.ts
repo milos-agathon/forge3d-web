@@ -1,6 +1,7 @@
 import { Frame } from "./index.js";
 import { ValidationReport, type ValidationReportData, type JsonValue } from './diagnostics.js';
 import { SceneRecipe } from './map-recipe.js';
+import { type MapSceneRenderContext } from './map-render-context.js';
 import type { SceneRecipeInput, MapSceneRenderOptions, MapSceneResourceSummary, MapFrameMetrics } from './map-scene-types.js';
 import type { LabelPlanData } from './label-types.js';
 import { SceneState, type SceneStateInput } from './scene-review.js';
@@ -36,6 +37,8 @@ export interface MapSceneReviewRecord {
 /** Owns recipe resources, cancellation and output. GPU owners are disposed after each render. */
 export declare class MapScene {
     #private;
+    /** Own a shared device for related real draws, releasing it on success or failure. */
+    static withRenderContext<T>(work: (context: MapSceneRenderContext) => Promise<T>): Promise<T>;
     constructor(recipe: SceneRecipe | SceneRecipeInput);
     get recipe(): SceneRecipe;
     get sceneState(): SceneState;

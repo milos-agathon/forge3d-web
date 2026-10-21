@@ -8,6 +8,86 @@ declare global {
 for (const dist of [false, true]) {
     const label = dist ? 'dist' : 'source';
     test.describe(label, () => {
+        test(`W18 ${label}: lost scoped devices fail and the next scope recreates them`, async ({ page }, info) => {
+            test.setTimeout(60000);
+            await page.addInitScript(() => {
+                const original = GPUAdapter.prototype.requestDevice;
+                GPUAdapter.prototype.requestDevice = async function (options) { const device = await original.call(this, options); (window as any).__scopedDevice = device; return device; };
+            });
+            await page.reload(); await page.waitForFunction(() => window.__w18?.ready);
+            const result = await page.evaluate(async () => {
+                const { api, baseRecipe } = window.__w18;
+                const first = new api.MapScene(baseRecipe()), afterLoss = new api.MapScene(baseRecipe());
+                let code, reference: any, failed: any;
+                try {
+                    await api.MapScene.withRenderContext(async (renderContext: any) => {
+                        reference = await first.render({ renderContext });
+                        const device = (window as any).__scopedDevice as GPUDevice;
+                        device.destroy(); await device.lost; await Promise.resolve();
+                        try { await afterLoss.render({ renderContext }); } catch (error: any) { code = error.code; }
+                        failed = await afterLoss.reviewRecord();
+                    });
+                } finally { first.dispose(); afterLoss.dispose(); }
+                const next = new api.MapScene(baseRecipe()); let recovered: any;
+                try { recovered = await api.MapScene.withRenderContext((renderContext: any) => next.render({ renderContext })); }
+                finally { next.dispose(); delete (window as any).__scopedDevice; }
+                return { code, failed, same: recovered.frame.data.every((v: number, i: number) => v === reference.frame.data[i]), coverage: recovered.metrics.coveragePixels, memory: [first, afterLoss, next].map(s => s.getMemoryReport().gpuBytes) };
+            });
+            await info.attach('map-scoped-device-loss.json', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
+            expect(result.code).toBe('DEVICE_LOST'); expect(result.failed.last_render).toBeNull(); expect(result.failed.renderable).toBe(false);
+            expect(result.same).toBe(true); expect(result.coverage).toBeGreaterThan(500); expect(result.memory).toEqual([0, 0, 0]);
+        });
+        test(`W18 ${label}: scoped devices preserve every frame and close after failure`, async ({ page }, info) => {
+            test.setTimeout(60000);
+            await page.addInitScript(() => {
+                (window as any).__mapDeviceRequests = 0;
+                const original = GPUAdapter.prototype.requestDevice;
+                GPUAdapter.prototype.requestDevice = function (options) { (window as any).__mapDeviceRequests++; return original.call(this, options); };
+            });
+            await page.reload(); await page.waitForFunction(() => window.__w18?.ready);
+            const result = await page.evaluate(async () => {
+                const { api, baseRecipe, fullRecipe } = window.__w18;
+                const recipes = [baseRecipe(), fullRecipe(api), baseRecipe()];
+                recipes[2].terrain.source.data.material = { ...api.getTerrainMaterialDefaults(), pom: { enabled: true }, layers: { snow: { enabled: true, altitudeMin: .3, altitudeBlend: .2 } } };
+                recipes[2].shadows = { enabled: true, filter: 'pcf' };
+                const draw = async (recipe: any, renderContext?: any) => {
+                    const scene = new api.MapScene(recipe);
+                    try { const result = await scene.render({ renderContext }); if (scene.getMemoryReport().gpuBytes !== 0) throw Error('Frame retained GPU owners'); return result; }
+                    finally { scene.dispose(); }
+                };
+                const original = []; for (const recipe of recipes) original.push(await draw(recipe));
+                (window as any).__mapDeviceRequests = 0;
+                let token: any;
+                const shared = await api.MapScene.withRenderContext(async (context: any) => {
+                    token = context; return Promise.all(recipes.map((recipe: any) => draw(recipe, context)));
+                });
+                const sharedDevices = (window as any).__mapDeviceRequests;
+                let closed;
+                try { await draw(baseRecipe(), token); } catch (error: any) { closed = error.code; }
+                const lost: any[] = [];
+                const module = GPUDevice.prototype.createShaderModule;
+                let inject = true, failure;
+                try {
+                    GPUDevice.prototype.createShaderModule = function (descriptor) {
+                        return module.call(this, inject && descriptor.label === 'forge3d-web-terrain-shader' ? { ...descriptor, code: descriptor.code + '\ninvalid scoped shader;' } : descriptor);
+                    };
+                    await api.MapScene.withRenderContext(async (context: any) => {
+                        try { await draw(baseRecipe(), context); } catch (error: any) { lost.push(error.code); throw error; }
+                    });
+                } catch (error: any) { failure = error.code; }
+                finally { inject = false; GPUDevice.prototype.createShaderModule = module; }
+                (window as any).__mapDeviceRequests = 0;
+                const recovered = await api.MapScene.withRenderContext((context: any) => draw(baseRecipe(), context));
+                return { sharedDevices, closed, failure, lost, recoveryDevices: (window as any).__mapDeviceRequests,
+                    frames: shared.map((frame: any, i: number) => ({ coverage: frame.metrics.coveragePixels, originalCoverage: original[i].metrics.coveragePixels, same: frame.frame.data.every((v: number, j: number) => v === original[i].frame.data[j]) })),
+                    recoverySame: recovered.frame.data.every((v: number, j: number) => v === original[0].frame.data[j]) };
+            });
+            await info.attach('map-scoped-device-frames.json', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
+            expect(result.sharedDevices).toBe(1); expect(result.recoveryDevices).toBe(1);
+            expect(result.closed).toBe('INVALID_INPUT'); expect(result.failure).toBe('SHADER_COMPILATION_FAILED'); expect(result.lost).toEqual(['SHADER_COMPILATION_FAILED']);
+            expect(result.recoverySame).toBe(true);
+            for (const frame of result.frames) { expect(frame.coverage).toBeGreaterThan(500); expect(frame.coverage).toBe(frame.originalCoverage); expect(frame.same).toBe(true); }
+        });
         for (const kind of ['sentinel', 'rounded-sentinel', 'nan', 'screen']) test(`W18 ${label}: ${kind} terrain preserves original capture coverage`, async ({ page }, info) => {
             test.setTimeout(60000);
             const result = await page.evaluate(async kind => {

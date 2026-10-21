@@ -5409,8 +5409,10 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-      "sha256": "639f60429f1094a42a47da313629d5c1059da0726f3cb6351b703dc4ebcbe458",
+      "sha256": "9aafa267df2daeecfbff69e7ea4beeb55b3c71fa07c25f4a1751ab3a06af23ba",
       "declarations": [
+        "W18 ${label}: lost scoped devices fail and the next scope recreates them",
+        "W18 ${label}: scoped devices preserve every frame and close after failure",
         "W18 ${label}: ${kind} terrain preserves original capture coverage",
         "W18 ${label}: scene pipelines compile only for geometry that exists",
         "W18 ${label}: public and map bootstrap preserve structured shader failures",

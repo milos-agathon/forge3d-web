@@ -48,6 +48,15 @@ try {
 
 ## Layer and resource contracts
 
+For related offscreen renders, `MapScene.withRenderContext(async context => { ... })`
+owns a device until the callback settles. Pass `{renderContext: context}` to each
+`scene.render()` in that callback. Frames keep independent surfaces, scene state,
+budgets and buffers, and release those owners after each draw. Shared-device frames
+run serially so WebGPU validation errors stay with their draw. The context releases
+the device on success or failure; a closed token cannot render again. Explicit
+canvas presentation and calls without a context retain their existing lifecycle.
+The migration gallery uses one scope per offline example, without caching frames.
+
 Each layer has a unique `layerId`. Each source has `id`, `format`, explicit `crs`
 and exactly one of `data` or `url`. A resource identity covers all buffers in that
 asset. Validation lists every declared source and global material/IBL/probe asset;

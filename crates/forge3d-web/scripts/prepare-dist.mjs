@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const repoRoot = join(root, "..", "..");
 const dist = join(root, "dist");
-for (const file of ['diagnostic-style','diagnostics','diagnostic-paths','diagnostic-templates','map-scene-types','map-scene','map-recipe','map-support']) {
+for (const file of ['diagnostic-style','diagnostics','diagnostic-paths','diagnostic-templates','map-scene-types','map-scene','map-recipe','map-support','map-render-context']) {
   const declarations = readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(frames|scene|camera)\.js\1/g,'from "./index.js"');
   writeFileSync(join(root,'types',file+'.d.ts'),declarations);
 }

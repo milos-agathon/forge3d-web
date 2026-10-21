@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "7d550e5c17bd3dbc57aed7f7382e1e41b788b2a4d062c9b13216a1495f0a3c5b",
+      "sha256": "3b21b310a9e1b695191271265af2902675780a35c202d3e1ef5fbd8217547eca",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -2687,8 +2687,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt",
-      "sha256": "639f60429f1094a42a47da313629d5c1059da0726f3cb6351b703dc4ebcbe458",
-      "bytes": 43742,
+      "sha256": "9aafa267df2daeecfbff69e7ea4beeb55b3c71fa07c25f4a1751ab3a06af23ba",
+      "bytes": 50470,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2698,7 +2698,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-            "sha256": "639f60429f1094a42a47da313629d5c1059da0726f3cb6351b703dc4ebcbe458",
+            "sha256": "9aafa267df2daeecfbff69e7ea4beeb55b3c71fa07c25f4a1751ab3a06af23ba",
             "hashMode": "utf8-lf"
           }
         ],
@@ -4924,8 +4924,8 @@
     },
     {
       "path": "crates/forge3d-web/examples/migration/gallery.js",
-      "sha256": "c94ed6122966a633337be929ef88ca8b3729ebb562115507d7323da9be0026ae",
-      "bytes": 4563,
+      "sha256": "334e24e6d62e7fd0429f89beaf93fc1ec9bae46eed0e32996128fd71004ceffc",
+      "bytes": 4918,
       "hashMode": "utf8-lf",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
@@ -5371,8 +5371,8 @@
     },
     {
       "path": "crates/forge3d-web/examples/migration/workflows.js",
-      "sha256": "87d10ffa267c5858b056d94eef2a9056d1aa40444a02b084c36f1000945cf1b6",
-      "bytes": 51765,
+      "sha256": "33f6f2a625242e1cc7186c90d90db02fa99e4dbae84c293909e032a02845f4ba",
+      "bytes": 51869,
       "hashMode": "utf8-lf",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",

@@ -36,19 +36,24 @@ async function run(name = select.value) {
     if (!selected.length) throw Error('Unknown native example');
     const examples=[];
     for (const entry of selected) {
-      const workflows=createWorkflows(api,document.querySelector('canvas'),runController.signal,output,{...entry,interactive:name!=='all'},owner=>{viewers.add(owner);retainedController=runController;activeViewer=owner.inspect;}), steps=[];
-      let execution='executed';
-      try {
-        for(const workflow of entry.workflows) {
-          controller.signal.throwIfAborted();status.textContent=`Running ${entry.name}: ${workflow}…`;activeWorkflow=entry.name+'-'+workflow;
-          const result=await workflows[workflow]();steps.push({workflow,result});results[workflow]??=result;
-          if(result.status==='unavailable'){execution='unavailable';break;}
+      const execute=async renderContext=>{
+        const workflows=createWorkflows(api,document.querySelector('canvas'),runController.signal,output,{...entry,renderContext,interactive:name!=='all'},owner=>{viewers.add(owner);retainedController=runController;activeViewer=owner.inspect;}), steps=[];
+        let execution='executed';
+        try {
+          for(const workflow of entry.workflows) {
+            controller.signal.throwIfAborted();status.textContent=`Running ${entry.name}: ${workflow}…`;activeWorkflow=entry.name+'-'+workflow;
+            const result=await workflows[workflow]();steps.push({workflow,result});results[workflow]??=result;
+            if(result.status==='unavailable'){execution='unavailable';break;}
+          }
+        } catch(error) {
+          if(error.code!=='LICENSE_REQUIRED')throw error;
+          execution='blocked-license';steps.push({workflow:activeWorkflow,error:{code:error.code,message:error.message}});
         }
-      } catch(error) {
-        if(error.code!=='LICENSE_REQUIRED')throw error;
-        execution='blocked-license';steps.push({workflow:activeWorkflow,error:{code:error.code,message:error.message}});
-      }
-      examples.push({name:entry.name,workflows:entry.workflows,source:entry.source,status:execution,steps});
+        examples.push({name:entry.name,workflows:entry.workflows,source:entry.source,status:execution,steps});
+      };
+      // One device per bounded offline example; every MapScene still draws and
+      // disposes its own frame resources. Interactive owners keep their lifecycle.
+      if(name==='all')await api.MapScene.withRenderContext(execute);else await execute(undefined);
     }
     const report = { workflows: results, artifacts, examples };
     status.textContent = JSON.stringify(report, null, 2); window.__w23.report = report; return report;

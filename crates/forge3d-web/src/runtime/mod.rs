@@ -6,6 +6,7 @@ mod environment;
 mod ibl;
 mod init;
 mod lighting;
+mod map_context;
 mod memory;
 pub(crate) mod offline;
 mod postfx;
@@ -185,6 +186,11 @@ impl Forge3DRuntime {
             }
             result.map(|_| JsValue::UNDEFINED)
         })
+    }
+
+    #[wasm_bindgen(js_name = createMapContext)]
+    pub fn create_map_context(&self) -> Result<map_context::MapRuntimeContext, JsValue> {
+        map_context::MapRuntimeContext::from_runtime(self)
     }
 
     #[wasm_bindgen(js_name = dispose)]

@@ -10,6 +10,7 @@ import { mapCamera } from './map-recipe.js';
 import { mapCancelled } from './map-resource-loader.js';
 import { MAP_SCENE_DEFAULT_BUDGET } from './map-validation.js';
 import { tryReadMapFrame, createMapRuntime, configureMapRuntime } from './runtime-internals.js';
+import { createScopedMapRuntime } from './map-render-context.js';
 import type { PreparedMapLayers } from './map-layer-adapters.js';
 import type { SceneRecipeInput, MapSceneRenderOptions, MapFrameMetrics } from './map-scene-types.js';
 /** Convert the point renderer's hardware depth to W06 normalized view-space depth. */
@@ -99,8 +100,10 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
                 }
         }
         const optionsCanvas = options.canvas;
-        const createRuntime = (canvas: HTMLCanvasElement | OffscreenCanvas, options: Forge3DRuntimeOptions) =>
+        const independentRuntime = (canvas: HTMLCanvasElement | OffscreenCanvas, options: Forge3DRuntimeOptions) =>
             optionsCanvas ? Forge3DRuntime.create(canvas, options) : createMapRuntime(canvas, options, (canvas, options) => Forge3DRuntime.create(canvas, options));
+        const createRuntime = (canvas: HTMLCanvasElement | OffscreenCanvas, settings: Forge3DRuntimeOptions) =>
+            options.renderContext && !optionsCanvas ? createScopedMapRuntime(options.renderContext, canvas, settings, independentRuntime) : independentRuntime(canvas, settings);
         const runtime = await createRuntime(options.canvas ?? mapCanvas(width, height), settings);
         releases.push(() => runtime.dispose());
         mapCancelled(signal);

@@ -7,7 +7,7 @@ import { attachOrbitInput } from './interactive-view.js';
  * @param {HTMLCanvasElement} canvas
  * @param {AbortSignal} signal
  * @param {(blob: Blob, name: string) => void} [onOutput]
- * @param {{name?:string,interactive?:boolean}} [example]
+ * @param {{name?:string,interactive?:boolean,renderContext?:import('../../types/index.js').MapSceneRenderContext}} [example]
  * @param {(owner:{dispose:()=>void,inspect:()=>unknown})=>void} [retain] */
 export function createWorkflows(api, canvas, signal, onOutput, example={}, retain) {
   const check = (ok, message) => { if (!ok) throw Error(message); };
@@ -83,7 +83,7 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
     // Independent owners use at most two GPU contexts at once. Settle each
     // pair before propagating failure so an in-flight control is never abandoned.
     for (let i = 0; i < scenes.length; i += 2) {
-      const pair = await Promise.allSettled(scenes.slice(i, i + 2).map(scene => scene.render({ signal })));
+      const pair = await Promise.allSettled(scenes.slice(i, i + 2).map(scene => scene.render({ signal,renderContext:example.renderContext })));
       for (const result of pair) if (result.status === 'rejected') throw result.reason;
       for (const result of pair) if (result.status === 'fulfilled') results.push(result.value);
     }

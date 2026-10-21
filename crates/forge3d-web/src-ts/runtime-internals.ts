@@ -1,5 +1,6 @@
 export type RuntimeDeviceLostHandler = (error: unknown) => void;
 import type { Forge3DRuntime, Forge3DRuntimeOptions } from './index.js';
+import type { MapNativeContext } from './map-render-context.js';
 type RuntimeFactory = (canvas: HTMLCanvasElement | OffscreenCanvas, options: Forge3DRuntimeOptions) => Promise<Forge3DRuntime>;
 let mapRuntimeFactory: RuntimeFactory | undefined;
 export function registerMapRuntimeFactory(factory: RuntimeFactory): void { mapRuntimeFactory = factory; }
@@ -9,6 +10,7 @@ export function createMapRuntime(canvas: HTMLCanvasElement | OffscreenCanvas, op
 }
 
 interface RuntimeInternalAccess {
+  createMapContext?(): MapNativeContext | undefined;
   configureMap?(setup: () => void): Promise<void>;
   readMapFrame?(): Promise<MapFrameReadback | undefined>;
   setDeviceLostHandler(handler: RuntimeDeviceLostHandler | undefined): void;
@@ -16,6 +18,7 @@ interface RuntimeInternalAccess {
 }
 
 const runtimeInternals = new WeakMap<object, RuntimeInternalAccess>();
+export function getMapRuntimeContext(runtime: object): MapNativeContext | undefined { return runtimeInternals.get(runtime)?.createMapContext?.(); }
 export async function configureMapRuntime(runtime: object, setup: () => void): Promise<void> {
   const configure = runtimeInternals.get(runtime)?.configureMap;
   if (configure) await configure(setup); else setup();
