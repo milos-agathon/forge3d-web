@@ -1,4 +1,7 @@
 import { readFileSync } from "node:fs";
+// Initialize the real shaping module during collection, before label-budget
+// assertions start their five-second deadline under full-suite transform load.
+import "../../assets/harfbuzz/index.mjs";
 import { FontAtlas } from "../../src-ts/typography.js";
 import { LabelLayer } from "../../src-ts/labels.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
