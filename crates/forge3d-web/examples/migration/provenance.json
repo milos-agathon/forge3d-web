@@ -1,0 +1,16 @@
+{
+  "nativeCommit": "1f4084af428dc699bdcd108b029736cb73903926",
+  "sourceExamples": [
+    "examples/sample_style.json",
+    "examples/presets/baseline_no_vector_overlays.json",
+    "examples/presets/rainier_showcase.json"
+  ],
+  "encodedInputs": "../../tests/fixtures/w22/manifest.json",
+  "derivedInputs": {
+    "applications.json": "applications-provenance.json",
+    "terrain-single-tile.png": "single-tile-oracle.json",
+    "rainier-cog.tif": "rainier-cog.json"
+  },
+  "terrain": "Bundled mini DEM, COG stream, or bounded native analysis-oracle inputs; simple API-only cases use a seed-free 16x16 Gaussian.",
+  "overlay": "Native bivariate/REM/travel/solar results become raster RGBA; API-only cases use an analytic 4x4 input."
+}

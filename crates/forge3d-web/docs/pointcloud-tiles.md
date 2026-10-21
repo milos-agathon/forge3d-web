@@ -130,7 +130,7 @@ by a real LAZ decode with the independent fixture hashes. Main-thread and
 bare-port jobs outside native decoding can only cancel cooperatively; their
 execution slot stays occupied until the handler returns after a deadline.
 `transferPointData` copies into owned transferable arrays so caller buffers are
-not detached. See [the worker example](https://github.com/milos-agathon/forge3d/blob/main/crates/forge3d-web/examples/w16-worker.js).
+not detached. See [the worker example](https://github.com/milos-agathon/forge3d-web/blob/main/crates/forge3d-web/examples/w16-worker.js).
 
 Dataset `cacheBytes` is split between compressed bytes and decoded LRU entries.
 An oversized cache item fails before eviction; caches have byte/hit/eviction

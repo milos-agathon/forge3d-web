@@ -93,7 +93,10 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
     Ok(true)
 }
 
-fn record_frame_stats(runtime: &mut Forge3DRuntime, frame_ms: f64) -> Result<(), WebError> {
+pub(super) fn record_frame_stats(
+    runtime: &mut Forge3DRuntime,
+    frame_ms: f64,
+) -> Result<(), WebError> {
     let passes = scene_pass_draws(runtime);
     let gpu = if runtime.postfx.is_none() {
         runtime.query_ring.as_ref().and_then(|ring| ring.latest())
@@ -410,6 +413,17 @@ pub(super) fn encode_scene_render_pass(
     label: &'static str,
     timestamp_slot: Option<usize>,
 ) {
+    encode_scene_render_pass_with_depth(runtime, encoder, view, label, timestamp_slot, false);
+}
+
+pub(super) fn encode_scene_render_pass_with_depth(
+    runtime: &Forge3DRuntime,
+    encoder: &mut wgpu::CommandEncoder,
+    view: &wgpu::TextureView,
+    label: &'static str,
+    timestamp_slot: Option<usize>,
+    preserve_depth: bool,
+) {
     let destination = view;
     let view = runtime.environment.as_ref().map_or(view, |e| &e.world.view);
     if let Some(e) = &runtime.environment {
@@ -423,7 +437,10 @@ pub(super) fn encode_scene_render_pass(
                 view: &depth.view,
                 depth_ops: Some(wgpu::Operations {
                     load: wgpu::LoadOp::Clear(1.0),
-                    store: if runtime.environment.is_some() || runtime.vectors.is_some() {
+                    store: if preserve_depth
+                        || runtime.environment.is_some()
+                        || runtime.vectors.is_some()
+                    {
                         wgpu::StoreOp::Store
                     } else {
                         wgpu::StoreOp::Discard

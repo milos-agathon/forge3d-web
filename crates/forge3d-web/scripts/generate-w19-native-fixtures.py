@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w19/native-contract.json","crates/forge3d-web/tests/fixtures/w19/native-renderable.forge3d","crates/forge3d-web/tests/fixtures/w19/native-snapshot.png","crates/forge3d-web/tests/fixtures/w19/native-v2.forge3d","crates/forge3d-web/tests/fixtures/w19/native-cases/*/*.forge3d"]
 """Run the pinned native expression/color implementations; never use web output as the oracle."""
 import ast
 import hashlib

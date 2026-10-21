@@ -1,4 +1,5 @@
 import type { CameraInput, Forge3DRuntimeOptions, TerrainHeightmapInput, TerrainOverlayLayerInput, LightInput, EnvironmentInput, PostFxChainInput, ShadowConfigInput, CascadedShadowConfigInput, SceneNodeInput, ScatterBatchInput, TerrainProbeSnapshot, MaterialInput, IblSnapshot } from './index.js';
+export type { MapSceneRenderContext } from './map-render-context.js';
 import type { VectorLayerInput } from './vector-types.js';
 import type { LabelRecord, LabelPlanOptions, LabelStyleInput, KeepoutRegionInput, LabelPlanData } from './label-types.js';
 import type { BuildingInput, BuildingLayerOptions } from './buildings.js';
@@ -211,6 +212,8 @@ export interface MapFrameMetrics {
     backend: 'webgpu' | 'cpu';
 }
 export interface MapSceneRenderOptions {
+    /** Reuse a device within an explicit scope; all frame resources stay independent. */
+    renderContext?: import('./map-render-context.js').MapSceneRenderContext;
     signal?: AbortSignal;
     canvas?: HTMLCanvasElement | OffscreenCanvas;
     onProgress?: (progress: MapSceneProgress) => void;

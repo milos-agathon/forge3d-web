@@ -9,6 +9,8 @@ import { SdfScene } from './sdf.js';
 import { mapCamera } from './map-recipe.js';
 import { mapCancelled } from './map-resource-loader.js';
 import { MAP_SCENE_DEFAULT_BUDGET } from './map-validation.js';
+import { tryReadMapFrame, createMapRuntime, configureMapRuntime } from './runtime-internals.js';
+import { createScopedMapRuntime } from './map-render-context.js';
 import type { PreparedMapLayers } from './map-layer-adapters.js';
 import type { SceneRecipeInput, MapSceneRenderOptions, MapFrameMetrics } from './map-scene-types.js';
 /** Convert the point renderer's hardware depth to W06 normalized view-space depth. */
@@ -97,25 +99,54 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
                     scene.removeNode(n.id);
                 }
         }
-        const runtime = await Forge3DRuntime.create(options.canvas ?? mapCanvas(width, height), settings);
+        const optionsCanvas = options.canvas;
+        const independentRuntime = (canvas: HTMLCanvasElement | OffscreenCanvas, options: Forge3DRuntimeOptions) =>
+            optionsCanvas ? Forge3DRuntime.create(canvas, options) : createMapRuntime(canvas, options, (canvas, options) => Forge3DRuntime.create(canvas, options));
+        const createRuntime = (canvas: HTMLCanvasElement | OffscreenCanvas, settings: Forge3DRuntimeOptions) =>
+            options.renderContext && !optionsCanvas ? createScopedMapRuntime(options.renderContext, canvas, settings, independentRuntime) : independentRuntime(canvas, settings);
+        const runtime = await createRuntime(options.canvas ?? mapCanvas(width, height), settings);
         releases.push(() => runtime.dispose());
         mapCancelled(signal);
         const snapshot = scene.snapshot(), terrainNode = snapshot.nodes.find(n => n.node.kind === 'terrain')?.node;
-        // Scene terrain nodes are topology markers; heightmap uploads use the terrain API.
-        if (terrainNode?.kind === 'terrain')
-            runtime.setTerrain(terrainNode.terrain);
-        runtime.setScene(snapshot);
-        runtime.setCamera(camera);
-        if (!runtime.render())
-            throw new Forge3DError('INTERNAL_ERROR', 'MapScene runtime declined the render');
+        // Explicit canvases retain the original public bootstrap. Offscreen
+        // maps apply their final scene settings before compiling terrain, and
+        // validate the actual setup instead of an unused default variant.
+        if (options.canvas) {
+            if (terrainNode?.kind === 'terrain') runtime.setTerrain(terrainNode.terrain);
+            runtime.setScene(snapshot); runtime.setCamera(camera);
+        } else await configureMapRuntime(runtime, () => {
+            mapCancelled(signal);
+            runtime.setCamera(camera); runtime.setScene(snapshot);
+            if (terrainNode?.kind === 'terrain') runtime.setTerrain(terrainNode.terrain);
+        });
+        // Default offscreen output is drawn by readback itself. Explicit canvas
+        // presentation and temporal effects still need their display lifecycle.
+        // Display depth includes nodata's clear-colored placeholder triangles;
+        // only the original capture depth excludes those samples from coverage.
+        const heightmap = terrainNode?.kind === 'terrain' ? terrainNode.terrain : undefined;
+        const nodata = heightmap?.nodata === undefined ? undefined : Math.fround(heightmap.nodata);
+        const needsCapturedCoverage = heightmap?.heights.some(h => !Number.isFinite(h) || Math.fround(h) === nodata) ?? false;
+        const privateReadback = !options.canvas && !layers.points.length && !needsCapturedCoverage;
+        let direct = privateReadback && !input.postFx ? await tryReadMapFrame(runtime) : undefined;
+        if (!direct) {
+            if (!runtime.render())
+                throw new Forge3DError('INTERNAL_ERROR', 'MapScene runtime declined the render');
+            if (privateReadback) direct = await tryReadMapFrame(runtime);
+        }
         let rgba: Uint8Array, baseBytes = runtime.getMemoryReport().currentBytes, pointCount = 0,pointBytes=0;
         memory(baseBytes);
         const stats = runtime.getRenderStats();
-        const capture = await runtime.capture({ samples: 1, aovs: ['depth'], signal });
+        let drawCalls = stats.drawCalls;
+        let baseDepth: Float32Array, covered: Float32Array;
+        if (direct) {
+            rgba = direct.rgba; covered = Float32Array.from(direct.coverage); baseDepth = new Float32Array();
+        } else {
+            const capture = await runtime.capture({ samples: 1, aovs: ['depth'], signal });
+            mapCancelled(signal);
+            rgba = await runtime.readRgba();
+            baseDepth = capture.aovFrame.depth(); covered = baseDepth.map(d => d < 1 ? 1 : 0);
+        }
         mapCancelled(signal);
-        rgba = await runtime.readRgba();
-        mapCancelled(signal);
-        const baseDepth=capture.aovFrame.depth(),covered=baseDepth.map(d=>d<1?1:0);
         baseBytes=runtime.getMemoryReport().currentBytes;memory(baseBytes);
         if (layers.points.length) {
             const pointBudget = budget - baseBytes;
@@ -125,7 +156,7 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
             releases.push(() => points.dispose());
             mapCancelled(signal);
             points.setLayers(layers.points);
-            points.setOcclusionDepth(mapHardwareDepth(capture.aovFrame.depth(), camera));
+            points.setOcclusionDepth(mapHardwareDepth(baseDepth, camera));
             const c = new Camera(camera);
             await points.render({ position: camera.position, viewportHeight: height, fovY: camera.fovYDegrees * Math.PI / 180, viewProjection: c.viewProjectionMatrix(width / height) }, signal);
             const pointPixels = await points.readRgba(signal), depth = await points.readDepth(signal);
@@ -138,14 +169,16 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
         }
             if (overlayScene.snapshot().nodes.length) {
                 const remaining = budget - baseBytes - pointBytes;
-                const overlay = await Forge3DRuntime.create(mapCanvas(width, height), { ...settings, memoryBudgetBytes: remaining, clearColor: [0, 0, 0, 0], alphaMode: 'premultiplied' });
+                const overlay = await createRuntime(mapCanvas(width, height), { ...settings, memoryBudgetBytes: remaining, clearColor: [0, 0, 0, 0], alphaMode: 'premultiplied' });
                 releases.push(() => overlay.dispose());
                 mapCancelled(signal);
-                overlay.setScene(overlayScene.snapshot());
-                overlay.setCamera(camera);
-                if (!overlay.render())
+                if (options.canvas) { overlay.setScene(overlayScene.snapshot()); overlay.setCamera(camera); }
+                else await configureMapRuntime(overlay, () => { mapCancelled(signal); overlay.setCamera(camera); overlay.setScene(overlayScene.snapshot()); });
+                if (!direct && !overlay.render())
                     throw Error('Overlay render declined');
-                const front = await overlay.readRgba();
+                const overlayFrame = direct ? await tryReadMapFrame(overlay) : undefined;
+                const front = overlayFrame?.rgba ?? await overlay.readRgba();
+                drawCalls += overlay.getRenderStats().drawCalls;
                 mapCancelled(signal);
                 memory(baseBytes + pointBytes + overlay.getMemoryReport().currentBytes);
                 for (let i = 0; i < width * height; i++) {
@@ -162,7 +195,7 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
         const coverage=covered.reduce((n,v)=>n+v,0);
         if (!coverage)
             throw new Forge3DError('UNSUPPORTED_FEATURE', 'MapScene rendered only the clear background', { reason: 'empty-render-output' });
-        return { frame: new Frame(width, height, rgba), metrics: { gpuBytes: current, peakGpuBytes: peak, coveragePixels: coverage, drawCalls: stats.drawCalls, pointCount, backend: 'webgpu' } };
+        return { frame: new Frame(width, height, rgba), metrics: { gpuBytes: current, peakGpuBytes: peak, coveragePixels: coverage, drawCalls, pointCount, backend: 'webgpu' } };
     }
     finally {
         for (const release of releases.reverse())

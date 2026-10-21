@@ -138,11 +138,7 @@ pub(super) fn pipelines(
     layouts: [&wgpu::BindGroupLayout; 4],
     features: ShaderFeatures,
     format: wgpu::TextureFormat,
-) -> (
-    wgpu::RenderPipeline,
-    wgpu::RenderPipeline,
-    wgpu::RenderPipeline,
-) {
+) -> (wgpu::RenderPipeline, wgpu::ShaderModule) {
     let normal = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("scatter-shader"),
         source: wgpu::ShaderSource::Wgsl(shader::shader(features).into()),
@@ -160,21 +156,6 @@ pub(super) fn pipelines(
             None,
             features.capture_blend(),
         ),
-        pipeline::create(
-            device,
-            layouts,
-            &capture,
-            format,
-            Some(CapturePass::Primary),
-            features.capture_blend(),
-        ),
-        pipeline::create(
-            device,
-            layouts,
-            &capture,
-            format,
-            Some(CapturePass::Surface),
-            features.capture_blend(),
-        ),
+        capture,
     )
 }

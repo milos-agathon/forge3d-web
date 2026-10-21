@@ -1,0 +1,104 @@
+{
+  "file": "rainier-cog.tif",
+  "sizeBytes": 1536165,
+  "sha256": "ca8db82d906056938c8f56f286f6c8f323be5d6173f07a712292955cce7a0e21",
+  "width": 1024,
+  "height": 1024,
+  "count": 1,
+  "dtype": [
+    "float32"
+  ],
+  "nodata": -9999.0,
+  "crs": "EPSG:4326",
+  "epsg": 4326,
+  "bounds": [
+    -121.83283173110011,
+    46.77719537186752,
+    -121.687264998403,
+    46.92276210456464
+  ],
+  "transform": [
+    0.00014215501239953575,
+    0.0,
+    -121.83283173110011,
+    0.0,
+    -0.00014215501239953315,
+    46.92276210456464
+  ],
+  "blockShapes": [
+    [
+      256,
+      256
+    ]
+  ],
+  "colorInterp": [
+    "gray"
+  ],
+  "overviewFactors": [
+    2,
+    4
+  ],
+  "levels": [
+    {
+      "level": 0,
+      "factor": 1,
+      "width": 1024,
+      "height": 1024,
+      "tileWidth": 256,
+      "tileHeight": 256,
+      "tilesAcross": 4,
+      "tilesDown": 4,
+      "tileCount": 16,
+      "bitsPerSample": "float32",
+      "compression": "deflate"
+    },
+    {
+      "level": 1,
+      "factor": 2,
+      "width": 512,
+      "height": 512,
+      "tileWidth": 256,
+      "tileHeight": 256,
+      "tilesAcross": 2,
+      "tilesDown": 2,
+      "tileCount": 4,
+      "bitsPerSample": "float32",
+      "compression": "deflate"
+    },
+    {
+      "level": 2,
+      "factor": 4,
+      "width": 256,
+      "height": 256,
+      "tileWidth": 256,
+      "tileHeight": 256,
+      "tilesAcross": 1,
+      "tilesDown": 1,
+      "tileCount": 1,
+      "bitsPerSample": "float32",
+      "compression": "deflate"
+    }
+  ],
+  "samples": [
+    {
+      "0,0": 1797.0,
+      "center": 4325.0,
+      "last": 1680.0
+    },
+    {
+      "0,0": 1797.974365234375,
+      "center": 4321.5390625,
+      "last": 1683.082763671875
+    },
+    {
+      "0,0": 1799.5963134765625,
+      "center": 4315.6279296875,
+      "last": 1687.130615234375
+    }
+  ],
+  "tileSha256": [
+    "958fd9dbbdfa9d9366242d68316f2c562a99b20bbde26a9d105c0a6513c34956",
+    "3b12356743009ea71083e09e33c2c2b38ebc42f209eb18037905123886d798ab",
+    "ae5687d20626bdb0b7e2f877a7f74f8a3bedff25bec07dd72c0c9a844cc084b5"
+  ]
+}

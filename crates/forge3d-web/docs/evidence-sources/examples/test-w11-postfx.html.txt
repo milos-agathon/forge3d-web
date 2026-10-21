@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>W11 HDR and post-FX</title>
+<canvas id="canvas" width="96" height="64"></canvas><pre id="status">Loading W11…</pre>
+<script type="module">
+import { Forge3DRuntime, Forge3DScene, Forge3DSession, PostFxChain, createIdentityColorLut } from "../src-ts/index.ts";
+import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
+import * as api from "../src-ts/index.ts";
+import { nativeComparisons } from "../tests/browser/w11-native-oracle.js";
+const camera={position:[4,3,5],target:[0,.4,0],up:[0,1,0],fovYDegrees:55,near:.1,far:30};
+function scene(){
+  const s=Forge3DScene.create();s.clearLights();s.addLight({type:"directional",direction:[.3,-1,.2],intensity:6,color:[1,.95,.9],castsShadow:false});
+  s.setMaterial("floor",{id:"floor",brdf:"lambert",baseColor:[.5,.5,.5,1],roughness:.15});
+  s.setMaterial("red",{id:"red",brdf:"lambert",baseColor:[1,.05,.03,1],roughness:.2});
+  const floor=s.addGroundPlane({name:"floor",size:[12,12],color:[1,1,1,1],materialSlot:"floor"});
+  const plane=s.addGroundPlane({name:"raised",size:[2,2],height:1,color:[1,1,1,1],materialSlot:"red"});
+  const wall=s.addGroundPlane({name:"wall",size:[4,3],color:[.1,.4,1,1],materialSlot:"floor"});
+  s.setTransform(wall,{translation:[0,1.5,-1.5],rotation:[Math.SQRT1_2,0,0,Math.SQRT1_2]});
+  return {s,floor,plane};
+}
+async function make(){
+  const canvas=document.createElement("canvas");canvas.width=96;canvas.height=64;document.body.append(canvas);
+  const r=await Forge3DRuntime.create(canvas,{diagnostics:true,devicePixelRatio:1,clearColor:[.03,.04,.05,1]});
+  const {s,plane}=scene();r.setScene(s.snapshot());r.setCamera(camera);return {r,s,plane,canvas};
+}
+const difference=(a,b)=>a.reduce((v,x,i)=>v+Math.abs(x-b[i]),0)/a.length;
+window.__w11={make,scene,camera,PostFxChain,createIdentityColorLut,difference,Forge3DSession,simulateRuntimeDeviceLossForTests};
+window.__w11Native=async()=>{const {r,canvas}=await make();try{return await nativeComparisons(api,r,camera);}finally{r.dispose();canvas.remove();}};
+window.__w11Temporal=async()=>{
+  const {r,canvas}=await make();try{
+    const chain=[{kind:"ssao",id:"ao"},{kind:"taa",id:"aa",jitter:false},{kind:"tonemap",operator:"aces"}];
+    r.setPostFx(chain);for(let i=0;i<24;i++)r.render();const before=await r.readRgba();
+    const shifted={...camera,position:[4.5,3,5],target:[.5,.4,0]};r.setCamera(shifted);
+    const frames=[];for(let i=0;i<16;i++){r.render();frames.push(await r.readRgba());}
+    r.resetPostFxHistory();r.render();const fresh=await r.readRgba();
+    const initialError=difference(before,fresh)/255;
+    const errors=frames.map(f=>difference(f,fresh)/255);const flicker=Math.max(...frames.slice(9).map((f,i)=>difference(f,frames[8+i])))/255;
+    r.setPostFx([{kind:"taa",id:"aa"},{kind:"tonemap",operator:"aces"}]);for(let i=0;i<48;i++)r.render();
+    let prior=await r.readRgba(),jitterFlicker=0;for(let i=0;i<8;i++){r.render();const frame=await r.readRgba();jitterFlicker=Math.max(jitterFlicker,difference(prior,frame)/255);prior=frame;}
+    r.setPostFx([{kind:"accumulation-aa",id:"aa",samples:16}]);for(let i=0;i<16;i++)r.render();const accum=r.getPostFxReport();
+    const depth=await r.readPostFxIntermediate("depth"), hzb=[];
+    for(let mip=0;mip<accum.hzbLevels;mip++)hzb.push(await r.readPostFxIntermediate(`hzb:${mip}`));
+    let source=depth.data,sw=depth.width,sh=depth.height,maxHzbError=0;
+    for(let mip=0;mip<hzb.length;mip++){
+      const level=hzb[mip];for(let y=0;y<level.height;y++)for(let x=0;x<level.width;x++){
+        let min=Infinity;for(let yy=Math.floor(y*sh/level.height);yy<Math.floor((y+1)*sh/level.height);yy++)for(let xx=Math.floor(x*sw/level.width);xx<Math.floor((x+1)*sw/level.width);xx++)min=Math.min(min,source[yy*sw+xx]);
+        maxHzbError=Math.max(maxHzbError,Math.abs(level.data[y*level.width+x]-min));
+      }source=level.data;sw=level.width;sh=level.height;
+    }
+    const [color,motion]=await Promise.all([r.readPostFxIntermediate("color"),r.readPostFxIntermediate("motion")]);
+    const frozen=await r.readRgba();r.render();const freezeDelta=difference(frozen,await r.readRgba());
+    r.setCamera(camera);r.setPostFx([{kind:"motion-blur",id:"blur",shutter:1},{kind:"tonemap",operator:"aces"}]);r.render();r.setCamera(shifted);r.render();
+    const moving=await r.readPostFxIntermediate("motion"),blur=await r.readPostFxIntermediate("blur:resolve"),sharp=await r.readPostFxIntermediate("color");
+    return {movement:difference(before,frames[0]),initialError,errors,flicker,jitterFlicker,accum,maxHzbError,freezeDelta,blurDelta:difference(blur.data,sharp.data),cameraMotion:Math.max(...moving.data.map(Math.abs)),parallelChannels:[color.channels,motion.channels]};
+  }finally{r.dispose();canvas.remove();}
+};
+window.__w11Recovery=async()=>{
+  const canvas=document.createElement("canvas");canvas.width=96;canvas.height=64;document.body.append(canvas);
+  const viewer=await api.Forge3DViewer.create(canvas,{runtime:{devicePixelRatio:1,diagnostics:true},controls:false,resize:false});
+  try{
+    const terrain={heights:Float32Array.from({length:64},(_,i)=>Math.sin(i/8)*.2),width:8,height:8,spacing:[12/7,12/7],bounds:[-6,-6,6,6],domain:[-.2,.2],renderMode:"perspective"};
+    viewer.setTerrain(terrain);viewer.setCamera(camera);viewer.setPostFx([{kind:"bloom",id:"glow"},{kind:"taa",id:"aa",jitter:false},{kind:"tonemap",operator:"aces"}]);for(let i=0;i<8;i++)viewer.render();
+    const first=await viewer.readPostFxIntermediate("glow:composite");
+    let invalid;viewer.addRecoveryListener(()=>{invalid=viewer.getPostFxReport();});
+    const {simulateViewerDeviceLossForTests}=await import("../src-ts/viewer.ts");simulateViewerDeviceLossForTests(viewer);
+    const deadline=performance.now()+15000;while(viewer.status==="recovering"||viewer.getDiagnostics().recoveryAttempts<1){if(performance.now()>deadline)throw Error("W11 recovery timeout");await new Promise(r=>setTimeout(r,20));}
+    for(let i=0;i<8;i++)viewer.render();const recovered=await viewer.readPostFxIntermediate("glow:composite");
+    return {delta:difference(first.data,recovered.data),invalid,report:viewer.getPostFxReport(),attempts:viewer.getDiagnostics().recoveryAttempts};
+  }finally{viewer.dispose();canvas.remove();}
+};
+window.__w11Effects=async()=>{
+  const {r,canvas}=await make();const results={};
+  try{
+    const baseline=await r.readRgba();r.setPostFx([{kind:"tonemap",id:"map",operator:"aces"}]);r.render();
+    const base=await r.readRgba();const color=await r.readPostFxIntermediate("color");const depth=await r.readPostFxIntermediate("depth");
+    results.covered=Array.from(depth.data).filter(x=>x<.999).length;results.maxHdr=Math.max(...color.data);
+    for(const kind of ["ssao","gtao","ssgi","ssr","bloom","dof","motion-blur","taa","accumulation-aa","denoise","lens"]){
+      let effect={kind,id:kind};
+      if(kind==="ssao")effect={...effect,radius:.8,intensity:3,samples:32};
+      if(kind==="ssgi"||kind==="ssr")effect={...effect,maxDistance:8,thickness:.5,steps:64,fallback:[.02,.03,.04]};
+      if(kind==="dof")effect={...effect,aperture:1,focusDistance:1,maxBlurRadius:12};
+      if(kind==="lens")effect={...effect,distortion:.3,chromaticAberration:.08,vignetteStrength:.8};
+      const effects=kind==="lens"?[{kind:"tonemap",id:"map",operator:"aces"},effect]:[effect,{kind:"tonemap",id:"map",operator:"aces"}];
+      r.setPostFx(effects);for(let i=0;i<8;i++)r.render();
+      const actual=await r.readRgba();const report=r.getPostFxReport();
+      const raw=await r.readPostFxIntermediate(kind==="ssao"||kind==="gtao"||kind==="ssgi"||kind==="ssr"?`${kind}:temporal`:`${kind}:${kind==="bloom"?"composite":kind==="denoise"?"atrous-2":"resolve"}`);
+      results[kind]={delta:difference(base,actual),finite:raw.data.every(Number.isFinite),min:Math.min(...raw.data),max:Math.max(...raw.data),report};
+    }
+    r.setPostFx(null);const disabled=await r.readRgba();results.disabledDelta=difference(baseline,disabled);return results;
+  }finally{r.dispose();canvas.remove();}
+};
+window.__w11Lifecycle=async()=>{
+  const {r,s,plane,canvas}=await make();try{
+    const baseline=r.getMemoryReport().currentBytes;
+    const cycles=[];for(let i=0;i<30;i++){r.setPostFx([{kind:"bloom",id:"glow"},{kind:"taa",id:"aa"}]);r.render();r.setPostFx(null);cycles.push(r.getMemoryReport().currentBytes-baseline);}
+    r.setPostFx([{kind:"taa",id:"aa"}]);r.render();r.render();const before=r.getPostFxReport();
+    const a=await r.readRgba();const b=await r.readRgba();const readFrames=r.getPostFxReport().historyFrames;
+    r.resetPostFxHistory();const reset=r.getPostFxReport();r.render();
+    r.resize({width:67,height:45,devicePixelRatio:1});const resized=r.getPostFxReport();r.render();const frame=await r.readPostFxIntermediate("depth");
+    r.setCamera({...camera,position:[-4,3,-5]});r.render();const cut=r.getPostFxReport();
+    r.setCamera(camera);r.setPostFx([{kind:"tonemap"}]);r.render();
+    s.setTransform(plane,{translation:[1,0,0]});r.setScene(s.snapshot());r.render();
+    const motion=await r.readPostFxIntermediate("motion");const moved=Math.max(...Array.from(motion.data,Math.abs));r.render();
+    const stationary=await r.readPostFxIntermediate("motion");return {cycles,before,readFrames,readDelta:difference(a,b),reset,resized,cut,dimensions:[frame.width,frame.height],moved,stationary:Math.max(...Array.from(stationary.data,Math.abs))};
+  }finally{r.dispose();canvas.remove();}
+};
+window.__w11Contracts=async()=>{
+  const {r,s,canvas}=await make();let limited;
+  try{
+    const chain=[{kind:"bloom",id:"glow",quality:"high"},{kind:"denoise",id:"clean",iterations:2},{kind:"taa",id:"aa",jitter:false},{kind:"tonemap",id:"map",operator:"aces"},{kind:"lens",id:"lens",vignetteStrength:.3}];
+    r.setPostFx(chain);r.render();const order=r.getPostFxReport().passOrder;
+    const views={};for(const view of ["color","depth","normal","albedo","motion","hzb","effect"]){r.setPostFx({effects:chain,debug:{view,...(view==="effect"?{effectId:"glow"}:{}),hzbMip:2}});r.render();views[view]=Array.from(await r.readRgba()).every(Number.isFinite);}
+    r.setPostFx([{kind:"tonemap",id:"map",operator:"none"}]);r.render();const raw=await r.readPostFxIntermediate("color"),display=await r.readRgba();let transferError=0;
+    for(let i=0;i<display.length;i++)if(i%4!==3){const v=Math.min(1,Math.max(0,raw.data[i]));const expected=Math.round(255*(v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055));transferError=Math.max(transferError,Math.abs(expected-display[i]));}
+    const base=r.getMemoryReport().currentBytes-r.getPostFxReport().gpuBytes;
+    limited=await Forge3DRuntime.create(document.createElement("canvas"),{width:96,height:64,devicePixelRatio:1,memoryBudgetBytes:base+850000,clearColor:[.03,.04,.05,1]});limited.setScene(s.snapshot());limited.setCamera(camera);limited.setPostFx([{kind:"tonemap",operator:"aces"}]);limited.render();
+    const before=await limited.readRgba(),bytes=limited.getMemoryReport().currentBytes;let budgetCode;
+    try{limited.setPostFx(chain);}catch(e){budgetCode=e.code;}
+    const rollbackDelta=difference(before,await limited.readRgba()),afterBytes=limited.getMemoryReport().currentBytes;
+    const bad=api.normalizePostFx([{kind:"tonemap"}]);bad.effects[0].params[15]=1;let invalidCode;try{limited.setPostFx(bad);}catch(e){invalidCode=e.code;}
+    const mesh={positions:new Float32Array([-1,0,0,1,0,0,-1,3,0,1,3,0]),normals:new Float32Array([0,0,1,0,0,1,0,0,1,0,0,1]),indices:new Uint32Array([0,1,2,2,1,3])};
+    r.setPostFx([{kind:"motion-blur",id:"blur"},{kind:"tonemap",operator:"aces"}]);r.setScatterBatches([new api.TerrainScatterBatch({levels:[{mesh}],transforms:Float32Array.from(api.makeScatterTransform([0,0,0])),color:[.8,.2,.1,.5],wind:{enabled:true,amplitude:1,rigidity:.2}})]);r.setTimeSeconds(0);r.render();r.setTimeSeconds(.37);r.render();
+    const moving=await r.readPostFxIntermediate("motion"),format=r.getPostFxReport();r.render();const still=await r.readPostFxIntermediate("motion");
+    return {order,views,transferError,budgetCode,rollbackDelta,bytes,afterBytes,invalidCode,format,windMotion:Math.max(...moving.data.map(Math.abs)),windStationary:Math.max(...still.data.map(Math.abs))};
+  }finally{limited?.dispose();r.dispose();canvas.remove();}
+};
+window.__w11Worker=async()=>{
+  const {r,s,canvas}=await make();const c=document.createElement("canvas");c.width=96;c.height=64;document.body.append(c);
+  const worker=new Worker(new URL("./test-w11-worker.js",import.meta.url),{type:"module"});let renderer;
+  try{
+    s.setPostFx([{kind:"bloom",threshold:.3,strength:1},{kind:"tonemap",operator:"aces"}]);r.setScene(s.snapshot());r.render();const main=await r.readRgba();
+    renderer=await api.Forge3DWorkerRenderer.create(c,{worker,controls:false,resize:false,session:{runtime:{width:96,height:64,devicePixelRatio:1,clearColor:[.03,.04,.05,1]}}});
+    await renderer.setScene(s);await renderer.setCamera(camera);await renderer.render();const actual=await renderer.readRgba();
+    s.setPostFx(null);await renderer.setScene(s);await renderer.render();const disabled=await renderer.readRgba();
+    return {delta:difference(main,actual),disabledDelta:difference(actual,disabled),covered:Array.from(actual).filter((v,i)=>i%4!==3&&v>20).length};
+  }finally{await renderer?.dispose();worker.terminate();r.dispose();canvas.remove();c.remove();}
+};
+const preview=await Forge3DRuntime.create(document.getElementById("canvas"),{devicePixelRatio:1});const {s}=scene();preview.setScene(s.snapshot());preview.setCamera(camera);preview.setPostFx([{kind:"gtao"},{kind:"bloom"},{kind:"tonemap",operator:"aces"}]);preview.render();
+document.getElementById("status").textContent="W11 ready";window.__w11Ready=true;
+</script></html>

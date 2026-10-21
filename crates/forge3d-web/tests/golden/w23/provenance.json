@@ -1,0 +1,13 @@
+{
+  "generator": "crates/forge3d-web/scripts/generate-w23-goldens.py",
+  "source": {
+    "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+    "path": "examples/terrain_single_tile.py",
+    "sha256": "00b24ca3a6047c0656fbfa008a7c8615472b41a81659de96b193be05048ef13b"
+  },
+  "input": "assets/datasets/mini_dem.npy",
+  "method": "Unchanged historical main(); browser input/file I/O boundary adapted; NumPy float32 normalization.",
+  "rgbaSha256": "6622ea1ef33ec3fe85f6bb638cf6a9b02538a879e51a34e13c83029693a62caf",
+  "width": 256,
+  "height": 256
+}

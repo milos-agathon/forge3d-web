@@ -4,7 +4,7 @@ use crate::{
     runtime::Forge3DRuntime,
 };
 use forge3d_core::{environment::Environment, gpu::GpuContext};
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, OnceCell, RefCell};
 const SHADER: &str = concat!(include_str!("sky.wgsl"), include_str!("effects.wgsl"));
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -45,8 +45,8 @@ impl Target {
 pub(crate) struct EnvironmentResources {
     pub snapshot: Environment,
     pub world: Target,
-    water_primary: wgpu::RenderPipeline,
-    water_surface: wgpu::RenderPipeline,
+    water_primary: OnceCell<wgpu::RenderPipeline>,
+    water_surface: OnceCell<wgpu::RenderPipeline>,
     pub original_lighting: Option<(forge3d_core::lighting::LightingState, Vec<u32>)>,
     effect: Target,
     history: Target,

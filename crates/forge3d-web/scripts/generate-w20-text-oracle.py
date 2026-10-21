@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w20/text-layout-oracle.json"]
 """Independent Pillow BASIC controls; never imports the web metrics generator."""
 from pathlib import Path
 from PIL import ImageFont

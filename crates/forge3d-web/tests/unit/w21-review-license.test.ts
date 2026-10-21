@@ -3,6 +3,9 @@ import * as ed from '@noble/ed25519';
 import { LicenseManager, licenseManager } from '../../src-ts/license.js';
 import licenses from '../fixtures/w21/licenses.json';
 import { productGateCases } from './w21-gate-cases.js';
+// Warm transforms during collection; each issuer assertion still resets modules
+// and imports its own fresh actual SDK instance inside the original deadline.
+import '../../src-ts/index.js';
 
 beforeEach(() => licenseManager.clear());
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });

@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+// Module loading belongs to collection; TIFF creation/decoding stays in the test.
+import { writeArrayBuffer, fromArrayBuffer } from 'geotiff';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
@@ -36,7 +38,6 @@ describe('W22 bounded cache and allocation admission',()=>{
     }
   });
   it('decodes band zero of a real multi-band strip TIFF and replays metadata',async()=>{
-    const {writeArrayBuffer,fromArrayBuffer}=await import('geotiff');
     const input=writeArrayBuffer(new Uint8Array([1,91,191,2,92,192,3,93,193,4,94,194,5,95,195,6,96,196]),{width:3,height:2,BitsPerSample:[8,8,8],SamplesPerPixel:[3],GDAL_NODATA:'255\0'});
     const tiff=await fromArrayBuffer(input),image=await tiff.getImage();
     expect(image.isTiled).toBe(false);expect(image.getSamplesPerPixel()).toBe(3);

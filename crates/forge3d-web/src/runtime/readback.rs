@@ -4,11 +4,18 @@ use wasm_bindgen::{closure::Closure, prelude::*, Clamped, JsCast};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
-use super::render::encode_scene_render_pass;
+use super::render::encode_scene_render_pass_with_depth;
 use super::Forge3DRuntime;
 use crate::error::{map_core_error, Forge3DErrorCode, WebError};
 
 const READBACK_MEMORY_KEY: &str = "readback:frame";
+mod coverage;
+mod reference;
+
+struct FrameReadback {
+    rgba: Vec<u8>,
+    coverage: Option<Vec<u8>>,
+}
 
 pub(super) async fn screenshot_runtime(runtime: &mut Forge3DRuntime) -> Result<Blob, WebError> {
     let rgba = read_rgba_runtime(runtime).await?;
@@ -16,6 +23,76 @@ pub(super) async fn screenshot_runtime(runtime: &mut Forge3DRuntime) -> Result<B
 }
 
 pub(super) async fn read_rgba_runtime(runtime: &mut Forge3DRuntime) -> Result<Vec<u8>, WebError> {
+    Ok(read_frame_runtime(runtime, false).await?.rgba)
+}
+
+pub(super) async fn read_map_frame_runtime(
+    runtime: &mut Forge3DRuntime,
+) -> Result<JsValue, WebError> {
+    // W08 keeps the complete capture lifecycle, including its residency maps.
+    if runtime
+        .terrain
+        .as_ref()
+        .is_some_and(|t| t.clipmap.is_some() || t.streaming.is_some() || t.vt.is_some())
+    {
+        return Ok(JsValue::UNDEFINED);
+    }
+    let bytes = u64::from(runtime.width) * u64::from(runtime.height) * 4;
+    if runtime
+        .context
+        .as_ref()
+        .is_some_and(|c| bytes > u64::from(c.device.limits().max_storage_buffer_binding_size))
+    {
+        return Ok(JsValue::UNDEFINED);
+    }
+    let started = super::timing::now_ms();
+    // Geometry (including scatter and vector picking) writes the canonical
+    // unjittered hardware depth. Color-only weather leaves that depth intact.
+    // MapScene routes heightfields containing nodata through full capture.
+    let frame = if runtime.postfx.is_some()
+        || runtime
+            .environment
+            .as_ref()
+            .is_some_and(|e| !e.snapshot.water.is_empty())
+        || runtime
+            .vectors
+            .as_ref()
+            .is_some_and(|v| v.needs_reference_depth(&runtime.camera))
+        || runtime.depth_attachment.is_none()
+        || runtime.terrain.as_ref().is_some_and(|t| t.render_mode == 1)
+    {
+        let depth = reference::read_depth(runtime).await?;
+        let mut frame = read_frame_runtime(runtime, false).await?;
+        frame.coverage = Some(depth.into_iter().map(|d| u8::from(d < 1.0)).collect());
+        frame
+    } else {
+        read_frame_runtime(runtime, true).await?
+    };
+    // This private offscreen path can be the first actual draw. Report its
+    // executed world/overlay plan without a discarded surface presentation.
+    super::render::record_frame_stats(runtime, super::timing::now_ms() - started)?;
+    let result = js_sys::Object::new();
+    for (name, bytes) in [("rgba", frame.rgba), ("coverage", frame.coverage.unwrap())] {
+        js_sys::Reflect::set(
+            &result,
+            &JsValue::from_str(name),
+            &js_sys::Uint8Array::from(bytes.as_slice()),
+        )
+        .map_err(|error| {
+            WebError::with_details(
+                Forge3DErrorCode::InternalError,
+                "Failed to return map frame readback",
+                error,
+            )
+        })?;
+    }
+    Ok(result.into())
+}
+
+async fn read_frame_runtime(
+    runtime: &mut Forge3DRuntime,
+    with_coverage: bool,
+) -> Result<FrameReadback, WebError> {
     super::environment::refresh(runtime)?;
     super::shadows::refresh_shadow_state(runtime)?;
     super::shader_variants::sync_pipelines(runtime)?;
@@ -58,6 +135,13 @@ pub(super) async fn read_rgba_runtime(runtime: &mut Forge3DRuntime) -> Result<Ve
         })?;
     let total_bytes = texture_bytes
         .checked_add(layout.buffer_size)
+        .and_then(|bytes| {
+            bytes.checked_add(if with_coverage {
+                texture_bytes.checked_mul(2)?
+            } else {
+                0
+            })
+        })
         .ok_or_else(|| {
             WebError::new(
                 Forge3DErrorCode::ResourceLimitExceeded,
@@ -67,7 +151,7 @@ pub(super) async fn read_rgba_runtime(runtime: &mut Forge3DRuntime) -> Result<Ve
     runtime
         .memory
         .replace(READBACK_MEMORY_KEY, MemoryCategory::Readback, total_bytes)?;
-    let result = capture_frame_rgba(runtime, &context, format, &layout).await;
+    let result = capture_frame_rgba(runtime, &context, format, &layout, with_coverage).await;
     runtime.memory.release(READBACK_MEMORY_KEY);
     result
 }
@@ -77,7 +161,8 @@ async fn capture_frame_rgba(
     context: &GpuContext,
     format: wgpu::TextureFormat,
     layout: &forge3d_core::readback::ReadbackLayout,
-) -> Result<Vec<u8>, WebError> {
+    with_coverage: bool,
+) -> Result<FrameReadback, WebError> {
     let validation_scope = context
         .device
         .push_error_scope(wgpu::ErrorFilter::Validation);
@@ -102,23 +187,37 @@ async fn capture_frame_rgba(
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
+    let coverage = with_coverage.then(|| {
+        coverage::CoverageReadback::new(
+            &context.device,
+            &runtime.depth_attachment.as_ref().unwrap().view,
+            runtime.width,
+            runtime.height,
+        )
+    });
     let mut encoder = context
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("forge3d-web-readback-encoder"),
         });
 
-    super::shadows::encode_shadow_passes(runtime, &mut encoder);
+    if super::postfx::readback_needs_scene_render(runtime) {
+        super::shadows::encode_shadow_passes(runtime, &mut encoder);
+    }
     if runtime.postfx.is_some() {
         super::postfx::encode(runtime, &mut encoder, &view, false)?;
     } else {
-        encode_scene_render_pass(
+        encode_scene_render_pass_with_depth(
             runtime,
             &mut encoder,
             &view,
             "forge3d-web-readback-pass",
             None,
+            with_coverage,
         );
+    }
+    if let Some(coverage) = &coverage {
+        coverage.encode(&mut encoder, runtime.width, runtime.height);
     }
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
@@ -151,7 +250,12 @@ async fn capture_frame_rgba(
     }
     let padded = map_readback_buffer(context, &readback, layout.buffer_size).await?;
     let rgba = forge3d_core::readback::unpad_rows(&padded, *layout).map_err(map_core_error)?;
-    normalize_readback_to_rgba(rgba, format)
+    let rgba = normalize_readback_to_rgba(rgba, format)?;
+    let coverage = match coverage {
+        Some(coverage) => Some(coverage.read(context).await?),
+        None => None,
+    };
+    Ok(FrameReadback { rgba, coverage })
 }
 
 pub(super) async fn map_readback_buffer(

@@ -1,3 +1,4 @@
+// W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w22/autzen.laz","crates/forge3d-web/tests/fixtures/w22/glyphs.pbf","crates/forge3d-web/tests/fixtures/w22/linear.exr","crates/forge3d-web/tests/fixtures/w22/linear.hdr","crates/forge3d-web/tests/fixtures/w22/manifest.json","crates/forge3d-web/tests/fixtures/w22/multiband-strips.tif","crates/forge3d-web/tests/fixtures/w22/predictor.tif","crates/forge3d-web/tests/fixtures/w22/rgba.ktx2","crates/forge3d-web/tests/fixtures/w22/triangle.glb"]
 import { multibandStripTiff } from './w22-strip-fixture.mjs';
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';

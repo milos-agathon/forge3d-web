@@ -27,6 +27,8 @@ const CAPABILITIES: Forge3DRuntimeCapabilities = {
 };
 
 class FakeRuntime implements SessionRuntimeLike {
+  #resolveDisposed!: () => void;
+  readonly whenDisposed = new Promise<void>((resolve) => { this.#resolveDisposed = resolve; });
   disposed = false;
   readonly terrains: TerrainHeightmapInput[] = [];
   readonly scenes: SceneSnapshot[] = [];
@@ -80,6 +82,7 @@ class FakeRuntime implements SessionRuntimeLike {
 
   dispose(): void {
     this.disposed = true;
+    this.#resolveDisposed();
   }
 }
 
@@ -539,7 +542,9 @@ describe("Forge3DWorkerRenderer", () => {
       const diagnostics = renderer.getDiagnostics();
       expect(diagnostics.ownedListeners).toBe(11);
       renderer.dispose();
-      await flush();
+      // Observe the real host teardown instead of paying six platform timer
+      // ticks per cycle (which can exceed the deadline under parallel load).
+      await runtimes[cycle]!.whenDisposed;
       expect(runtimes[cycle]!.disposed).toBe(true);
       dispose();
       expect(renderer.getDiagnostics().ownedListeners).toBe(0);
@@ -548,7 +553,7 @@ describe("Forge3DWorkerRenderer", () => {
       expect(canvas.captured.size).toBe(0);
     }
     expect(runtimes).toHaveLength(30);
-    await flush();
+    await Promise.all(runtimes.map((runtime) => runtime.whenDisposed));
     expect(runtimes.every((runtime) => runtime.disposed)).toBe(true);
   });
 

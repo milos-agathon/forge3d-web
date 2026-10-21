@@ -4,9 +4,9 @@ Building import, style loading/application and bundle save/load require an activ
 
 `MapScene` owns a typed recipe, validates its resources, prepares completed layer
 adapters, and returns a PNG `Blob`, RGBA `Frame`, validation report and review hashes.
-Use the package entrypoint. The [browser example](../examples/mapscene.html) renders
-terrain, imagery, vector roads, scalar buildings, mesh/scatter geometry,
-real shaped glyphs and an annotation. Run `npm run dev` to open that example.
+Use the package entrypoint. The [browser example](../examples/migration/index.html?example=mapscene_vector_labels.py) renders
+terrain, vector roads and shaped glyph labels. Other migrated examples cover
+imagery, scalar buildings and scatter geometry. Run `npm run dev` to open that example.
 
 ## Quickstart
 
@@ -48,12 +48,21 @@ try {
 
 ## Layer and resource contracts
 
+For related offscreen renders, `MapScene.withRenderContext(async context => { ... })`
+owns a device until the callback settles. Pass `{renderContext: context}` to each
+`scene.render()` in that callback. Frames keep independent surfaces, scene state,
+budgets and buffers, and release those owners after each draw. Shared-device frames
+run serially so WebGPU validation errors stay with their draw. The context releases
+the device on success or failure; a closed token cannot render again. Explicit
+canvas presentation and calls without a context retain their existing lifecycle.
+The migration gallery uses one scope per bounded offline run, without caching frames.
+
 Each layer has a unique `layerId`. Each source has `id`, `format`, explicit `crs`
 and exactly one of `data` or `url`. A resource identity covers all buffers in that
 asset. Validation lists every declared source and global material/IBL/probe asset;
 shared IDs require identical payloads. `scene:` IDs are reserved. Unresolved URL
 assets remain marked `unresolved` until asynchronous preparation verifies them.
-The full example's [recipe helpers](../examples/w18-mapscene.js) show concrete inputs.
+The full example's [recipe helpers](https://github.com/milos-agathon/forge3d-web/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/w18-mapscene.js) show concrete inputs.
 
 | Layer | Adapter and formats |
 |---|---|
@@ -213,8 +222,8 @@ Native factory codes retain messages, remediation, IDs, details and severity:
 | Product instancing | `unsupported` | unsupported_instancing_path; M02b. |
 | Pro import intent | `Pro-gated` | pro_gated_path; keep blocked. |
 
-Canonical examples and support guides: [MapScene](../examples/mapscene.html),
-[recipe helpers](../examples/w18-mapscene.js), [LabelPlan](labels.md),
+Canonical examples and support guides: [MapScene](../examples/migration/index.html?example=mapscene_vector_labels.py),
+[recipe helpers](https://github.com/milos-agathon/forge3d-web/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/w18-mapscene.js), [LabelPlan](labels.md),
 [vector/style scope](vector-layers.md), [building scope](geometry-mesh-io.md),
 [tiles scope](pointcloud-tiles.md), [VT and product boundaries](support-matrix.md).
 Run `npm run test:w18` for their executable regression tests.

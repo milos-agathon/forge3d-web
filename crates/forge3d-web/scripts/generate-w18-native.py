@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w18/contract.json"]
 """Freeze W18's actual final native contracts; never derive oracles from the web port."""
 import ast
 import hashlib

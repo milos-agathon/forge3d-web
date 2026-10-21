@@ -6,6 +6,7 @@ import { validateMapRecipe, mapProblem } from './map-validation.js';
 import { loadMapResources, mapCancelled } from './map-resource-loader.js';
 import { prepareMapLayers, type PreparedMapLayers } from './map-layer-adapters.js';
 import { renderMapFrame } from './map-render.js';
+import { withMapRenderContext, scheduleMapFrame, type MapSceneRenderContext } from './map-render-context.js';
 import type { SceneRecipeInput, MapSceneRenderOptions, MapSceneResourceSummary, PreparedMapResource, MapSceneProgress, MapFrameMetrics } from './map-scene-types.js';
 import type { LabelPlanData } from './label-types.js';
 import { SceneState, type SceneStateInput } from './scene-review.js';
@@ -49,6 +50,8 @@ async function cancellable<T>(pending:Promise<T>,signal:AbortSignal):Promise<T>{
 }
 /** Owns recipe resources, cancellation and output. GPU owners are disposed after each render. */
 export class MapScene {
+    /** Own a shared device for related real draws, releasing it on success or failure. */
+    static withRenderContext<T>(work: (context: MapSceneRenderContext) => Promise<T>): Promise<T> { return withMapRenderContext(work); }
     #recipe: SceneRecipe;
     #review: SceneState;
     #bundle: LoadedBundle | undefined;
@@ -172,7 +175,8 @@ export class MapScene {
                 if (!this.#layers)
                     throw new Forge3DError('INTERNAL_ERROR', 'MapScene prepared layers unavailable');
                 options.onProgress?.({ phase: 'render', completed: 0, total: 1 });
-                const rendered = await renderMapFrame(this.recipe.value, this.#layers, options, signal, bytes => { this.#gpuBytes = bytes; this.#peakGpuBytes = Math.max(this.#peakGpuBytes, bytes); });
+                const draw = () => renderMapFrame(this.recipe.value, this.#layers!, options, signal, bytes => { this.#gpuBytes = bytes; this.#peakGpuBytes = Math.max(this.#peakGpuBytes, bytes); });
+                const rendered = options.renderContext ? await scheduleMapFrame(options.renderContext, draw) : await draw();
                 this.#live();
                 mapCancelled(signal);
                 options.onProgress?.({ phase: 'render', completed: 1, total: 1 });

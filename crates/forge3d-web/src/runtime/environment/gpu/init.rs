@@ -1,5 +1,4 @@
 use super::bindings::pipeline;
-use super::water::water_pipeline;
 use super::*;
 use wgpu::util::DeviceExt;
 impl EnvironmentResources {
@@ -110,29 +109,8 @@ impl EnvironmentResources {
         Self {
             snapshot,
             world,
-            water_primary: water_pipeline(
-                device,
-                &layout,
-                &shadow_layout,
-                &shader,
-                "fs_water_primary",
-                &[
-                    wgpu::TextureFormat::R32Float,
-                    wgpu::TextureFormat::R32Uint,
-                    wgpu::TextureFormat::Rg32Float,
-                ],
-            ),
-            water_surface: water_pipeline(
-                device,
-                &layout,
-                &shadow_layout,
-                &shader,
-                "fs_water_surface",
-                &[
-                    wgpu::TextureFormat::Rgba32Float,
-                    wgpu::TextureFormat::Rgba32Float,
-                ],
-            ),
+            water_primary: OnceCell::new(),
+            water_surface: OnceCell::new(),
             original_lighting: None,
             effect,
             history,

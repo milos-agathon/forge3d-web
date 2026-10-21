@@ -2,6 +2,13 @@
 
 Run this checklist from the repository root unless a command explicitly changes directory. It gates the incremental browser WebGPU/WASM package and, once every manifest row closes, the complete functional-parity release.
 
+W23 coverage has its own reproducible gates: `npm run verify:w23`,
+`npm run test:w23` and `npm run test:package-consumer:w23` from
+`crates/forge3d-web`. Run `python scripts/audit-w23-native.py` from the repository
+root to independently enumerate the historical examples, docs and native tests.
+See [migration evidence](w23-evidence.md). Passing coverage does not close the
+functional or physical-browser blockers below.
+
 ## Interactive Viewer Release Blocker
 
 The FND-01..FND-07 shared viewer foundation is implemented substantially, but
@@ -29,12 +36,12 @@ documentation must keep these categories separate:
 | Category | Required treatment |
 |---|---|
 | Delivery-format exclusion | Name the unshipped packaging/process mechanism and map its observable outcomes to E01-E07 browser equivalents. |
-| Tombstone or product boundary | Link the explicit [composite manifest](https://github.com/milos-agathon/forge3d/blob/main/docs/parity/forge3d-composite-baseline.json) or plan ledger entry; never present it as an implemented capability. |
+| Tombstone or product boundary | Link the explicit [composite manifest](https://github.com/milos-agathon/forge3d-web/blob/main/docs/parity/forge3d-composite-baseline.json) or plan ledger entry; never present it as an implemented capability. |
 | Feature gap | Link every current gap to its R/C/T/P/V/G/M row and W00-W24 task; never relabel an open row as excluded. |
 | Browser support evidence | Keep a lane `NOT_PROVEN` until its required attested physical evidence passes. |
 
-The [exhaustive parity matrix](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix)
-and [tombstone ledger](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger)
+The [exhaustive parity matrix](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix)
+and [tombstone ledger](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger)
 are authoritative. A release cannot claim complete functional parity while
 `npm run verify:parity` reports an open capability/constraint, plan drift,
 unmapped inventory, or missing evidence.

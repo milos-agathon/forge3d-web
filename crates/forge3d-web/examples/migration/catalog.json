@@ -1,0 +1,1559 @@
+[
+  {
+    "name": "turkiye_river_basins_3d.py",
+    "nativePath": "examples/turkiye_river_basins_3d.py",
+    "workflows": [
+      "application",
+      "terrain",
+      "raster",
+      "vectors",
+      "furniture",
+      "render"
+    ],
+    "capabilities": [
+      "T03",
+      "T01",
+      "T02",
+      "T11",
+      "V01",
+      "T12",
+      "M05",
+      "M06",
+      "R02",
+      "C07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/turkiye_river_basins_3d.py",
+      "sha256": "a6a2bb64652ce5ef883405856b2b66387d518b54850399b76c97c21206ae2b2f",
+      "gitBlob": "abe639498638b2a0b13504e28a2ab9579b47ff88"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "_import_shim.py",
+    "nativePath": "examples/_import_shim.py",
+    "workflows": [
+      "esm"
+    ],
+    "capabilities": [
+      "R12"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/_import_shim.py",
+      "sha256": "8e26def667c1812d37ed9e17e3b2accced53410884010ca83c019512e17a5008",
+      "gitBlob": "79d3bd1397e6ad12cf1d4ea7ca208d847327dd3f"
+    },
+    "adaptation": "Package ESM resolution replaces sys.path mutation."
+  },
+  {
+    "name": "mapscene_p1_assets_bundle_showcase.py",
+    "nativePath": "examples/mapscene_p1_assets_bundle_showcase.py",
+    "workflows": [
+      "datasets",
+      "buildings",
+      "labels",
+      "diagnostics",
+      "bundle",
+      "mapscene",
+      "furniture"
+    ],
+    "capabilities": [
+      "E06",
+      "G05a",
+      "G05b",
+      "V05",
+      "V06a",
+      "V06b",
+      "V07",
+      "M01",
+      "M02b",
+      "M04",
+      "T18",
+      "M02a",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/mapscene_p1_assets_bundle_showcase.py",
+      "sha256": "1e161086ecf82ddd3f65826ac019c2aa8a6af685f330132e6dbc79005c9faca3",
+      "gitBlob": "b0e544837f5e5c979590be19e489d0f00cc27fe3"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "belgium_bivariate_climate_map.py",
+    "nativePath": "examples/belgium_bivariate_climate_map.py",
+    "workflows": [
+      "application",
+      "crs",
+      "terrain",
+      "raster",
+      "colormaps",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "T01",
+      "T02",
+      "T11",
+      "M07",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/belgium_bivariate_climate_map.py",
+      "sha256": "ccde65a8feed55f32e2b57d1a930cc5d453f6a2f7207867e4d61275da75dd02b",
+      "gitBlob": "eb0765eebfbf07b3bedf2c0d8600a47252f1ba38"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "diagnostics_support_matrices_demo.py",
+    "nativePath": "examples/diagnostics_support_matrices_demo.py",
+    "workflows": [
+      "diagnostics",
+      "style",
+      "buildings",
+      "labels"
+    ],
+    "capabilities": [
+      "M01",
+      "M02b",
+      "M03",
+      "G05a",
+      "G05b",
+      "V05",
+      "V06a",
+      "V06b",
+      "V07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/diagnostics_support_matrices_demo.py",
+      "sha256": "d047ed3e88e106b0e2a7e13b4f8674cb90eefeb8e196f93def78366c22c16b42",
+      "gitBlob": "126a0ab5a6c7e4673e48da4434ae7a688dfecbcb"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "california_fire_smoke_effect.py",
+    "nativePath": "examples/california_fire_smoke_effect.py",
+    "workflows": [
+      "application",
+      "terrain",
+      "raster",
+      "environment",
+      "render"
+    ],
+    "capabilities": [
+      "T03",
+      "T01",
+      "T02",
+      "T11",
+      "P08",
+      "P09",
+      "P10",
+      "T17",
+      "R02",
+      "C07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/california_fire_smoke_effect.py",
+      "sha256": "ce91641c503965fd12f303ef0732b1fb91f3ce7a8bdf4d9117dfbfa18c6b999c",
+      "gitBlob": "9000da472768d045611e03a0cf2c38c74eabae11"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "helsinki_transit_daycycle.py",
+    "nativePath": "examples/helsinki_transit_daycycle.py",
+    "workflows": [
+      "application",
+      "crs",
+      "buildings",
+      "vectors",
+      "environment",
+      "animation",
+      "video"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "G05a",
+      "G05b",
+      "V01",
+      "T12",
+      "P08",
+      "P09",
+      "P10",
+      "T17",
+      "C03",
+      "C05",
+      "C06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/helsinki_transit_daycycle.py",
+      "sha256": "cc4a67bfa2bac756556c49a90378850444432850b102958f7a9225d49be95133",
+      "gitBlob": "ba19fd479f48c0bc5f6d61dd0d0580692cc9c4bb"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "pnoa_river_showcase.py",
+    "nativePath": "examples/pnoa_river_showcase.py",
+    "workflows": [
+      "application",
+      "terrain",
+      "raster",
+      "materials",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "T01",
+      "T02",
+      "T11",
+      "T05",
+      "P07",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/pnoa_river_showcase.py",
+      "sha256": "b6ce4cec37132e0fb0366c0aedc280496b2ad8b7dda70c2aa66734d1e2c8f3c5",
+      "gitBlob": "39bfbf69d62a6c8dc65be886f145ab3be68ee1a4"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "camera_animation_demo.py",
+    "nativePath": "examples/camera_animation_demo.py",
+    "workflows": [
+      "terrain",
+      "animation",
+      "video",
+      "render"
+    ],
+    "capabilities": [
+      "T01",
+      "T02",
+      "T03",
+      "C03",
+      "C05",
+      "C06",
+      "R02",
+      "C07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/camera_animation_demo.py",
+      "sha256": "2e7065ffc02d1584367e11b1d5caab0fc7ea25a67f1c14b0c180323d32358672",
+      "gitBlob": "578fa298b8d284c9b74327181928121fa78840b4"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "colorado_rem_forge3d.py",
+    "nativePath": "examples/colorado_rem_forge3d.py",
+    "workflows": [
+      "application",
+      "crs",
+      "terrain",
+      "raster",
+      "scatter",
+      "materials",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "T01",
+      "T02",
+      "T11",
+      "T13",
+      "T05",
+      "P07",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/colorado_rem_forge3d.py",
+      "sha256": "d374ab9ce224194ae07cb8eb0c30f50a109879455749763bd7882a95cffb63d3",
+      "gitBlob": "333ffbfdfe9443752a3ee0ffcdd4ec7400dd8e70"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "quickstart.ipynb",
+    "nativePath": "examples/notebooks/quickstart.ipynb",
+    "workflows": [
+      "datasets",
+      "terrain",
+      "viewer",
+      "png"
+    ],
+    "capabilities": [
+      "E06",
+      "T01",
+      "T02",
+      "T03",
+      "R10",
+      "E07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/notebooks/quickstart.ipynb",
+      "sha256": "ff0618f1e78c1a11d71568c883bdfb8d22f57a44a46221c00e91b22132c9d3a1",
+      "gitBlob": "fa791cfbcddc4e8ad5753d9abe5b820b391fa1dd"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "bryce_canyon_storm_timelapse.py",
+    "nativePath": "examples/bryce_canyon_storm_timelapse.py",
+    "workflows": [
+      "application",
+      "terrain",
+      "raster",
+      "environment",
+      "animation",
+      "video"
+    ],
+    "capabilities": [
+      "T03",
+      "T01",
+      "T02",
+      "T11",
+      "P08",
+      "P09",
+      "P10",
+      "T17",
+      "C03",
+      "C05",
+      "C06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/bryce_canyon_storm_timelapse.py",
+      "sha256": "bc80ccf890ac1d24aabffd7f53f4e7a865dcf29d6dff939ddb12c1487326ced5",
+      "gitBlob": "4a04f1f17bae672c791ab013422dfc39a929d472"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "poland_river_basins_forge3d.py",
+    "nativePath": "examples/poland_river_basins_forge3d.py",
+    "workflows": [
+      "application",
+      "crs",
+      "terrain",
+      "raster",
+      "vectors",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "T01",
+      "T02",
+      "T11",
+      "V01",
+      "T12",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/poland_river_basins_forge3d.py",
+      "sha256": "f6e13014dc1a56187d26a61cd95ee1a92eb93beedca6a53bb28f057b644b03c3",
+      "gitBlob": "e08d2328dc2124d1bce9cc1597913d01242bda59"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "mapscene_vector_labels.py",
+    "nativePath": "examples/mapscene_vector_labels.py",
+    "workflows": [
+      "terrain",
+      "vectors",
+      "labels",
+      "mapscene",
+      "bundle",
+      "furniture"
+    ],
+    "capabilities": [
+      "T01",
+      "T02",
+      "T03",
+      "V01",
+      "T12",
+      "V05",
+      "V06a",
+      "V06b",
+      "V07",
+      "M02a",
+      "M04",
+      "T18",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/mapscene_vector_labels.py",
+      "sha256": "03b629b72d868aab51827320f51d945c3e3f5bce8a63e29a49409f5ab69ca965",
+      "gitBlob": "6acb0fadf8a6d938bb0515e732e7034de1cee4e1"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "california_wildfire_smoke_video.py",
+    "nativePath": "examples/california_wildfire_smoke_video.py",
+    "workflows": [
+      "application",
+      "terrain",
+      "raster",
+      "environment",
+      "animation",
+      "video",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "T01",
+      "T02",
+      "T11",
+      "P08",
+      "P09",
+      "P10",
+      "T17",
+      "C03",
+      "C05",
+      "C06",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/california_wildfire_smoke_video.py",
+      "sha256": "f6ce236bdcdce96895055af29451ca00322709efdcb803919cb4cdb7702a5a5c",
+      "gitBlob": "aa49679ac69980fc153777a8bba2a8c26b184585"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "terrain_single_tile.py",
+    "nativePath": "examples/terrain_single_tile.py",
+    "workflows": [
+      "singleTile",
+      "png"
+    ],
+    "capabilities": [
+      "T01",
+      "E07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/terrain_single_tile.py",
+      "sha256": "00b24ca3a6047c0656fbfa008a7c8615472b41a81659de96b193be05048ef13b",
+      "gitBlob": "a191744e776fb0d85458b71b27d8188e3c9b4bf6"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "romania_terrain_landcover_viewer.py",
+    "nativePath": "examples/romania_terrain_landcover_viewer.py",
+    "workflows": [
+      "application",
+      "crs",
+      "terrain",
+      "raster",
+      "materials",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "T01",
+      "T02",
+      "T11",
+      "T05",
+      "P07",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/romania_terrain_landcover_viewer.py",
+      "sha256": "64974bf6caecf7831eba129c6cb8040854fc29d1920b0112868a829cdce5299c",
+      "gitBlob": "c48ef6a869eae4457c306d899c8baaed726c286f"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "terrain_camera_rigs_demo.py",
+    "nativePath": "examples/terrain_camera_rigs_demo.py",
+    "workflows": [
+      "terrain",
+      "rigs",
+      "animation",
+      "video"
+    ],
+    "capabilities": [
+      "T01",
+      "T02",
+      "T03",
+      "C04",
+      "C03",
+      "C05",
+      "C06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/terrain_camera_rigs_demo.py",
+      "sha256": "28a305ac29d63d07f4a2c8674ad56206ca3b00e5375a98ac27e2f0fd8c2b5f18",
+      "gitBlob": "93c1d5b87c7b77d356664914ac2e2f159b83803d"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "map_plate.ipynb",
+    "nativePath": "examples/notebooks/map_plate.ipynb",
+    "workflows": [
+      "datasets",
+      "terrain",
+      "render",
+      "furniture",
+      "colormaps"
+    ],
+    "capabilities": [
+      "E06",
+      "T01",
+      "T02",
+      "T03",
+      "R02",
+      "C07",
+      "M05",
+      "M06",
+      "M07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/notebooks/map_plate.ipynb",
+      "sha256": "72963d11acb000d977d148576944c440de702b49a5aa32f1a55a063e46a423a6",
+      "gitBlob": "dd0d5d24542ce1bca4bb3b8440fefee6ca4363a7"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "picking_test_interactive.py",
+    "nativePath": "examples/picking_test_interactive.py",
+    "workflows": [
+      "vectors",
+      "picking",
+      "viewer"
+    ],
+    "capabilities": [
+      "V01",
+      "T12",
+      "V04",
+      "R10"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/picking_test_interactive.py",
+      "sha256": "dd64b955d47e944ce4931df87855b8b115ea46d916def8824c55a3afcfd34edf",
+      "gitBlob": "74b8fdc3d605dc5897018be50e25c7c2ad4da0b0"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "mapscene_terrain_raster.py",
+    "nativePath": "examples/mapscene_terrain_raster.py",
+    "workflows": [
+      "terrain",
+      "raster",
+      "mapscene",
+      "bundle",
+      "png"
+    ],
+    "capabilities": [
+      "T01",
+      "T02",
+      "T03",
+      "T11",
+      "M02a",
+      "M04",
+      "T18",
+      "E07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/mapscene_terrain_raster.py",
+      "sha256": "b93e5315f9682c4d923ababb49ad6edb886e2b091e6204fe1bc6f1f2280cfdaa",
+      "gitBlob": "e6703ec9ba4869c15ae484bffa6169207d15a85e"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "swiss_terrain_landcover_viewer.py",
+    "nativePath": "examples/swiss_terrain_landcover_viewer.py",
+    "workflows": [
+      "application",
+      "terrain",
+      "raster",
+      "materials",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "T01",
+      "T02",
+      "T11",
+      "T05",
+      "P07",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/swiss_terrain_landcover_viewer.py",
+      "sha256": "588b19e175675b6ec09e32c6069e84c583918bf66d1819a76875b76eae646d1d",
+      "gitBlob": "57c5154445371a587479dd36dec6ff25207ea3c2"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "_png.py",
+    "nativePath": "examples/_png.py",
+    "workflows": [
+      "png"
+    ],
+    "capabilities": [
+      "E07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/_png.py",
+      "sha256": "39ff329414c2b05169cf0d276c4d9c71669c2f1e4975dfb9b6629044e941bbe3",
+      "gitBlob": "4ac6a51dd837499fcdbc1920d7609988ac88a712"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "baseline_no_vector_overlays.json",
+    "nativePath": "examples/presets/baseline_no_vector_overlays.json",
+    "workflows": [
+      "presets",
+      "render"
+    ],
+    "capabilities": [
+      "R04",
+      "R02",
+      "C07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/presets/baseline_no_vector_overlays.json",
+      "sha256": "1f662fce42e6c3e39f582c1703395be3b5554185915e11713c7ffedadbc37d4e",
+      "gitBlob": "11f3fc746f0b6ca28ff6246a28b72bb30d8b670c"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "terrain_atmosphere_path_demo.py",
+    "nativePath": "examples/terrain_atmosphere_path_demo.py",
+    "workflows": [
+      "terrain",
+      "ibl",
+      "materials",
+      "environment",
+      "animation",
+      "render"
+    ],
+    "capabilities": [
+      "T01",
+      "T02",
+      "T03",
+      "P06",
+      "T05",
+      "P07",
+      "P08",
+      "P09",
+      "P10",
+      "T17",
+      "C03",
+      "C05",
+      "R02",
+      "C07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/terrain_atmosphere_path_demo.py",
+      "sha256": "d7bb0541d62d979b6fbc919709eba4f4525e6bcce0dd5f80d78d2e74d120b849",
+      "gitBlob": "49cdff7e8741a89784bf7eda9be6687372263b7d"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "cog_streaming_demo.py",
+    "nativePath": "examples/cog_streaming_demo.py",
+    "workflows": [
+      "cog",
+      "terrain",
+      "viewer"
+    ],
+    "capabilities": [
+      "T10",
+      "T01",
+      "T02",
+      "T03",
+      "R10"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/cog_streaming_demo.py",
+      "sha256": "a9394f3a1918bf5280c7778e25682a5d790095d2acb60758adaa63a4d03d694f",
+      "gitBlob": "5f657a55f712a89be9ad31479d6154519bcf0bd4"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "rotterdam_solar_potential_shadow_study.py",
+    "nativePath": "examples/rotterdam_solar_potential_shadow_study.py",
+    "workflows": [
+      "application",
+      "crs",
+      "buildings",
+      "environment",
+      "materials",
+      "animation",
+      "video",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "G05a",
+      "G05b",
+      "P08",
+      "P09",
+      "P10",
+      "T17",
+      "T05",
+      "P07",
+      "C03",
+      "C05",
+      "C06",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/rotterdam_solar_potential_shadow_study.py",
+      "sha256": "b7063e7f969cd75ec2fef34126b3baa769e34c61bf27970cdf5e801265e57613",
+      "gitBlob": "bebebd4912a30e35db21e0eb1680058e6499481b"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "germany_terrain_landcover_viewer.py",
+    "nativePath": "examples/germany_terrain_landcover_viewer.py",
+    "workflows": [
+      "application",
+      "crs",
+      "terrain",
+      "raster",
+      "materials",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "T01",
+      "T02",
+      "T11",
+      "T05",
+      "P07",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/germany_terrain_landcover_viewer.py",
+      "sha256": "6c1057bdecd1e2c81f94a9dd31af5042449620ae13cf95f273c52bd1850a9dea",
+      "gitBlob": "a223fdc2f9171cbf27fafd170f076d695a8c2c3d"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "png_numpy_roundtrip.py",
+    "nativePath": "examples/png_numpy_roundtrip.py",
+    "workflows": [
+      "png"
+    ],
+    "capabilities": [
+      "E07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/png_numpy_roundtrip.py",
+      "sha256": "ada873eb713ec163fbb782b25476eb32174f909fa03c2f095b2f229ba14eaace",
+      "gitBlob": "87274022608d9b3086d778b6ef6c6ba593de36f3"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "poland_population_spikes_height_shade.py",
+    "nativePath": "examples/poland_population_spikes_height_shade.py",
+    "workflows": [
+      "application",
+      "terrain",
+      "mesh",
+      "scatter",
+      "materials",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "T01",
+      "T02",
+      "G06",
+      "G07",
+      "G08",
+      "T13",
+      "T05",
+      "P07",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/poland_population_spikes_height_shade.py",
+      "sha256": "a69378e6b59b06b28a40267f2826f86a2823aa818a7b881f7df3d59eb4fad47e",
+      "gitBlob": "1246d8b07767746680c5154fa6dcf79966d7af79"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "luxembourg_rail_overlay.py",
+    "nativePath": "examples/luxembourg_rail_overlay.py",
+    "workflows": [
+      "application",
+      "terrain",
+      "vectors",
+      "picking",
+      "viewer"
+    ],
+    "capabilities": [
+      "T03",
+      "T01",
+      "T02",
+      "V01",
+      "T12",
+      "V04",
+      "R10"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/luxembourg_rail_overlay.py",
+      "sha256": "cebb05f58507c1613f7f0748442e659f1460283b6a9194f64aed24529704bb72",
+      "gitBlob": "a58d9d8847b8bd35faac720f706b71b5795b9750"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "label_api_truth_basic.py",
+    "nativePath": "examples/label_api_truth_basic.py",
+    "workflows": [
+      "labels",
+      "vectors",
+      "diagnostics"
+    ],
+    "capabilities": [
+      "V05",
+      "V06a",
+      "V06b",
+      "V07",
+      "V01",
+      "T12",
+      "M01",
+      "M02b"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/label_api_truth_basic.py",
+      "sha256": "8bbf717f42d1d16015ac89e0cc6b32cb9a70e942b42b4d0d1aedccdb13bfd68a",
+      "gitBlob": "84f4f1d8c7d4b709ce77230b73457cc7cf0ea6fa"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "triangle_png.py",
+    "nativePath": "examples/triangle_png.py",
+    "workflows": [
+      "triangle",
+      "png"
+    ],
+    "capabilities": [
+      "G06",
+      "R02",
+      "E07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/triangle_png.py",
+      "sha256": "ef47c75bb225ae75b7a9463274f620ad063ee25f7a6363287bc31195626c340a",
+      "gitBlob": "c17002746a9eb521175c8b1ded25d4cab3bffebc"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "fuji_labels_demo.py",
+    "nativePath": "examples/fuji_labels_demo.py",
+    "workflows": [
+      "terrain",
+      "labels",
+      "picking",
+      "viewer"
+    ],
+    "capabilities": [
+      "T01",
+      "T02",
+      "T03",
+      "V05",
+      "V06a",
+      "V06b",
+      "V07",
+      "V04",
+      "R10"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/fuji_labels_demo.py",
+      "sha256": "d2a0a6a16310c4ac482ba4f2d0713af13e313ba6a9f45f73f7ed9beea768018d",
+      "gitBlob": "1efb2165fb40d06644b549a59dab1e0d5b3ce46a"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "terrain_explorer.ipynb",
+    "nativePath": "examples/notebooks/terrain_explorer.ipynb",
+    "workflows": [
+      "datasets",
+      "terrain",
+      "raster",
+      "viewer"
+    ],
+    "capabilities": [
+      "E06",
+      "T01",
+      "T02",
+      "T03",
+      "T11",
+      "R10"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/notebooks/terrain_explorer.ipynb",
+      "sha256": "5073e82b24f47584fa34a25f83ec0bb7098454451a46b9c45b88785e7c380cd7",
+      "gitBlob": "8f471cfe11a03ddd583682812c5c7bc2be9c7728"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "rainier_showcase.json",
+    "nativePath": "examples/presets/rainier_showcase.json",
+    "workflows": [
+      "presets",
+      "terrain",
+      "render"
+    ],
+    "capabilities": [
+      "R04",
+      "T01",
+      "T02",
+      "T03",
+      "R02",
+      "C07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/presets/rainier_showcase.json",
+      "sha256": "85bb6828b0b5990bd7ea66dcc73c90e6be3a2d5666975d26c6e2f163638b5572",
+      "gitBlob": "838933a65d0655f246f484d59841e9b088d2067e"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "osm_city_daycycle.py",
+    "nativePath": "examples/osm_city_daycycle.py",
+    "workflows": [
+      "application",
+      "buildings",
+      "environment",
+      "animation",
+      "video",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G05a",
+      "G05b",
+      "P08",
+      "P09",
+      "P10",
+      "T17",
+      "C03",
+      "C05",
+      "C06",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/osm_city_daycycle.py",
+      "sha256": "c414ee821261ad3d3c7a27c7f7c9b54f10a01a53ec26f525d6777b515a5ffebe",
+      "gitBlob": "40c5c00b1142c12395307e5b5e5a3b45e0e0ff8e"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "bosnia_terrain_landcover_viewer.py",
+    "nativePath": "examples/bosnia_terrain_landcover_viewer.py",
+    "workflows": [
+      "application",
+      "crs",
+      "terrain",
+      "raster",
+      "materials",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "T01",
+      "T02",
+      "T11",
+      "T05",
+      "P07",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/bosnia_terrain_landcover_viewer.py",
+      "sha256": "591d456862c207947bcf355e436a2a20945ec2708040b7c39e0ba8cf3cdf14b3",
+      "gitBlob": "6fe82ec94ea6dd17782720f75e25714093f6b1d2"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "platte_rem_forge3d.py",
+    "nativePath": "examples/platte_rem_forge3d.py",
+    "workflows": [
+      "application",
+      "crs",
+      "terrain",
+      "raster",
+      "ibl",
+      "materials",
+      "render"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "T01",
+      "T02",
+      "T11",
+      "P06",
+      "T05",
+      "P07",
+      "R02",
+      "C07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/platte_rem_forge3d.py",
+      "sha256": "a67c150191c02fb91baeaaa1cbd1b022ecf9e8a1b3b1cbcdaca2cb4f6ccb8d5a",
+      "gitBlob": "3786c1bde84edee73d6243fa33efb04e9b3056c6"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "barcelona_travel_time_3d.py",
+    "nativePath": "examples/barcelona_travel_time_3d.py",
+    "workflows": [
+      "application",
+      "crs",
+      "terrain",
+      "raster",
+      "colormaps",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "T01",
+      "T02",
+      "T11",
+      "M07",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/barcelona_travel_time_3d.py",
+      "sha256": "4ca92ae53a78b94b10ec442fd8a03117f1f527368ab58aae16fcd632681e716a",
+      "gitBlob": "87437c84f78ef97164161b4c4f54e7b9c2b12943"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "picking_demo.py",
+    "nativePath": "examples/picking_demo.py",
+    "workflows": [
+      "vectors",
+      "picking",
+      "viewer"
+    ],
+    "capabilities": [
+      "V01",
+      "T12",
+      "V04",
+      "R10"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/picking_demo.py",
+      "sha256": "db47d4eba3c86638dd5449e8c25a4f19a5afe126c6e011e70134ffb132a932bf",
+      "gitBlob": "df26785eeeb3bd3607c237a67f51df4500028c65"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "terrain_viewer_interactive.py",
+    "nativePath": "examples/terrain_viewer_interactive.py",
+    "workflows": [
+      "terrain",
+      "materials",
+      "viewer",
+      "furniture"
+    ],
+    "capabilities": [
+      "T01",
+      "T02",
+      "T03",
+      "T05",
+      "P07",
+      "R10",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/terrain_viewer_interactive.py",
+      "sha256": "3e4947dbce34844b9fc5723d564e936bdbd4425b4c62ee270a3922b71528905e",
+      "gitBlob": "60e1b3a9087788cfe6064b6a2651aabe8071fcf9"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "pointcloud_viewer_interactive.py",
+    "nativePath": "examples/pointcloud_viewer_interactive.py",
+    "workflows": [
+      "pointcloud",
+      "viewer"
+    ],
+    "capabilities": [
+      "G02",
+      "G03",
+      "R10"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/pointcloud_viewer_interactive.py",
+      "sha256": "a907f3d1199917991a30c0ae611dd793665473b9496aa3e2377863b9d7bab04c",
+      "gitBlob": "42b3d43277228ed8e5781c33f4694a07394aae08"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "buildings_viewer_interactive.py",
+    "nativePath": "examples/buildings_viewer_interactive.py",
+    "workflows": [
+      "buildings",
+      "viewer",
+      "furniture"
+    ],
+    "capabilities": [
+      "G05a",
+      "G05b",
+      "R10",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/buildings_viewer_interactive.py",
+      "sha256": "48dd8162752ee18b1832c0654c47db36dbb216e96d186e04bc45a6bb263ce320",
+      "gitBlob": "a3fd54b0e92f99a88d445488e5da46c369bb797b"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "pnoa_river_showcase_video.py",
+    "nativePath": "examples/pnoa_river_showcase_video.py",
+    "workflows": [
+      "application",
+      "terrain",
+      "raster",
+      "materials",
+      "animation",
+      "video",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "T01",
+      "T02",
+      "T11",
+      "T05",
+      "P07",
+      "C03",
+      "C05",
+      "C06",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/pnoa_river_showcase_video.py",
+      "sha256": "a9e972adfe4acea36c41fbfbb3856deb2406387d357320ff67ca20535ef0c73f",
+      "gitBlob": "47d98b3d968dd3fadc9e2130621c71e754f753d5"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "style_viewer_interactive.py",
+    "nativePath": "examples/style_viewer_interactive.py",
+    "workflows": [
+      "style",
+      "vectors",
+      "labels",
+      "viewer"
+    ],
+    "capabilities": [
+      "M03",
+      "V01",
+      "T12",
+      "V05",
+      "V06a",
+      "V06b",
+      "V07",
+      "R10"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/style_viewer_interactive.py",
+      "sha256": "6876ca32dd777f3ac968c63cd55dbaa568b8b5935e76dbb9611fe2f6ebb312c7",
+      "gitBlob": "dc147480b8e97f2170b4a4a3109a28ac58396b44"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "mapscene_bundled_datasets_showcase.py",
+    "nativePath": "examples/mapscene_bundled_datasets_showcase.py",
+    "workflows": [
+      "datasets",
+      "terrain",
+      "vectors",
+      "labels",
+      "mapscene",
+      "bundle",
+      "furniture"
+    ],
+    "capabilities": [
+      "E06",
+      "T01",
+      "T02",
+      "T03",
+      "V01",
+      "T12",
+      "V05",
+      "V06a",
+      "V06b",
+      "V07",
+      "M02a",
+      "M04",
+      "T18",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/mapscene_bundled_datasets_showcase.py",
+      "sha256": "5843f9da65b94f3feda5f70c4237dd4d7654944073c01817a510d9ee015d186e",
+      "gitBlob": "82621d7efbc5ea0ac2bf197936005ebb564f34c1"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "uk_ireland_lighthouse_map.py",
+    "nativePath": "examples/uk_ireland_lighthouse_map.py",
+    "workflows": [
+      "application",
+      "crs",
+      "terrain",
+      "vectors",
+      "ibl",
+      "materials",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "T01",
+      "T02",
+      "V01",
+      "T12",
+      "P06",
+      "T05",
+      "P07",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/uk_ireland_lighthouse_map.py",
+      "sha256": "c267f2b18220dc481e401ac7821f6f5355ce7bb7e1faac4d65ad56f129fc89d3",
+      "gitBlob": "5031d9fbe785a4290651be48f04c8253e11de5f9"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "osm_city_demo.py",
+    "nativePath": "examples/osm_city_demo.py",
+    "workflows": [
+      "application",
+      "crs",
+      "buildings",
+      "vectors",
+      "render",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G01",
+      "G05a",
+      "G05b",
+      "V01",
+      "T12",
+      "R02",
+      "C07",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/osm_city_demo.py",
+      "sha256": "e6b891a3e81027ef9a6b01920bcba1d0adbb0263b84b9a91af8c38b82c800c9a",
+      "gitBlob": "ab88210aac2ad882122aabf8736d1f99f19b2af0"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "khumbu_icefall_sentinel_timelapse.py",
+    "nativePath": "examples/khumbu_icefall_sentinel_timelapse.py",
+    "workflows": [
+      "application",
+      "terrain",
+      "raster",
+      "animation",
+      "video"
+    ],
+    "capabilities": [
+      "T03",
+      "T01",
+      "T02",
+      "T11",
+      "C03",
+      "C05",
+      "C06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/khumbu_icefall_sentinel_timelapse.py",
+      "sha256": "7fffd91e3489a75327c6ffd2972b3805506e66422fb7a0cb7149b63e59144254",
+      "gitBlob": "510c540eace603b1c3f6d8c4a63d2bd5510daada"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "sample_style.json",
+    "nativePath": "examples/sample_style.json",
+    "workflows": [
+      "style",
+      "vectors",
+      "render"
+    ],
+    "capabilities": [
+      "M03",
+      "V01",
+      "T12",
+      "R02",
+      "C07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/sample_style.json",
+      "sha256": "99737f5c8c1d019190bfd19cefc08fc6b60e3c9658a75f695e6d9df9fd49847a",
+      "gitBlob": "0df05a387510a3af6c00728c1c259db20840281c"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "terrain_demo.py",
+    "nativePath": "examples/terrain_demo.py",
+    "workflows": [
+      "terrain",
+      "materials",
+      "effects",
+      "presets",
+      "bundle",
+      "render"
+    ],
+    "capabilities": [
+      "T01",
+      "T02",
+      "T03",
+      "T05",
+      "P07",
+      "P12",
+      "P14",
+      "R04",
+      "M04",
+      "T18",
+      "R02",
+      "C07"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/terrain_demo.py",
+      "sha256": "f8aab85665c1f36f28e25d2358d2e84b776bf70b32b46cef36e45482bfd27e9a",
+      "gitBlob": "96258185a0d223319b193054cb595569b7d74e58"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "osm_city_flood_daycycle.py",
+    "nativePath": "examples/osm_city_flood_daycycle.py",
+    "workflows": [
+      "application",
+      "buildings",
+      "vectors",
+      "environment",
+      "water",
+      "animation",
+      "video",
+      "furniture"
+    ],
+    "capabilities": [
+      "T03",
+      "G05a",
+      "G05b",
+      "V01",
+      "T12",
+      "P08",
+      "P09",
+      "P10",
+      "T17",
+      "T16",
+      "C03",
+      "C05",
+      "C06",
+      "M05",
+      "M06"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/osm_city_flood_daycycle.py",
+      "sha256": "0502ab70dfaa97d29ce2c6758d441e158ce83f7a8c2bd4d1249648a462d07a78",
+      "gitBlob": "2ac774c623800634b99001d2434dbded35034725"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  },
+  {
+    "name": "mapscene_buildings_labels.py",
+    "nativePath": "examples/mapscene_buildings_labels.py",
+    "workflows": [
+      "terrain",
+      "buildings",
+      "labels",
+      "mapscene",
+      "bundle"
+    ],
+    "capabilities": [
+      "T01",
+      "T02",
+      "T03",
+      "G05a",
+      "G05b",
+      "V05",
+      "V06a",
+      "V06b",
+      "V07",
+      "M02a",
+      "M04",
+      "T18"
+    ],
+    "source": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/mapscene_buildings_labels.py",
+      "sha256": "553268940ff074aeeadfa5a39e5a24116e1fba359604287d57257c94de4350e7",
+      "gitBlob": "bc21e3ee2be8fa0df6b6912e59a90e71efb041c9"
+    },
+    "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
+  }
+]

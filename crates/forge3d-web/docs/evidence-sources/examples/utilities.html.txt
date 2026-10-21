@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forge3D browser utilities</title>
+<style>body{font:16px system-ui;max-width:760px;margin:48px auto;padding:0 20px;color:#252525;background:#faf9f6}button,input{font:inherit;padding:8px;margin:4px}canvas{display:block;image-rendering:pixelated;width:256px;height:192px;margin:20px 0;border:1px solid #ccc}pre{white-space:pre-wrap;overflow-wrap:anywhere}label{display:block}</style>
+<h1>Browser utilities</h1>
+<p>Offline license verification, exact PNG pixels, and operation benchmarks.</p>
+<label>Pro license key <input id="license" type="password" autocomplete="off" placeholder="F3D-…"></label>
+<button id="verify">Verify key</button><button id="clear">Clear key</button>
+<p id="license-status" role="status">No license loaded</p>
+<canvas id="pixels" width="8" height="6" aria-label="RGBA image preview"></canvas>
+<button id="png">Download PNG</button><button id="benchmark">Benchmark PNG encoding</button>
+<pre id="result" role="status">Ready</pre>
+<script type="module">
+const api=await import(/* @vite-ignore */ location.search.includes('source')?'../src-ts/index.ts':'../dist/index.js');
+const canvas=document.querySelector('#pixels'),result=document.querySelector('#result'),licenseStatus=document.querySelector('#license-status');
+const data=Uint8Array.from({length:8*6*4},(_,i)=>i%4===3?255:(i*37)%256),image={width:8,height:6,channels:4,data};
+api.displayImageArray(canvas,image);
+document.querySelector('#verify').onclick=async()=>{try{const info=await api.setLicenseKey(document.querySelector('#license').value);licenseStatus.textContent=`${info.status} · ${info.tier??'no tier'} · expiry ${info.expiry??'none'}`;}catch(e){licenseStatus.textContent=e.message;}};
+document.querySelector('#clear').onclick=async()=>{await api.setLicenseKey('');document.querySelector('#license').value='';licenseStatus.textContent='No license loaded';};
+document.querySelector('#png').onclick=async()=>{try{const blob=await api.arrayToPng(image);await api.writeByteSink(await blob.arrayBuffer(),{kind:'download',filename:'forge3d-pixels.png'});result.textContent=`PNG: ${blob.size} bytes`;}catch(e){result.textContent=e.message;}};
+document.querySelector('#benchmark').onclick=async()=>{try{result.textContent=JSON.stringify(await api.runBenchmark({op:'array_to_png',width:64,height:48,warmup:2,iterations:5,seed:0}),null,2);}catch(e){result.textContent=e.message;}};
+window.__w21={api,image,ready:true};
+</script>
+</html>

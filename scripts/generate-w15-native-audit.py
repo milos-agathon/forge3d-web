@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w15/native/7b08af8/tests/*.py"]
 """Freeze the W15 native suite inventory and its concrete browser adaptations."""
 import ast
 import hashlib

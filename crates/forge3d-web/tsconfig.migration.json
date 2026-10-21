@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ES2022", "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], "allowJs": true,
+    "checkJs": true, "noEmit": true, "strict": false, "skipLibCheck": false, "types": []
+  },
+  "include": ["examples/migration/workflows.js", "tests/docs/**/*.ts"]
+}

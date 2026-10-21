@@ -34,7 +34,20 @@ impl EnvironmentResources {
         water_draw(
             encoder,
             &[&targets.depth.view, &targets.id.view, &targets.motion.view],
-            &self.water_primary,
+            self.water_primary.get_or_init(|| {
+                water_pipeline(
+                    device,
+                    &self.layout,
+                    &self.shadow_layout,
+                    &self.shader,
+                    "fs_water_primary",
+                    &[
+                        wgpu::TextureFormat::R32Float,
+                        wgpu::TextureFormat::R32Uint,
+                        wgpu::TextureFormat::Rg32Float,
+                    ],
+                )
+            }),
             &group,
             &shadow,
         );
@@ -42,7 +55,19 @@ impl EnvironmentResources {
             water_draw(
                 encoder,
                 &[&targets.albedo.view, &targets.normal.view],
-                &self.water_surface,
+                self.water_surface.get_or_init(|| {
+                    water_pipeline(
+                        device,
+                        &self.layout,
+                        &self.shadow_layout,
+                        &self.shader,
+                        "fs_water_surface",
+                        &[
+                            wgpu::TextureFormat::Rgba32Float,
+                            wgpu::TextureFormat::Rgba32Float,
+                        ],
+                    )
+                }),
                 &group,
                 &shadow,
             );

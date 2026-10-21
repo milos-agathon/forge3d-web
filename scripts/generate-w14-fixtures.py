@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w14/crs-epsg-v1.json","crates/forge3d-web/tests/fixtures/w14/provenance.json"]
 """Freeze native CRS controls and bundled data without importing Forge3D.
 
 Run with numpy and pyproj. The runtime does not use either dependency.

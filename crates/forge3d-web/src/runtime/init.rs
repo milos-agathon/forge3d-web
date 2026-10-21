@@ -62,6 +62,17 @@ fn check_webgpu_environment() -> Result<(), WebError> {
 pub(super) async fn create_runtime(
     canvas: RuntimeCanvas,
     options: JsValue,
+    prime_terrain: bool,
+) -> Result<Forge3DRuntime, WebError> {
+    create_runtime_with_context(canvas, options, prime_terrain, None).await
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(super) async fn create_runtime_with_context(
+    canvas: RuntimeCanvas,
+    options: JsValue,
+    prime_terrain: bool,
+    shared: Option<(GpuRuntime, GpuContext)>,
 ) -> Result<Forge3DRuntime, WebError> {
     check_webgpu_environment()?;
 
@@ -70,10 +81,13 @@ pub(super) async fn create_runtime(
     canvas.set_width(width);
     canvas.set_height(height);
 
-    let mut instance_descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
-    instance_descriptor.backends = wgpu::Backends::BROWSER_WEBGPU;
-    let instance = wgpu::Instance::new(instance_descriptor);
-    let gpu_runtime = GpuRuntime::new(instance);
+    let gpu_runtime = if let Some((gpu, _)) = &shared {
+        gpu.clone()
+    } else {
+        let mut descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
+        descriptor.backends = wgpu::Backends::BROWSER_WEBGPU;
+        GpuRuntime::new(wgpu::Instance::new(descriptor))
+    };
     let surface = gpu_runtime
         .instance
         .create_surface(canvas.surface_target())
@@ -99,10 +113,15 @@ pub(super) async fn create_runtime(
         required_limits: wgpu::Limits::downlevel_webgl2_defaults(),
         label: Some("forge3d-web-device".to_string()),
     };
-    let context = gpu_runtime
-        .request_context(Some(&surface), &context_options)
-        .await
-        .map_err(map_core_error)?;
+    let context = if let Some((_, context)) = shared {
+        context.health.check().map_err(map_core_error)?;
+        context
+    } else {
+        gpu_runtime
+            .request_context(Some(&surface), &context_options)
+            .await
+            .map_err(map_core_error)?
+    };
     let limits = context.device.limits();
     if width > limits.max_texture_dimension_2d || height > limits.max_texture_dimension_2d {
         return Err(WebError::new(
@@ -177,6 +196,7 @@ pub(super) async fn create_runtime(
         &textures,
         &ibl,
         &shadows,
+        prime_terrain,
     )
     .await?;
     let depth_attachment = DepthAttachment::new(&context, width, height);
@@ -255,10 +275,10 @@ pub(super) async fn create_runtime(
     })
 }
 
-/// Compiles the terrain pipeline variant for the initial runtime state inside a
-/// validation scope, so shader/pipeline failures surface as
-/// `SHADER_COMPILATION_FAILED` at creation. The compiled variant seeds the
-/// runtime's terrain pipeline cache.
+/// Validate terrain layouts and, for public creation, the initial pipeline.
+/// Public shader/pipeline failures still surface as SHADER_COMPILATION_FAILED
+/// at creation. MapScene instead validates its actual setup in configureMap,
+/// without compiling a default variant it may never use.
 #[cfg(target_arch = "wasm32")]
 async fn validate_terrain_shader_and_pipeline(
     context: &GpuContext,
@@ -267,6 +287,7 @@ async fn validate_terrain_shader_and_pipeline(
     textures: &super::textures::TextureResources,
     ibl: &super::ibl::IblResources,
     shadows: &super::shadows::ShadowResources,
+    prime_terrain: bool,
 ) -> Result<TerrainPipelineCache, WebError> {
     let scope = context
         .device
@@ -280,7 +301,9 @@ async fn validate_terrain_shader_and_pipeline(
     );
     let features = super::shader_variants::terrain_lighting_features(lighting, ibl, shadows)
         .with_terrain_mode(0);
-    cache.variant(&context.device, features, surface_format);
+    if prime_terrain {
+        cache.variant(&context.device, features, surface_format);
+    }
 
     if let Some(error) = scope.pop().await {
         return Err(WebError::new(
@@ -295,8 +318,9 @@ async fn validate_terrain_shader_and_pipeline(
 pub(super) async fn create_runtime(
     canvas: super::canvas::RuntimeCanvas,
     options: JsValue,
+    prime_terrain: bool,
 ) -> Result<Forge3DRuntime, WebError> {
-    let _ = (canvas, options);
+    let _ = (canvas, options, prime_terrain);
     Err(WebError::new(
         Forge3DErrorCode::WebGpuUnavailable,
         "forge3d-web runtime creation is only available for wasm32 browser builds",

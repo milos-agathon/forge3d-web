@@ -887,7 +887,7 @@ the commit-path validation exactly.
 material path (native tv20 contract):
 
 ```ts
-material: {
+const material = {
   virtualTexture: {
     enabled: true,
     atlasSize: 2048,
@@ -896,7 +896,7 @@ material: {
     useFeedback: true,
     layers: [{ family: "albedo", virtualSizePx: [2048, 2048] }],
   },
-}
+};
 runtime.registerMaterialVtSource(materialIndex, "albedo", {width, height, data}, fallback);
 ```
 

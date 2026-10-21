@@ -1,0 +1,239 @@
+{
+  "generator": "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
+  "method": "Original Python AST helper bodies executed with bounded typed data; independent of browser implementation.",
+  "numericalEnvironment": {
+    "numpy": "2.5.1",
+    "OPENBLAS_CORETYPE": "Haswell",
+    "OPENBLAS_NUM_THREADS": "1",
+    "gemvProbeFloat32Bits": 1062074350
+  },
+  "sources": {
+    "belgium_bivariate_climate_map.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/belgium_bivariate_climate_map.py",
+      "sha256": "ccde65a8feed55f32e2b57d1a930cc5d453f6a2f7207867e4d61275da75dd02b",
+      "helpers": [
+        "_bivariate_palette_color",
+        "_classify",
+        "_quantile_breaks"
+      ]
+    },
+    "colorado_rem_forge3d.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/colorado_rem_forge3d.py",
+      "sha256": "d374ab9ce224194ae07cb8eb0c30f50a109879455749763bd7882a95cffb63d3",
+      "helpers": [
+        "_apply_idw_from_neighbors"
+      ]
+    },
+    "barcelona_travel_time_3d.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/barcelona_travel_time_3d.py",
+      "sha256": "4ca92ae53a78b94b10ec442fd8a03117f1f527368ab58aae16fcd632681e716a",
+      "helpers": [
+        "dijkstra_seconds",
+        "parse_maxspeed",
+        "project_to_pixels",
+        "select_timed_segments"
+      ]
+    },
+    "rotterdam_solar_potential_shadow_study.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/rotterdam_solar_potential_shadow_study.py",
+      "sha256": "b7063e7f969cd75ec2fef34126b3baa769e34c61bf27970cdf5e801265e57613",
+      "helpers": [
+        "orientation_factor",
+        "roof_normal_for_solar"
+      ]
+    },
+    "khumbu_icefall_sentinel_timelapse.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/khumbu_icefall_sentinel_timelapse.py",
+      "sha256": "7fffd91e3489a75327c6ffd2972b3805506e66422fb7a0cb7149b63e59144254",
+      "helpers": [
+        "build_frame_plan",
+        "normalize_rgb_to_rgba"
+      ]
+    },
+    "turkiye_river_basins_3d.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/turkiye_river_basins_3d.py",
+      "sha256": "a6a2bb64652ce5ef883405856b2b66387d518b54850399b76c97c21206ae2b2f",
+      "helpers": [
+        "_brighten_subject",
+        "_combine_render_passes",
+        "_river_width_px",
+        "_snapshot_dimensions"
+      ]
+    },
+    "california_fire_smoke_effect.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/california_fire_smoke_effect.py",
+      "sha256": "ce91641c503965fd12f303ef0732b1fb91f3ce7a8bdf4d9117dfbfa18c6b999c",
+      "helpers": [
+        "advect_density",
+        "inject_hotspots"
+      ]
+    },
+    "helsinki_transit_daycycle.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/helsinki_transit_daycycle.py",
+      "sha256": "cc4a67bfa2bac756556c49a90378850444432850b102958f7a9225d49be95133",
+      "helpers": [
+        "cumulative_distances",
+        "frame_seconds_for_index",
+        "parse_gtfs_time_seconds",
+        "trip_position_at_seconds"
+      ]
+    },
+    "pnoa_river_showcase.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/pnoa_river_showcase.py",
+      "sha256": "b6ce4cec37132e0fb0366c0aedc280496b2ad8b7dda70c2aa66734d1e2c8f3c5",
+      "helpers": [
+        "build_waterway_masks",
+        "smooth_heightmap",
+        "waterway_priority"
+      ]
+    },
+    "bryce_canyon_storm_timelapse.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/bryce_canyon_storm_timelapse.py",
+      "sha256": "bc80ccf890ac1d24aabffd7f53f4e7a865dcf29d6dff939ddb12c1487326ced5",
+      "helpers": [
+        "_rain_envelope",
+        "_storm_darkness",
+        "_sun_state",
+        "_sun_visibility"
+      ]
+    },
+    "poland_river_basins_forge3d.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/poland_river_basins_forge3d.py",
+      "sha256": "f6e13014dc1a56187d26a61cd95ee1a92eb93beedca6a53bb28f057b644b03c3",
+      "helpers": [
+        "_decode_terrarium",
+        "_palette_for",
+        "_river_width"
+      ]
+    },
+    "california_wildfire_smoke_video.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/california_wildfire_smoke_video.py",
+      "sha256": "f6ce236bdcdce96895055af29451ca00322709efdcb803919cb4cdb7702a5a5c",
+      "helpers": [
+        "_advect_smoke_density",
+        "_smoke_lifecycle_alpha"
+      ]
+    },
+    "bosnia_terrain_landcover_viewer.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/bosnia_terrain_landcover_viewer.py",
+      "sha256": "591d456862c207947bcf355e436a2a20945ec2708040b7c39e0ba8cf3cdf14b3",
+      "helpers": [
+        "DISPLAY_RGB",
+        "_clean_landcover_classes",
+        "_hillshade"
+      ]
+    },
+    "romania_terrain_landcover_viewer.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/romania_terrain_landcover_viewer.py",
+      "sha256": "64974bf6caecf7831eba129c6cb8040854fc29d1920b0112868a829cdce5299c",
+      "helpers": [
+        "_trim_border_open_water"
+      ]
+    },
+    "swiss_terrain_landcover_viewer.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/swiss_terrain_landcover_viewer.py",
+      "sha256": "588b19e175675b6ec09e32c6069e84c583918bf66d1819a76875b76eae646d1d",
+      "helpers": [
+        "classes_to_rgba",
+        "despeckle_landcover_classes",
+        "rgb_to_classes"
+      ]
+    },
+    "germany_terrain_landcover_viewer.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/germany_terrain_landcover_viewer.py",
+      "sha256": "6c1057bdecd1e2c81f94a9dd31af5042449620ae13cf95f273c52bd1850a9dea",
+      "helpers": [
+        "_prepare_render_overlay"
+      ]
+    },
+    "poland_population_spikes_height_shade.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/poland_population_spikes_height_shade.py",
+      "sha256": "a69378e6b59b06b28a40267f2826f86a2823aa818a7b881f7df3d59eb4fad47e",
+      "helpers": [
+        "build_height_dem"
+      ]
+    },
+    "luxembourg_rail_overlay.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/luxembourg_rail_overlay.py",
+      "sha256": "cebb05f58507c1613f7f0748442e659f1460283b6a9194f64aed24529704bb72",
+      "helpers": [
+        "_project_coord_to_terrain_world",
+        "_terrain_world_dimensions"
+      ]
+    },
+    "osm_city_demo.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/osm_city_demo.py",
+      "sha256": "e6b891a3e81027ef9a6b01920bcba1d0adbb0263b84b9a91af8c38b82c800c9a",
+      "helpers": [
+        "building_bin",
+        "infer_building_height",
+        "normalize"
+      ]
+    },
+    "osm_city_daycycle.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/osm_city_daycycle.py",
+      "sha256": "c414ee821261ad3d3c7a27c7f7c9b54f10a01a53ec26f525d6777b515a5ffebe",
+      "helpers": [
+        "sun_state_for_frame"
+      ]
+    },
+    "platte_rem_forge3d.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/platte_rem_forge3d.py",
+      "sha256": "a67c150191c02fb91baeaaa1cbd1b022ecf9e8a1b3b1cbcdaca2cb4f6ccb8d5a",
+      "helpers": [
+        "_idw_surface"
+      ]
+    },
+    "pnoa_river_showcase_video.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/pnoa_river_showcase_video.py",
+      "sha256": "a9e972adfe4acea36c41fbfbb3856deb2406387d357320ff67ca20535ef0c73f",
+      "helpers": [
+        "crop_hero_heightmap",
+        "sun_state"
+      ]
+    },
+    "uk_ireland_lighthouse_map.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/uk_ireland_lighthouse_map.py",
+      "sha256": "c267f2b18220dc481e401ac7821f6f5355ce7bb7e1faac4d65ad56f129fc89d3",
+      "helpers": [
+        "apply_northern_relief_boost",
+        "assign_lighthouse_glow_weights",
+        "farthest_point_indices",
+        "terrarium_rgb_to_height"
+      ]
+    },
+    "osm_city_flood_daycycle.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/osm_city_flood_daycycle.py",
+      "sha256": "0502ab70dfaa97d29ce2c6758d441e158ce83f7a8c2bd4d1249648a462d07a78",
+      "helpers": [
+        "flood_progress_for_frame",
+        "priority_flood_activation",
+        "water_level_for_progress"
+      ]
+    }
+  }
+}

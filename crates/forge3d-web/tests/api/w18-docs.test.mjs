@@ -21,7 +21,7 @@ test('documents every emitted MapScene validation code and the native required c
   for (const code of codes) assert.ok(doc.includes('`' + code + '`'), code);
 });
 test('links canonical browser examples and the actual layer support guides', () => {
-  for (const text of ['../examples/mapscene.html', '../examples/w18-mapscene.js', '(labels.md)', '(vector-layers.md)', '(geometry-mesh-io.md)', '(pointcloud-tiles.md)', '(support-matrix.md)', 'npm run test:w18']) assert.ok(doc.includes(text), text);
+  for (const text of ['../examples/migration/index.html?example=mapscene_vector_labels.py', 'https://github.com/milos-agathon/forge3d-web/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/w18-mapscene.js', '(labels.md)', '(vector-layers.md)', '(geometry-mesh-io.md)', '(pointcloud-tiles.md)', '(support-matrix.md)', 'npm run test:w18']) assert.ok(doc.includes(text), text);
   const example = read('examples/w18-mapscene.js');
   for (const kind of ['raster', 'vector', 'labels', 'buildings']) assert.ok(example.includes("kind: '" + kind + "'"), kind);
   assert.ok(!/raw.?ipc/i.test(example));

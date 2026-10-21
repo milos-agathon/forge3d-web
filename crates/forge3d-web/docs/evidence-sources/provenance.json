@@ -1,0 +1,566 @@
+{
+  "generator": "scripts/w23-coverage.mjs",
+  "meaning": "Current browser evidence source snapshots, not native output goldens.",
+  "files": [
+    {
+      "path": "crates/forge3d-web/examples/test-clear.html",
+      "sha256": "68ec4cbc307251785aff15d546f2ff4bc5eb593300bb02528fdad2d802ec905f",
+      "snapshot": "evidence-sources/examples/test-clear.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/webgpu_diagnostics.spec.ts",
+      "sha256": "4bd15ef4ccc8fae817b8da6eb80379de156d6c481fdc58fbb3eb5f6d6f071577",
+      "snapshot": "evidence-sources/tests/playwright/webgpu_diagnostics.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/device_loss.spec.ts",
+      "sha256": "ee2ef5bbcf22e015ead0d15965a749ff4f4d602f901e8ef6e92938868183630c",
+      "snapshot": "evidence-sources/tests/playwright/device_loss.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w06-capture.html",
+      "sha256": "104dd3188857d7e0750c77e895db1b7baa367c848bdcac8ce1786586342b2fa6",
+      "snapshot": "evidence-sources/examples/test-w06-capture.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w06-frames.test.ts",
+      "sha256": "a463f97ec17bcf4605e5540f4b0d87e15884fb31e7908c0f5761ff9fe56b10a9",
+      "snapshot": "evidence-sources/tests/unit/w06-frames.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w06-offline.test.ts",
+      "sha256": "87ff7544f057a38f0360357f739de8845242124ba40dc39e5fb8c6f8c913e061",
+      "snapshot": "evidence-sources/tests/unit/w06-offline.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w06_capture.spec.ts",
+      "sha256": "d9c39a3b6d1944b172ec7865ec58709ff5f7ec7f45bd38b4768b5fb6f6325200",
+      "snapshot": "evidence-sources/tests/playwright/w06_capture.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w02-runtime.html",
+      "sha256": "bb1eb879be3c563ee9232d28d35781d48ae43c9238206e82d74813405225f543",
+      "snapshot": "evidence-sources/examples/test-w02-runtime.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/scene.test.ts",
+      "sha256": "fad66b1cbe592cee538d73322ff34021b0b54262ba44c6d245c9edecf794dade",
+      "snapshot": "evidence-sources/tests/unit/scene.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/session.test.ts",
+      "sha256": "b4f38f4daf1f1965b15a9eb15875fc02f7f71acad721930df51f612573349ba0",
+      "snapshot": "evidence-sources/tests/unit/session.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/browser-resources.test.ts",
+      "sha256": "c27fcbbc90122a0549462fe433d2311f24204f58b80d501b4707dc25dc5ad441",
+      "snapshot": "evidence-sources/tests/unit/browser-resources.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w02_runtime.spec.ts",
+      "sha256": "63a8b7afb881e43360ee85c20aa62451644cd510085fb71cdef3b087f7cd2beb",
+      "snapshot": "evidence-sources/tests/playwright/w02_runtime.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/renderer-config.test.ts",
+      "sha256": "7c081ddb402364e626aec062165e52094469812213b99a45f5d1ccfa87b5be7d",
+      "snapshot": "evidence-sources/tests/unit/renderer-config.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/parity/w23-public-contracts.test.mjs",
+      "sha256": "01965ba8eeaf921ac55d02c0d4f0ab1fbff5751aa9ab9ae23e0719e5429ff0f3",
+      "snapshot": "evidence-sources/tests/parity/w23-public-contracts.test.mjs.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w05-camera.html",
+      "sha256": "881038d388cbd29d1d356117d7266e3ab60cbd017e1d902d322863628fd4eb96",
+      "snapshot": "evidence-sources/examples/test-w05-camera.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/camera.test.ts",
+      "sha256": "6dce786b913e33cbaa23606b31b40e7b5466a6381c8a510b7a8bd474350edc9d",
+      "snapshot": "evidence-sources/tests/unit/camera.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/camera-animation.test.ts",
+      "sha256": "746c486a1de463e2324517e9368f249e37fdd424f6fde821c1e7adb9f1ea1c5d",
+      "snapshot": "evidence-sources/tests/unit/camera-animation.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/camera-rigs.test.ts",
+      "sha256": "9e27c3fdde8900ec842c4df13e61e0900dc12ae19fcd592597d2cbfb39026c42",
+      "snapshot": "evidence-sources/tests/unit/camera-rigs.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w05_camera.spec.ts",
+      "sha256": "820eff9818374c89b1b09d8e6740353af3c9d37803867cd684eadfca7a5fc825",
+      "snapshot": "evidence-sources/tests/playwright/w05_camera.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w03-terrain.html",
+      "sha256": "42bd41bd4fdde57330a49c5123a12ff9ed59422b5ec84a99d586b268404ebf55",
+      "snapshot": "evidence-sources/examples/test-w03-terrain.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/terrain-dataset.test.ts",
+      "sha256": "06c23bfc0e45b11e07332282bb5c37fa59e7cdc5755e88c4b35a9e27069efb1a",
+      "snapshot": "evidence-sources/tests/unit/terrain-dataset.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w03_terrain.spec.ts",
+      "sha256": "5f785e4a0a4442fefec743fde726bb9b9d30f88a33e8e838ec393332890d54b4",
+      "snapshot": "evidence-sources/tests/playwright/w03_terrain.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/parity/w23-application-analysis.test.mjs",
+      "sha256": "fb2b161e26524db2b7233c3d8347d5ead9742330d26aec0d7a744616604f5caa",
+      "snapshot": "evidence-sources/tests/parity/w23-application-analysis.test.mjs.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w07-materials.html",
+      "sha256": "98f3a974f568a779f55ba3b1ed740b185d9110cf6ff2ca48f1c1016a70b208f9",
+      "snapshot": "evidence-sources/examples/test-w07-materials.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/terrain-material.test.ts",
+      "sha256": "9bc1cc4848fda75ab183177921aeaffa2bb43c8f6b0618bc29dc7d63a1321903",
+      "snapshot": "evidence-sources/tests/unit/terrain-material.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w07_materials.spec.ts",
+      "sha256": "b5253ee04f744865af3b33b5790c650a096ec705e6823d7fb812722a86a4dadf",
+      "snapshot": "evidence-sources/tests/playwright/w07_materials.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w08-terrain.html",
+      "sha256": "189b77b3ab9901fae540a9dfb0ca560cded8bc66aeada7dd92cba65d4862735c",
+      "snapshot": "evidence-sources/examples/test-w08-terrain.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/terrain-streaming.test.ts",
+      "sha256": "a752fc266036c6d668be3cc91b7a0d713d51bed7930614c962cadc7622bfb5e8",
+      "snapshot": "evidence-sources/tests/unit/terrain-streaming.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/cog.test.ts",
+      "sha256": "2985c81adc570b8e6fb00b1cdedcae1f194165c126972241bf452123c467b168",
+      "snapshot": "evidence-sources/tests/unit/cog.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/terrain-overlays.test.ts",
+      "sha256": "74c894d8958e08bab2f543767f5fec261164556b8e2d7a9ccc9ae85c8556e2b5",
+      "snapshot": "evidence-sources/tests/unit/terrain-overlays.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/terrain-vt.test.ts",
+      "sha256": "3202f6cd3e37a90c555ba9976f05b326d8ae50e44161d58e72cbaac7ec93b435",
+      "snapshot": "evidence-sources/tests/unit/terrain-vt.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w08_terrain.spec.ts",
+      "sha256": "a06f3549c061c5bf901f57e2a0327ab11d0e69981e8f9890ef05ec66ac3f4086",
+      "snapshot": "evidence-sources/tests/playwright/w08_terrain.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w08_cog.spec.ts",
+      "sha256": "7a8128fbee6178bf5d5790b4c09761c14bdba829ec547f858ae669a3e0c11b13",
+      "snapshot": "evidence-sources/tests/playwright/w08_cog.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w08_vt.spec.ts",
+      "sha256": "f459c096bceb4f85a6611b339b336ea00d5e51993003b6d523f538abb7f274c6",
+      "snapshot": "evidence-sources/tests/playwright/w08_vt.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/vector-picking.html",
+      "sha256": "77e036d08acd3ba849606f1a60d497deb5d387562423b0d8bcec4d87955ba9dd",
+      "snapshot": "evidence-sources/examples/vector-picking.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/vector.test.ts",
+      "sha256": "8fa4f7dbee6db682cb836c86553d6941a8c68d4316627ff4fa505f4ddb8c4106",
+      "snapshot": "evidence-sources/tests/unit/vector.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+      "sha256": "ed7b5c8db1717637bda97f1516fcf6a4ae10b2d6258f768b48a8e2c7f79436c9",
+      "snapshot": "evidence-sources/tests/unit/w12-native-provenance.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+      "sha256": "968cae780a802f1fc1806e9428255985ac73abd3efae6964ef9c6f5ba5d921f3",
+      "snapshot": "evidence-sources/tests/playwright/w12_vector.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w09.html",
+      "sha256": "5b740fb4c7be155598193dc04dde688e96c1b89ee7cc3180b446834199f88981",
+      "snapshot": "evidence-sources/examples/test-w09.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/terrain-scatter.test.ts",
+      "sha256": "1af3ba184b5ad59aefb801c87bdd51d63250bd78cafb2213689916003315862f",
+      "snapshot": "evidence-sources/tests/unit/terrain-scatter.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/terrain-probes.test.ts",
+      "sha256": "7b822a5dcc68e5230744ff1288433c633b86a2f4379d1ca4f2e81c02a97bb50a",
+      "snapshot": "evidence-sources/tests/unit/terrain-probes.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w09_scatter_probes.spec.ts",
+      "sha256": "4341415bed9f878ad695eb100dbd033c39c61a1426e2579dbed2dc1c689794c7",
+      "snapshot": "evidence-sources/tests/playwright/w09_scatter_probes.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w10.html",
+      "sha256": "d5dad9c1dec2a2f73fe0dff3fe934b2f5f7e716bc169d713a94f1583f46c1ed3",
+      "snapshot": "evidence-sources/examples/test-w10.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/environment.test.ts",
+      "sha256": "d0aab3c9f3475ed65996403acd60eada951c2c43f8362eeea05fef9a6c4b31f8",
+      "snapshot": "evidence-sources/tests/unit/environment.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w10_environment.spec.ts",
+      "sha256": "f965889fb6f09f5847422219948e4e78d572da37872034326fd3422494a030b3",
+      "snapshot": "evidence-sources/tests/playwright/w10_environment.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w10_native.spec.ts",
+      "sha256": "397e557a8f3d3dcc323c4b0f55cd333413dabc64535050f962cad07fc390a466",
+      "snapshot": "evidence-sources/tests/playwright/w10_native.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/style-bundle.html",
+      "sha256": "35b2622d854eb201dcefa06eedd7d37521c60c60dd5c74bb5b6df8bdd7c0b461",
+      "snapshot": "evidence-sources/examples/style-bundle.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
+      "sha256": "dd92f81fefabd1a46a9fe32dc5c4eb1a1ceed3a15caba6bf6c46d008876b3010",
+      "snapshot": "evidence-sources/tests/unit/w19-style-bundle.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w19-native-contract.test.ts",
+      "sha256": "bf2651d4d63d0ff09efe8476366b2a368dcc576824e1a96722ffdb9a1dfd084b",
+      "snapshot": "evidence-sources/tests/unit/w19-native-contract.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w19-native-replay.test.ts",
+      "sha256": "63009defba5b861111c86e4a5d88e672e5c88ea25afc66b12168554ec8c1bad5",
+      "snapshot": "evidence-sources/tests/unit/w19-native-replay.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w19_style_bundle.spec.ts",
+      "sha256": "eba5438d16dbaaccc4c9b433ec3d049b257b34124887e295ff84569ea537b9b6",
+      "snapshot": "evidence-sources/tests/playwright/w19_style_bundle.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w04-materials.html",
+      "sha256": "86c31bc1a28840833f117d115f57b8479b6b2c8a7f0d50ffc14e2863c558a375",
+      "snapshot": "evidence-sources/examples/test-w04-materials.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/lighting.test.ts",
+      "sha256": "19938b45b4db14e2cd0ac563dbaa2385a1ec1bfc9b2fe5d53ece778517b6e19a",
+      "snapshot": "evidence-sources/tests/unit/lighting.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/materials.test.ts",
+      "sha256": "072503b7ed499d2b5c73c73263aecdbf02229607cbd7c8301599a71cd63b395d",
+      "snapshot": "evidence-sources/tests/unit/materials.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/textures.test.ts",
+      "sha256": "04a7e3578a653f3282ed8224e878196acd0fdaeb697dbab014695b35689b9171",
+      "snapshot": "evidence-sources/tests/unit/textures.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/ibl.test.ts",
+      "sha256": "b740d5fc8add415861f0a697639f417b9bb5b16ee5d204b2dea34e61ba4b5bd9",
+      "snapshot": "evidence-sources/tests/unit/ibl.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/shadows.test.ts",
+      "sha256": "f2d73facca3da753f82c0dc7323ba8a071f0f93f1e5d4297ee76df1776fbf130",
+      "snapshot": "evidence-sources/tests/unit/shadows.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w04_materials.spec.ts",
+      "sha256": "753bd8330a391eb487bcdbff1a29820f082848734f27f7dbcb192c6ccbe10b51",
+      "snapshot": "evidence-sources/tests/playwright/w04_materials.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w04_shadows.spec.ts",
+      "sha256": "f33f3cc14b0a99b4b7e65661ecbdb38256bf8e82c5d20347c328bd9d9fab1f1b",
+      "snapshot": "evidence-sources/tests/playwright/w04_shadows.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w11-postfx.html",
+      "sha256": "19b6cb08758b3bf13a5a9b6385b56bf61b3c13ee0b72099b0c7186a2d31d6c13",
+      "snapshot": "evidence-sources/examples/test-w11-postfx.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/postfx.test.ts",
+      "sha256": "a8b956aa8bf0d844d9b1b6599a46f66cf76a04e33b6f2938a8644cda1852a097",
+      "snapshot": "evidence-sources/tests/unit/postfx.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w11-native-provenance.test.ts",
+      "sha256": "22b33f10aa0315cc7631943b27ca5abe8f126632f9be15d51b0acd89d90fb598",
+      "snapshot": "evidence-sources/tests/unit/w11-native-provenance.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w11_postfx.spec.ts",
+      "sha256": "08d55fb5e5ea124cd2c96e2eb8f734fdd77d550993b6b170a599f9fa18075151",
+      "snapshot": "evidence-sources/tests/playwright/w11_postfx.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/test-w13-labels.html",
+      "sha256": "adb599db2cf63b2a951ff709118cfd6e2192733491eb371ae7193920084e22ad",
+      "snapshot": "evidence-sources/examples/test-w13-labels.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/labels.test.ts",
+      "sha256": "b87beb78110eda484fd1c55cfe1176a4321a461a3882aa7dbbab4b112991ffad",
+      "snapshot": "evidence-sources/tests/unit/labels.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+      "sha256": "885fdee83aeee8da7275cf73ab4d2e1fbdecf5bca54d0d1e10e3ebf9066b6d7a",
+      "snapshot": "evidence-sources/tests/unit/label-workflows.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/label-contract-record.test.ts",
+      "sha256": "e9a7d69f282155c397ccfe5bd444225bb44a97fc3f43ebb005fd0ece7d5b6903",
+      "snapshot": "evidence-sources/tests/unit/label-contract-record.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w13_labels.spec.ts",
+      "sha256": "14f8aa81e6c5cd526892944f7664673aa364369b22109c07b4c3d8465baa81dc",
+      "snapshot": "evidence-sources/tests/playwright/w13_labels.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/crs-datasets.html",
+      "sha256": "28fbccd10a2511e6a749603cad97c2c610184c51f9ed7eae15bda0fc0b00c829",
+      "snapshot": "evidence-sources/examples/crs-datasets.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+      "sha256": "afebd5648a0cf5507c974bc29bd3cb94e425deebfdc0941201a0fb2cd24ba63d",
+      "snapshot": "evidence-sources/tests/unit/w14-crs.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+      "sha256": "a426d3347413f51e934289762e5a7246e27acc4242a9fcd1848d4600db07fb56",
+      "snapshot": "evidence-sources/tests/unit/w14-datasets.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w14_foundation.spec.ts",
+      "sha256": "27ccf13f3672a604c679bd789f002388ab4d72309fe5cd590d08231f56fa3bc5",
+      "snapshot": "evidence-sources/tests/playwright/w14_foundation.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/pointcloud-tiles.html",
+      "sha256": "2fc179045386d293c9ae7a52ea1215436703fb66e92c945ace24520da3d43a3d",
+      "snapshot": "evidence-sources/examples/pointcloud-tiles.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w16-pointcloud.test.ts",
+      "sha256": "f604b27cbd6f81437f76de2eb87147c4208abb9a0097a62f96539e534f579573",
+      "snapshot": "evidence-sources/tests/unit/w16-pointcloud.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w16-tiles.test.ts",
+      "sha256": "d96f24f95b97f3243ed3051c3c08cc94ac477a38736e588cb52bce683f522f12",
+      "snapshot": "evidence-sources/tests/unit/w16-tiles.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w16_pointcloud.spec.ts",
+      "sha256": "d7fac966ab613527925c1ef7e41fea5568661ddfe31d8e629044b1ba731e9d0e",
+      "snapshot": "evidence-sources/tests/playwright/w16_pointcloud.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/mesh-buildings.html",
+      "sha256": "68fbaac457fe2f16db6799ae5cffd7c237b94fb0ffc40772806d7a5207e68f30",
+      "snapshot": "evidence-sources/examples/mesh-buildings.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+      "sha256": "9614de98064e303b83f6d05eb0edc83f002fdc160070f551346134ed12a0d98b",
+      "snapshot": "evidence-sources/tests/unit/w15-geometry.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w15-io.test.ts",
+      "sha256": "113cd512da63c9ad439b7e26a0b5618faa57f41929dbaaddec263cdf03af1677",
+      "snapshot": "evidence-sources/tests/unit/w15-io.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+      "sha256": "bdc8b60b94067a7ec852347cecb84dbfebc4019b5d42389ac1e3820b347a0976",
+      "snapshot": "evidence-sources/tests/unit/w15-buildings.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+      "sha256": "67c7447e3c49cb5ef2c8b361faff2ee67dbea2fbddbe6d599e98819281cc801e",
+      "snapshot": "evidence-sources/tests/unit/w15-native-contracts.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+      "sha256": "779fb8e5d1557a18414feedd52231eb9dc2b8f21d8daeacaa753b1daffb9d666",
+      "snapshot": "evidence-sources/tests/playwright/w15_geometry.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/tracing.html",
+      "sha256": "4ad2743a5dc5fdd01ac16b7ea2b303e2d922b95a850e9e736f1ae80106428a1d",
+      "snapshot": "evidence-sources/examples/tracing.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w17-tracing.test.ts",
+      "sha256": "174e0e3a8cff9e48969416d88032994d34fb86ef39c06c7399ae67ca8f98d386",
+      "snapshot": "evidence-sources/tests/unit/w17-tracing.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w17_tracing.spec.ts",
+      "sha256": "abadd857b8686499fbc2898bf1953c53cb6a4da49565c926ae87c5de7b742f03",
+      "snapshot": "evidence-sources/tests/playwright/w17_tracing.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/mapscene.html",
+      "sha256": "e2cd00a6ee265e983b9caf7c94fe0487e9341a381837e2b83511e8277834bc6e",
+      "snapshot": "evidence-sources/examples/mapscene.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+      "sha256": "79ac0ae5841ead16fd96d085b73c6b9a26d5b0eafe1e59fe6645daab1dfd79f5",
+      "snapshot": "evidence-sources/tests/unit/w18-diagnostics.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+      "sha256": "71a1b8ef874faf19efad198c0c55a6a3b4e48ec75a15d0e18bf656782ad14fa1",
+      "snapshot": "evidence-sources/tests/unit/w18-mapscene.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+      "sha256": "9aafa267df2daeecfbff69e7ea4beeb55b3c71fa07c25f4a1751ab3a06af23ba",
+      "snapshot": "evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/cartography.html",
+      "sha256": "d8541f4b6780f7b60102e4dfcc99d11f2ae1f995676e84adf0251692af1d7011",
+      "snapshot": "evidence-sources/examples/cartography.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w20-vector-export.test.ts",
+      "sha256": "0cc415082a60436170c34b5ea4635da7c87b188065ace1b6fc439b38b3bcd7ac",
+      "snapshot": "evidence-sources/tests/unit/w20-vector-export.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w20-colormaps.test.ts",
+      "sha256": "d65c16071f35f6261909d8c6caa4189601b59b539ba276690794818955f5bad8",
+      "snapshot": "evidence-sources/tests/unit/w20-colormaps.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w20-native-coverage.test.ts",
+      "sha256": "3599f9a9c47c5cc5eaf13e8cfb94161e8924053a5b545fd5888baad3179eba9a",
+      "snapshot": "evidence-sources/tests/unit/w20-native-coverage.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w20_cartography.spec.ts",
+      "sha256": "7cce9127aed87f9726e9aef0797983e2971a11d55ddcbd416456872a307ea56c",
+      "snapshot": "evidence-sources/tests/playwright/w20_cartography.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/utilities.html",
+      "sha256": "48907381cee4b1db16fa61e3d1f61991704bc30595fe076fb2e484df96961961",
+      "snapshot": "evidence-sources/examples/utilities.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w21-license.test.ts",
+      "sha256": "279a949332e50089af99ffb446b15a6d2ff5bc622e90a178e6f7b6f087bb20b3",
+      "snapshot": "evidence-sources/tests/unit/w21-license.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w21-images.test.ts",
+      "sha256": "8949222bafbe584d454e222cba92bbf5496002440e4467106224f86418ad5774",
+      "snapshot": "evidence-sources/tests/unit/w21-images.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w21-benchmark.test.ts",
+      "sha256": "f01a99ee37e7f925eb0224c457633f12e193ed758b1b48b603e68c142ed8e1f7",
+      "snapshot": "evidence-sources/tests/unit/w21-benchmark.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w21_utilities.spec.ts",
+      "sha256": "7f7208327353eefbb95e59a00002a9f7904e8b271da8fb7be50189330a0b28db",
+      "snapshot": "evidence-sources/tests/playwright/w21_utilities.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/examples/codecs.html",
+      "sha256": "9d6e2f6ed38243923f4b4458b756c74851fc06bd957ba0cf856020f9e6c89388",
+      "snapshot": "evidence-sources/examples/codecs.html.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w22-codecs.test.ts",
+      "sha256": "0a38649f6f1e432a9f08fd65cbc21f76b46e1fd37441bb57ed4b2ee96a22bbd1",
+      "snapshot": "evidence-sources/tests/unit/w22-codecs.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/w22-review-regressions.test.ts",
+      "sha256": "8b846a6cf264295a6bb0438961c79fed0b04b0845f5e6f7fb59f826bdf3bcd50",
+      "snapshot": "evidence-sources/tests/unit/w22-review-regressions.test.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w22_codecs.spec.ts",
+      "sha256": "9c3c19cb034ad95f7312acb33cacda58c7649782aa1d757a5dee20085ecfbec0",
+      "snapshot": "evidence-sources/tests/playwright/w22_codecs.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/scripts/generate-w05-camera-fixture.py",
+      "sha256": "f13ed8b28d8285652bd8a16a3cbb0e0de4c221929f14b6392996db1c46b95a80",
+      "snapshot": "evidence-sources/scripts/generate-w05-camera-fixture.py.txt"
+    },
+    {
+      "path": "crates/forge3d-web/scripts/generate-w06-aov-fixture.py",
+      "sha256": "22c8457434ea6028eb086857b197414a20d545d97c40dfed40f6ea31b8cf9439",
+      "snapshot": "evidence-sources/scripts/generate-w06-aov-fixture.py.txt"
+    },
+    {
+      "path": "crates/forge3d-web/scripts/generate-w23-goldens.py",
+      "sha256": "e8ecd69e69ab7a84183f026812c5aae1d13cd677811e80c100238af85319e792",
+      "snapshot": "evidence-sources/scripts/generate-w23-goldens.py.txt"
+    },
+    {
+      "path": "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
+      "sha256": "df66cb39bc0cf499b5970a2a40714649783702259c4f4dc1492176364969595c",
+      "snapshot": "evidence-sources/scripts/generate-w23-application-fixtures.py.txt"
+    },
+    {
+      "path": "crates/forge3d-web/scripts/capture-w23-dem-inputs.py",
+      "sha256": "1132a09a92d26a90ef33b2e4d7dc2b29083bb183fe00c10e872654d82e37819b",
+      "snapshot": "evidence-sources/scripts/capture-w23-dem-inputs.py.txt"
+    },
+    {
+      "path": "crates/forge3d-web/scripts/w23_regional_fixtures.py",
+      "sha256": "8e6fe88e6db16b1cd80b6860e3eff32c27d91a667b4bc9f89a23b7efefffec09",
+      "snapshot": "evidence-sources/scripts/w23_regional_fixtures.py.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w23_migration.spec.ts",
+      "sha256": "4553419c0541b11f47524be3982045bb420016ee6605dd640d4c1a62f9572924",
+      "snapshot": "evidence-sources/tests/playwright/w23_migration.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/browser/w23-stage-observer.ts",
+      "sha256": "15ebf45fda135050bd0e805f5360542569b8cd0b66bc6d30999fbd70bd776b94",
+      "snapshot": "evidence-sources/tests/browser/w23-stage-observer.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/parity/w23-review-regressions.test.mjs",
+      "sha256": "e74e5e68a564853e9d6f360f9175d97f5d3a76411be489c750567151b2145f16",
+      "snapshot": "evidence-sources/tests/parity/w23-review-regressions.test.mjs.txt"
+    }
+  ]
+}

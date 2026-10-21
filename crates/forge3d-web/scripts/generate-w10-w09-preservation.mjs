@@ -1,3 +1,4 @@
+// W23_OUTPUTS: ["crates/forge3d-web/tests/golden/w10/w09-preservation.json"]
 // Run against a separately built git archive of 7b738f9, served over HTTP.
 // Copy test-w10.html, w10-acceptance.js, w10-native-probes.js and its worker
 // into that archive's examples directory before starting Vite.

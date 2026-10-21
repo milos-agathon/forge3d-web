@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w16/colored.pnts","crates/forge3d-web/tests/fixtures/w16/copc-ept-tiles-v1.json","crates/forge3d-web/tests/fixtures/w16/ept/ept-data/0-0-0-0.bin","crates/forge3d-web/tests/fixtures/w16/ept/ept-hierarchy/0-0-0-0.json","crates/forge3d-web/tests/fixtures/w16/ept/ept.json","crates/forge3d-web/tests/fixtures/w16/external.json","crates/forge3d-web/tests/fixtures/w16/overview.copc.laz","crates/forge3d-web/tests/fixtures/w16/quantized.pnts","crates/forge3d-web/tests/fixtures/w16/tile-traversal-v2.json","crates/forge3d-web/tests/fixtures/w16/tileset.json","crates/forge3d-web/tests/fixtures/w16/triangle.b3dm"]
 """Independent laspy/lazrs oracle plus byte-defined EPT/OGC fixtures. No browser decoder is used."""
 from pathlib import Path
 import sys, json, hashlib, struct, subprocess, ast, types

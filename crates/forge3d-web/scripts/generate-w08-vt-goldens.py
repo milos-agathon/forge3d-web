@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/golden/w08/vt-albedo-off.f32","crates/forge3d-web/tests/golden/w08/vt-albedo-on.f32","crates/forge3d-web/tests/golden/w08/vt-heights.f32","crates/forge3d-web/tests/golden/w08/vt-native.json","crates/forge3d-web/tests/golden/w08/vt-noshadow-off.png","crates/forge3d-web/tests/golden/w08/vt-noshadow-on.png","crates/forge3d-web/tests/golden/w08/vt-off.png","crates/forge3d-web/tests/golden/w08/vt-on.png","crates/forge3d-web/tests/golden/w08/vt-src-0.png","crates/forge3d-web/tests/golden/w08/vt-src-1.png","crates/forge3d-web/tests/golden/w08/vt-src-2.png","crates/forge3d-web/tests/golden/w08/vt-src-3.png"]
 """Generate the W08 `terrain-vt-v1` native golden set.
 
 Renders the native ``test_tv20_virtual_texturing.py`` scene with the

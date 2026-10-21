@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Check out the protected source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable reviewed 2026-07-28
@@ -36,6 +38,23 @@ jobs:
           node-version: "20.19.0"
           cache: npm
           cache-dependency-path: crates/forge3d-web/package-lock.json
+
+      - name: Prepare Python for early W23 oracle feedback
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.13'
+
+      - name: Audit W23 native sources before the full corpus
+        working-directory: crates/forge3d-web
+        run: python ../../scripts/audit-w23-native.py
+
+      - name: Check W23 oracles before the full corpus
+        working-directory: crates/forge3d-web
+        run: |
+          python -m pip install numpy==2.5.1 pillow==12.2.0 scipy==1.16.0 rasterio==1.4.3
+          python -c "import sys, numpy as np; print(sys.version); print(np.__version__); print(np._core._multiarray_umath.__cpu_features__)"
+          python scripts/generate-w23-goldens.py --check
+          python scripts/generate-w23-application-fixtures.py --check
 
       - name: Verify composite parity manifest
         working-directory: crates/forge3d-web
@@ -176,6 +195,37 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Set up Python for W23 independent native oracles
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.13'
+
+      - name: Audit W23 native source completeness independently
+        working-directory: crates/forge3d-web
+        run: python ../../scripts/audit-w23-native.py
+
+      - name: Recompute W23 converted native oracles independently
+        working-directory: crates/forge3d-web
+        run: |
+          python -m pip install numpy==2.5.1 pillow==12.2.0 scipy==1.16.0 rasterio==1.4.3
+          python -c "import sys, numpy as np; print(sys.version); print(np.__version__); print(np._core._multiarray_umath.__cpu_features__)"
+          python scripts/generate-w23-goldens.py --check
+          python scripts/generate-w23-application-fixtures.py --check
+
+      - name: Test W23 installed migration workflows and documentation
+        id: w23-installed
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w23
+
+      - name: Upload W23 installed migration evidence
+        if: always() && steps.w23-installed.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-w23-installed
+          path: crates/forge3d-web/test-results/w23-installed
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Fuzz pinned W16 LAZ chunks through owned workers
         working-directory: crates/forge3d-web
         env:
@@ -195,6 +245,15 @@ jobs:
           path: crates/forge3d-web/test-results/browser-gate
           if-no-files-found: error
           retention-days: 30
+
+      - name: Upload differing W23 oracle candidates for diagnosis
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-w23-oracle-diff
+          path: crates/forge3d-web/test-results/w23-oracle-diff
+          if-no-files-found: ignore
+          retention-days: 7
 
   browser-preflight:
     name: Web Runtime / Browser Preflight
@@ -248,6 +307,12 @@ jobs:
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
         run: npx playwright test tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight --grep native-saver --max-failures=1
+
+      - name: Probe all W23 source workflows before the full Chromium corpus
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_WEBGPU_REQUIRED: "1"
+        run: npx playwright test tests/playwright/w23_migration.spec.ts --project=chromium-preflight --grep "W23 source" --max-failures=1
 
       - name: Run bundled Chromium preflight (ENGINE_PASS only)
         working-directory: crates/forge3d-web

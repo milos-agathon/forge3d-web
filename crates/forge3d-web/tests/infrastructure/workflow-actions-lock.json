@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-07-28",
+  "reviewedAt": "2026-10-19",
   "actions": [
     {
       "repository": "actions/attest",
@@ -22,6 +22,13 @@
       "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020",
       "upstreamVersion": "v4.4.0",
       "reviewedAt": "2026-07-28"
+    },
+    {
+      "repository": "actions/setup-python",
+      "path": "",
+      "commit": "a26af69be951a213d495a4c3e4e4022e16d87065",
+      "upstreamVersion": "v5.6.0",
+      "reviewedAt": "2026-10-19"
     },
     {
       "repository": "actions/upload-artifact",

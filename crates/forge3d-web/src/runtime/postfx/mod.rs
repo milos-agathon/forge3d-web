@@ -1,5 +1,5 @@
 #![cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-mod capture;
+pub(super) mod capture;
 mod gpu;
 mod plan;
 mod render;
@@ -300,6 +300,13 @@ pub(super) fn invalidate(runtime: &mut Forge3DRuntime, reason: &'static str, reb
             fx.capture = None;
         }
     }
+}
+/// Readback presents a cached frame when encode's non-advancing inputs match.
+/// Its final overlay/output passes do not consume a newly rendered shadow map.
+pub(super) fn readback_needs_scene_render(runtime: &Forge3DRuntime) -> bool {
+    runtime.postfx.as_ref().is_none_or(|fx| {
+        fx.last_camera != Some(runtime.camera) || fx.last_time != runtime.time_seconds
+    })
 }
 pub(super) fn prepare_resize(
     runtime: &Forge3DRuntime,

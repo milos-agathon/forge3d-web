@@ -6,6 +6,7 @@ mod environment;
 mod ibl;
 mod init;
 mod lighting;
+mod map_context;
 mod memory;
 pub(crate) mod offline;
 mod postfx;
@@ -120,7 +121,7 @@ impl Forge3DRuntime {
         options: JsValue,
     ) -> Result<Forge3DRuntime, JsValue> {
         install_panic_hook();
-        create_runtime(RuntimeCanvas::Html(canvas), options)
+        create_runtime(RuntimeCanvas::Html(canvas), options, true)
             .await
             .map_err(to_js_error)
     }
@@ -131,9 +132,65 @@ impl Forge3DRuntime {
         options: JsValue,
     ) -> Result<Forge3DRuntime, JsValue> {
         install_panic_hook();
-        create_runtime(RuntimeCanvas::Offscreen(canvas), options)
+        create_runtime(RuntimeCanvas::Offscreen(canvas), options, true)
             .await
             .map_err(to_js_error)
+    }
+
+    // Private facade bridge: MapScene validates its actual setup below instead
+    // of compiling the unused default terrain shader for every offscreen owner.
+    #[wasm_bindgen(js_name = createMap)]
+    pub async fn create_map(
+        canvas: HtmlCanvasElement,
+        options: JsValue,
+    ) -> Result<Forge3DRuntime, JsValue> {
+        install_panic_hook();
+        create_runtime(RuntimeCanvas::Html(canvas), options, false)
+            .await
+            .map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = createMapOffscreen)]
+    pub async fn create_map_offscreen(
+        canvas: web_sys::OffscreenCanvas,
+        options: JsValue,
+    ) -> Result<Forge3DRuntime, JsValue> {
+        install_panic_hook();
+        create_runtime(RuntimeCanvas::Offscreen(canvas), options, false)
+            .await
+            .map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = configureMap)]
+    pub fn configure_map(&self, setup: js_sys::Function) -> js_sys::Promise {
+        let context = self.context.clone();
+        // Poll on the next microtask, after the WASM borrow of this runtime is
+        // released: setup calls the ordinary mutable facade setters reentrantly.
+        wasm_bindgen_futures::future_to_promise(async move {
+            let context = context.ok_or_else(|| {
+                to_js_error(WebError::new(
+                    Forge3DErrorCode::RuntimeDisposed,
+                    "MapScene setup requires a live runtime",
+                ))
+            })?;
+            let scope = context
+                .device
+                .push_error_scope(wgpu::ErrorFilter::Validation);
+            let result = setup.call0(&JsValue::UNDEFINED);
+            let validation = scope.pop().await;
+            if let Some(error) = validation {
+                return Err(to_js_error(WebError::new(
+                    Forge3DErrorCode::ShaderCompilationFailed,
+                    format!("MapScene shader/pipeline: {error}"),
+                )));
+            }
+            result.map(|_| JsValue::UNDEFINED)
+        })
+    }
+
+    #[wasm_bindgen(js_name = createMapContext)]
+    pub fn create_map_context(&self) -> Result<map_context::MapRuntimeContext, JsValue> {
+        map_context::MapRuntimeContext::from_runtime(self)
     }
 
     #[wasm_bindgen(js_name = dispose)]
@@ -192,6 +249,16 @@ impl Forge3DRuntime {
             .await
             .map_err(to_js_error)?;
         Ok(js_sys::Uint8Array::from(rgba.as_slice()))
+    }
+
+    // Private facade bridge: coverage from the same draw as readRgba, when the
+    // display depth attachment represents all of the scene's opaque geometry.
+    #[wasm_bindgen(js_name = readMapFrame)]
+    pub async fn read_map_frame(&mut self) -> Result<JsValue, JsValue> {
+        self.guard_mutation()?;
+        readback::read_map_frame_runtime(self)
+            .await
+            .map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = setScene)]

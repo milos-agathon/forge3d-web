@@ -59,7 +59,7 @@ phase timings identify any stalled workload without changing its assertions.
 All 11 source checks pass on local Firefox and Chromium, and all 11 installed
 Chromium checks pass on the committed correction. Raw reports, exact parity
 results and the installed tarball digest are bound to `0a46179` in
-[the Firefox correction evidence](../../../docs/parity/w17-firefox-fix-evidence.json).
+[the Firefox correction evidence](https://github.com/milos-agathon/forge3d-web/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/docs/parity/w17-firefox-fix-evidence.json).
 
 Candidate RIS is checked against an exhaustive 50-light reference, with error reduction
 above 40%. Reuse is compared at equal sample/candidate counts, checked against

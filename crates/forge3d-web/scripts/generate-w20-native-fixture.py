@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w20/layout-oracle.json","crates/forge3d-web/tests/fixtures/w20/native-oracle.json"]
 """Execute the pinned W20 Python sources and their original tests. No native renderer needed.
 
 Only the unrelated W21 Pro check is replaced. Original native Rust projection

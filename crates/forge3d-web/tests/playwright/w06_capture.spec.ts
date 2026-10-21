@@ -21,6 +21,88 @@ test.describe("W06 readback, AOV/HDR/EXR, offline quality, frames and video", ()
     skipRenderAssertionsWhenProbing(webgpuAvailability);
   });
 
+  for (const dist of [false, true]) test(`C08 ${dist ? 'dist' : 'source'}: capture compiles optional kernels only when requested`, async ({ page }) => {
+    await page.addInitScript(() => {
+      (window as any).__capturePipelines = [];
+      for (const key of ['createComputePipeline', 'createRenderPipeline'] as const) {
+        const original = GPUDevice.prototype[key];
+        (GPUDevice.prototype as any)[key] = function (descriptor: any) {
+          (window as any).__capturePipelines.push({ label: descriptor.label, entry: descriptor.fragment?.entryPoint });
+          return (original as any).call(this, descriptor);
+        };
+      }
+    });
+    await page.goto('/examples/test-clear.html');
+    const r = await page.evaluate(async dist => {
+      const api = await (dist ? import('/dist/index.js') : import('/src-ts/index.ts'));
+      const canvas = document.createElement('canvas'), runtime = await api.Forge3DRuntime.create(canvas, { width: 33, height: 31 });
+      const scene = api.Forge3DScene.create();
+      scene.addNode({ kind: 'ground-plane', name: 'ground', size: [4, 4], height: 0, color: [.4, .5, .6, 1] });
+      const counts = () => {
+        const calls = (window as any).__capturePipelines;
+        return { denoise: calls.filter((c: any) => c.label === 'forge3d-web-offline-denoise').length,
+          luminance: calls.filter((c: any) => c.label === 'forge3d-web-offline-luminance').length,
+          surface: calls.filter((c: any) => c.entry === 'fs_capture_surface').length };
+      };
+      try {
+        runtime.setScene(scene.snapshot());
+        runtime.setCamera({ position: [0, 3, 3], target: [0, 0, 0], up: [0, 1, 0], fovYDegrees: 45, near: .1, far: 20 });
+        const plain = await runtime.capture({ samples: 1, aovs: ['depth'] }), before = counts();
+        runtime.beginOfflineAccumulation({ samples: 1, aovs: ['albedo', 'normal', 'depth'] });
+        await runtime.accumulateBatch(1);
+        await runtime.resolveOfflineHdr({ denoise: { enabled: true, method: 'atrous', iterations: 1 } });
+        await runtime.readAccumulationMetrics(.01, 8);
+        const requested = counts();
+        await runtime.resolveOfflineHdr({ denoise: { enabled: true, method: 'atrous', iterations: 1 } });
+        await runtime.readAccumulationMetrics(.01, 8);
+        return { before, requested, repeated: counts(), covered: [...plain.aovFrame.depth()].filter(d => d < 1).length };
+      } finally { runtime.dispose(); scene.dispose(); }
+    }, dist);
+    expect(r.covered).toBeGreaterThan(200);
+    expect(r.before).toEqual({ denoise: 0, luminance: 0, surface: 0 });
+    expect(r.requested).toEqual({ denoise: 1, luminance: 1, surface: 1 });
+    expect(r.repeated).toEqual(r.requested);
+  });
+
+  for (const dist of [false, true]) test(`C08 ${dist ? 'dist' : 'source'}: vector and scatter capture pipelines compile on demand and are reused`, async ({ page }) => {
+    test.setTimeout(60000);
+    await page.addInitScript(() => {
+      (window as any).__geometryCapturePipelines = [];
+      const original = GPUDevice.prototype.createRenderPipeline;
+      GPUDevice.prototype.createRenderPipeline = function (descriptor) {
+        if (descriptor.label === 'scatter-pipeline' || ['fs_aov', 'fs_surface'].includes(descriptor.fragment?.entryPoint ?? ''))
+          (window as any).__geometryCapturePipelines.push(descriptor.fragment?.entryPoint);
+        return original.call(this, descriptor);
+      };
+    });
+    await page.goto('/examples/test-clear.html');
+    const r = await page.evaluate(async dist => {
+      const api = await (dist ? import('/dist/index.js') : import('/src-ts/index.ts'));
+      const runtime = await api.Forge3DRuntime.create(document.createElement('canvas'), { width: 96, height: 96 }), vectors = new api.VectorLayers();
+      const counts = () => [...(window as any).__geometryCapturePipelines];
+      try {
+        runtime.setCamera({ position: [0, 3, 5], target: [0, 0, 0], up: [0, 1, 0], fovYDegrees: 45, near: .1, far: 30 });
+        vectors.add({ name: 'point', features: [{ id: 7, kind: 'point', position: [-1, .5, 0], style: { pointSize: 24, color: [1, 0, 0, .5] } }] });
+        runtime.setVectorLayers(vectors);
+        runtime.setScatterBatches([{ name: 'box', levels: [{ mesh: api.generatePrimitive('box') }], transforms: new Float32Array([1,0,0,1,0,1,0,.5,0,0,1,0,0,0,0,1]), color: [0,1,0,1] }]);
+        await runtime.readRgba(); const display = counts();
+        const plain = await runtime.capture({ samples: 1, aovs: ['depth', 'id'] }), depth = counts();
+        const surface = await runtime.capture({ samples: 1, aovs: ['depth', 'id', 'normal', 'albedo'] }), requested = counts();
+        const repeated = await runtime.capture({ samples: 1, aovs: ['depth', 'id', 'normal', 'albedo'] });
+        return { display, depth, requested, repeated: counts(), ids: [...new Set(plain.aovFrame.id())],
+          sameDepth: plain.aovFrame.depth().every((v, i) => v === surface.aovFrame.depth()[i]),
+          sameSurface: surface.aovFrame.normal().every((v, i) => v === repeated.aovFrame.normal()[i]),
+          normals: [...surface.aovFrame.normal()].some(v => Math.abs(v) > .5) };
+      } finally { runtime.dispose(); vectors.dispose(); }
+    }, dist);
+    expect(r.display).toEqual(['fs_main']);
+    expect(r.depth).toEqual(['fs_main', 'fs_capture_primary', 'fs_aov']);
+    expect(r.requested).toEqual(['fs_main', 'fs_capture_primary', 'fs_aov', 'fs_capture_surface', 'fs_surface']);
+    expect(r.repeated).toEqual(r.requested); expect(r.ids).toContain(0xffffffef);
+    expect(r.ids.some(id => id >= 0x100000 && id < 0xffffffef)).toBe(true);
+    expect(r.sameDepth).toBe(true); expect(r.sameSurface).toBe(true); expect(r.normals).toBe(true);
+  });
+
   test("R02/C07: exact HDR, AOV, depth, ID and motion readback with padded rows", async ({ page }) => {
     const r = await probe(page, "analytic");
     // 67x45 exercises padded rows for every texel size (R32F, R32Uint, Rg32F).

@@ -38,8 +38,10 @@ impl ScatterResources {
                 &runtime.textures.as_ref().unwrap().bind_group_layout,
                 &runtime.ibl.as_ref().unwrap().bind_group_layout,
             ];
-            (self.pipeline, self.primary, self.surface) =
+            (self.pipeline, self.capture_shader) =
                 pipelines(&context.device, layouts, features, format);
+            self.primary.take();
+            self.surface.take();
             self.features = features;
             self.format = format;
         }
@@ -230,11 +232,31 @@ impl ScatterResources {
         runtime: &Forge3DRuntime,
         capture: Option<CapturePass>,
     ) {
-        pass.set_pipeline(match capture {
+        let pipeline = match capture {
             None => &self.pipeline,
-            Some(CapturePass::Primary) => &self.primary,
-            Some(CapturePass::Surface) => &self.surface,
-        });
+            Some(which) => {
+                let cached = match which {
+                    CapturePass::Primary => &self.primary,
+                    CapturePass::Surface => &self.surface,
+                };
+                cached.get_or_init(|| {
+                    pipeline::create(
+                        &runtime.context.as_ref().expect("live context").device,
+                        [
+                            &self.layout,
+                            &runtime.lighting.as_ref().unwrap().bind_group_layout,
+                            &runtime.textures.as_ref().unwrap().bind_group_layout,
+                            &runtime.ibl.as_ref().unwrap().bind_group_layout,
+                        ],
+                        &self.capture_shader,
+                        self.format,
+                        Some(which),
+                        self.features.capture_blend(),
+                    )
+                })
+            }
+        };
+        pass.set_pipeline(pipeline);
         pass.set_bind_group(1, &runtime.lighting.as_ref().unwrap().bind_group, &[]);
         pass.set_bind_group(2, runtime.textures.as_ref().unwrap().bind_group_for(0), &[]);
         pass.set_bind_group(3, &runtime.ibl.as_ref().unwrap().bind_group, &[]);

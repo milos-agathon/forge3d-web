@@ -1,3 +1,4 @@
+// W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w15/assets.json"]
 import { mkdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";

@@ -60,7 +60,7 @@ test("accepts the exhaustive stored W00 baseline", () => {
 test("locks npm and CI to the required pre-build parity gate", () => {
   const packageJson = JSON.parse(readFileSync(resolve(repositoryRoot, "crates", "forge3d-web", "package.json"), "utf8"));
   const workflow = readFileSync(resolve(repositoryRoot, ".github", "workflows", "web.yml"), "utf8");
-  assert.equal(packageJson.scripts["verify:parity"], "node --test tests/parity/verify-parity-manifest.test.mjs && node ../../scripts/verify-parity-manifest.mjs");
+  assert.equal(packageJson.scripts["verify:parity"], "node --test tests/parity/verify-parity-manifest.test.mjs && node ../../scripts/verify-parity-manifest.mjs && node ../../scripts/verify-w23.mjs --coverage-only");
   const parityGate = workflow.indexOf("- name: Verify composite parity manifest");
   const firstBuildOrTest = workflow.indexOf("- name: Check core no-default wasm build");
   assert(parityGate >= 0);

@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json","crates/forge3d-web/tests/fixtures/w17/native/852b74d/tests/test_sdf_python.py","crates/forge3d-web/tests/fixtures/w17/native/d14577a/tests/*.py"]
 """Independent, byte-reproducible W00 trace-sdf-v1 reference generator."""
 import hashlib
 import json
