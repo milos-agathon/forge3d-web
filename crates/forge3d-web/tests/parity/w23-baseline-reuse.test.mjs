@@ -46,6 +46,12 @@ async function withFixture(work, options) {
   try { await work(fixture(options)); } finally { globalThis.ImageData = original; globalThis.document = document; }
 }
 
+function latch() {
+  let release;
+  const promise = new Promise(resolve => { release = resolve; });
+  return { promise, resolve: () => release() };
+}
+
 test('the explicit render workflow always renders again even for an unchanged recipe', () => withFixture(async f => {
   await f.workflows.render(); await f.workflows.render();
   assert.equal(f.calls.length, 2); assert.equal(f.disposed(), 2); assert.equal(f.outputs.length, 2);
@@ -108,7 +114,7 @@ test('baseline reuse still rejects a missing material contribution after a real 
 }, { suppressMaterials: true }));
 
 test('independent scene/control draws run in pairs while every removal comparison still executes', async () => {
-  const gate = Promise.withResolvers(); let active = 0, peak = 0;
+  const gate = latch(); let active = 0, peak = 0;
   await withFixture(async f => {
     const pending = f.workflows.mapscene();
     try {
@@ -122,7 +128,7 @@ test('independent scene/control draws run in pairs while every removal compariso
 });
 
 test('a failed paired draw waits for its in-flight peer and disposes both owners before rejecting', async () => {
-  const gate = Promise.withResolvers(); let completed = false;
+  const gate = latch(); let completed = false;
   await withFixture(async f => {
     const pending = f.workflows.raster().then(() => { completed = true; return null; }, error => { completed = true; return error; });
     try {
