@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+// Resolve the delegated decoder before timing its real conformance assertions.
+import 'geotiff';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { CodecRegistry, HdrFrame, AovFrame } from '../../src-ts/index.js';

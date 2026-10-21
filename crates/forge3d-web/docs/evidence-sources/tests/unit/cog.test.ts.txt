@@ -8,6 +8,9 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it, vi } from "vitest";
+// Keep cold dependency loading in collection; the test deadline covers actual
+// COG metadata, range IO and decode work rather than parallel module transforms.
+import "geotiff";
 
 import { CogDataset, createCogWorkerHandler } from "../../src-ts/cog.js";
 import { RangeScheduler } from "../../src-ts/range-scheduler.js";

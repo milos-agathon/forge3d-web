@@ -5602,7 +5602,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/cog.test.ts",
-      "sha256": "a771e012beddc857fb26932ea661989521ed902f1da5c950fafd4697a552cc16",
+      "sha256": "2985c81adc570b8e6fb00b1cdedcae1f194165c126972241bf452123c467b168",
       "declarations": [
         "parses metadata matching the truth JSON",
         "decodes the exact (arange*3)+7 values through DEFLATE+predictor 2",
@@ -6602,7 +6602,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w22-codecs.test.ts",
-      "sha256": "823fdc2f0e72e648adace9cc07b46f4b2404564029f9eded9d9c8d61b6ffb009",
+      "sha256": "0a38649f6f1e432a9f08fd65cbc21f76b46e1fd37441bb57ed4b2ee96a22bbd1",
       "declarations": [
         "pins every delegated dependency and hashes implementation revisions",
         "keeps the original Basis JS/WASM and CSP adapter exact without dynamic code generation",

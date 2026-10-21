@@ -144,7 +144,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/cog.test.ts",
-      "sha256": "a771e012beddc857fb26932ea661989521ed902f1da5c950fafd4697a552cc16",
+      "sha256": "2985c81adc570b8e6fb00b1cdedcae1f194165c126972241bf452123c467b168",
       "snapshot": "evidence-sources/tests/unit/cog.test.ts.txt"
     },
     {
@@ -504,7 +504,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w22-codecs.test.ts",
-      "sha256": "823fdc2f0e72e648adace9cc07b46f4b2404564029f9eded9d9c8d61b6ffb009",
+      "sha256": "0a38649f6f1e432a9f08fd65cbc21f76b46e1fd37441bb57ed4b2ee96a22bbd1",
       "snapshot": "evidence-sources/tests/unit/w22-codecs.test.ts.txt"
     },
     {
