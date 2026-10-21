@@ -55,7 +55,7 @@ budgets and buffers, and release those owners after each draw. Shared-device fra
 run serially so WebGPU validation errors stay with their draw. The context releases
 the device on success or failure; a closed token cannot render again. Explicit
 canvas presentation and calls without a context retain their existing lifecycle.
-The migration gallery uses one scope per offline example, without caching frames.
+The migration gallery uses one scope per bounded offline run, without caching frames.
 
 Each layer has a unique `layerId`. Each source has `id`, `format`, explicit `crs`
 and exactly one of `data` or `url`. A resource identity covers all buffers in that

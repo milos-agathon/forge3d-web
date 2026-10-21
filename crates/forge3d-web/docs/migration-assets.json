@@ -1907,7 +1907,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:bb55aebb5699fa426db2272918aa664984a9d235:crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "git:bed243092b2c9407dec91d36fd2525b20332b32c:crates/forge3d-web/docs/evidence-sources/provenance.json"
       ]
     },
     {
@@ -2707,7 +2707,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-        "git:bb55aebb5699fa426db2272918aa664984a9d235:crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
+        "git:bed243092b2c9407dec91d36fd2525b20332b32c:crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
       ]
     },
     {
@@ -4924,8 +4924,8 @@
     },
     {
       "path": "crates/forge3d-web/examples/migration/gallery.js",
-      "sha256": "334e24e6d62e7fd0429f89beaf93fc1ec9bae46eed0e32996128fd71004ceffc",
-      "bytes": 4918,
+      "sha256": "9ae8056a04f96c4eb3ab81df83dcc0320a0894fa96e983f5fae119dd34b289f1",
+      "bytes": 4945,
       "hashMode": "utf8-lf",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
@@ -4948,7 +4948,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:ddbd1310023727616d2b8bee1f0b8096b1150595:crates/forge3d-web/examples/migration/gallery.js"
+        "git:bed243092b2c9407dec91d36fd2525b20332b32c:crates/forge3d-web/examples/migration/gallery.js"
       ]
     },
     {
@@ -5395,7 +5395,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:bb55aebb5699fa426db2272918aa664984a9d235:crates/forge3d-web/examples/migration/workflows.js"
+        "git:bed243092b2c9407dec91d36fd2525b20332b32c:crates/forge3d-web/examples/migration/workflows.js"
       ]
     }
   ]

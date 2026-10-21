@@ -34,9 +34,9 @@ async function run(name = select.value) {
   };
   try {
     if (!selected.length) throw Error('Unknown native example');
-    const examples=[];
-    for (const entry of selected) {
-      const execute=async renderContext=>{
+    const execute=async renderContext=>{
+      const examples=[];
+      for (const entry of selected) {
         const workflows=createWorkflows(api,document.querySelector('canvas'),runController.signal,output,{...entry,renderContext,interactive:name!=='all'},owner=>{viewers.add(owner);retainedController=runController;activeViewer=owner.inspect;}), steps=[];
         let execution='executed';
         try {
@@ -50,11 +50,12 @@ async function run(name = select.value) {
           execution='blocked-license';steps.push({workflow:activeWorkflow,error:{code:error.code,message:error.message}});
         }
         examples.push({name:entry.name,workflows:entry.workflows,source:entry.source,status:execution,steps});
-      };
-      // One device per bounded offline example; every MapScene still draws and
-      // disposes its own frame resources. Interactive owners keep their lifecycle.
-      if(name==='all')await api.MapScene.withRenderContext(execute);else await execute(undefined);
-    }
+      }
+      return examples;
+    };
+    // The bounded offline run owns one device; every MapScene still draws and
+    // disposes its own frame resources. Interactive owners keep their lifecycle.
+    const examples=name==='all'?await api.MapScene.withRenderContext(execute):await execute(undefined);
     const report = { workflows: results, artifacts, examples };
     status.textContent = JSON.stringify(report, null, 2); window.__w23.report = report; return report;
   } finally { controller = undefined; document.querySelector('#cancel').disabled = true; document.querySelector('#run').disabled = false; }
