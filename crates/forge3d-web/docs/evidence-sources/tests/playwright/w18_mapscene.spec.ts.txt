@@ -13,6 +13,7 @@ for (const dist of [false, true]) {
             await page.addInitScript(() => {
                 (window as any).__mapOfflineCompilations = [];
                 (window as any).__mapReferencePasses = [];
+                (window as any).__mapColorPasses = [];
                 (window as any).__mapEnvironmentCompilations = [];
                 const renderPipeline = GPUDevice.prototype.createRenderPipeline;
                 GPUDevice.prototype.createRenderPipeline = function (descriptor) {
@@ -22,6 +23,7 @@ for (const dist of [false, true]) {
                 const renderPass = GPUCommandEncoder.prototype.beginRenderPass;
                 GPUCommandEncoder.prototype.beginRenderPass = function (descriptor) {
                     if (this.label === 'forge3d-web-map-depth-reference') (window as any).__mapReferencePasses.push(descriptor.label);
+                    if (descriptor.label === 'forge3d-web-scene-pass' || descriptor.label === 'forge3d-web-readback-pass') (window as any).__mapColorPasses.push(descriptor.label);
                     return renderPass.call(this, descriptor);
                 };
                 const original = GPUDevice.prototype.createComputePipeline;
@@ -46,11 +48,13 @@ for (const dist of [false, true]) {
                     (window as any).__mapOfflineCompilations.length = 0;
                     (window as any).__mapEnvironmentCompilations.length = 0;
                     (window as any).__mapReferencePasses.length = 0;
+                    (window as any).__mapColorPasses.length = 0;
                     const after = await candidate.render();
                     return { kind, same: before.frame.data.every((v: number, i: number) => v === after.frame.data[i]),
                         beforeCoverage: before.metrics.coveragePixels, afterCoverage: after.metrics.coveragePixels,
                         offlineCompilations: [...(window as any).__mapOfflineCompilations], gpuBytes: candidate.getMemoryReport().gpuBytes,
-                        referencePasses: [...(window as any).__mapReferencePasses], environmentCompilations: [...(window as any).__mapEnvironmentCompilations] };
+                        referencePasses: [...(window as any).__mapReferencePasses], environmentCompilations: [...(window as any).__mapEnvironmentCompilations],
+                        colorPasses: [...(window as any).__mapColorPasses], drawCalls: after.metrics.drawCalls };
                 } finally { baseline.dispose(); candidate.dispose(); }
             }, kind);
             await info.attach('map-reference-depth.json', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
@@ -60,6 +64,9 @@ for (const dist of [false, true]) {
             expect(result.referencePasses).not.toContain('forge3d-environment-pass');
             expect(result.environmentCompilations).toEqual(kind === 'water' ? ['fs_water_primary'] : []);
             if (kind === 'water') expect(result.referencePasses).toContain('environment-water-aov-pass');
+            // The fixture has one world scene and one separately composited overlay.
+            if (kind !== 'effects') expect(result.colorPasses).toEqual(['forge3d-web-readback-pass', 'forge3d-web-readback-pass']);
+            expect(result.drawCalls).toBeGreaterThan(0);
         });
         test(`W18 ${label}: opaque readback preserves exact pixels and coverage without an offline capture`, async ({ page }, info) => {
             await page.addInitScript(() => {

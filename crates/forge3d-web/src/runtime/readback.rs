@@ -45,6 +45,7 @@ pub(super) async fn read_map_frame_runtime(
     {
         return Ok(JsValue::UNDEFINED);
     }
+    let started = super::timing::now_ms();
     let frame = if runtime.postfx.is_some()
         || runtime.environment.is_some()
         || runtime.vectors.is_some()
@@ -58,6 +59,9 @@ pub(super) async fn read_map_frame_runtime(
     } else {
         read_frame_runtime(runtime, true).await?
     };
+    // This private offscreen path can be the first actual draw. Report its
+    // executed world/overlay plan without a discarded surface presentation.
+    super::render::record_frame_stats(runtime, super::timing::now_ms() - started)?;
     let result = js_sys::Object::new();
     for (name, bytes) in [("rgba", frame.rgba), ("coverage", frame.coverage.unwrap())] {
         js_sys::Reflect::set(

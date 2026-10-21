@@ -107,12 +107,18 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
             runtime.setTerrain(terrainNode.terrain);
         runtime.setScene(snapshot);
         runtime.setCamera(camera);
-        if (!runtime.render())
-            throw new Forge3DError('INTERNAL_ERROR', 'MapScene runtime declined the render');
+        // Default offscreen output is drawn by readback itself. Explicit canvas
+        // presentation and temporal effects still need their display lifecycle.
+        const privateReadback = !options.canvas && !layers.points.length;
+        let direct = privateReadback && !input.postFx ? await tryReadMapFrame(runtime) : undefined;
+        if (!direct) {
+            if (!runtime.render())
+                throw new Forge3DError('INTERNAL_ERROR', 'MapScene runtime declined the render');
+            if (privateReadback) direct = await tryReadMapFrame(runtime);
+        }
         let rgba: Uint8Array, baseBytes = runtime.getMemoryReport().currentBytes, pointCount = 0,pointBytes=0;
         memory(baseBytes);
         const stats = runtime.getRenderStats();
-        const direct = !options.canvas && !layers.points.length ? await tryReadMapFrame(runtime) : undefined;
         let baseDepth: Float32Array, covered: Float32Array;
         if (direct) {
             rgba = direct.rgba; covered = Float32Array.from(direct.coverage); baseDepth = new Float32Array();
@@ -150,7 +156,7 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
                 mapCancelled(signal);
                 overlay.setScene(overlayScene.snapshot());
                 overlay.setCamera(camera);
-                if (!overlay.render())
+                if (options.canvas && !overlay.render())
                     throw Error('Overlay render declined');
                 const front = await overlay.readRgba();
                 mapCancelled(signal);

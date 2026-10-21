@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "1d0f9c350712009f7cccd415b960c5dc73be9f4aa487d18db6f6ff275c417161",
+      "sha256": "758971e2afd86dc55d39da683e2f0254ffb6ea38d455217b369c70b73f1cfd92",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -1907,7 +1907,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:f8973adae365c83e8979c12c22ff3c5fbf4b967b:crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "git:cc05226a05bb4e5da18bcc66503e4fa13e5e71b5:crates/forge3d-web/docs/evidence-sources/provenance.json"
       ]
     },
     {
@@ -2082,7 +2082,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/browser/w23-stage-observer.ts",
-        "git:a811d6e96e23745a4ef0d9560090dfba74cd97ce:crates/forge3d-web/docs/evidence-sources/tests/browser/w23-stage-observer.ts.txt"
+        "git:cc05226a05bb4e5da18bcc66503e4fa13e5e71b5:crates/forge3d-web/docs/evidence-sources/tests/browser/w23-stage-observer.ts.txt"
       ]
     },
     {
@@ -2687,8 +2687,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt",
-      "sha256": "f3cc4eb74bf05bf3942bc88ff200b83825ca3c2dc05d4b7cd1c1feccc6a6e1a5",
-      "bytes": 29854,
+      "sha256": "297816b0d0b76d69ceb2aea13c89bff7c2a65c1b7f26625f8b997650626c0150",
+      "bytes": 30541,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2698,7 +2698,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-            "sha256": "f3cc4eb74bf05bf3942bc88ff200b83825ca3c2dc05d4b7cd1c1feccc6a6e1a5",
+            "sha256": "297816b0d0b76d69ceb2aea13c89bff7c2a65c1b7f26625f8b997650626c0150",
             "hashMode": "utf8-lf"
           }
         ],
@@ -2707,7 +2707,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-        "git:f8973adae365c83e8979c12c22ff3c5fbf4b967b:crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
+        "git:cc05226a05bb4e5da18bcc66503e4fa13e5e71b5:crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
       ]
     },
     {

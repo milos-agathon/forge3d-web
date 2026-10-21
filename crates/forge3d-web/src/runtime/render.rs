@@ -93,7 +93,10 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
     Ok(true)
 }
 
-fn record_frame_stats(runtime: &mut Forge3DRuntime, frame_ms: f64) -> Result<(), WebError> {
+pub(super) fn record_frame_stats(
+    runtime: &mut Forge3DRuntime,
+    frame_ms: f64,
+) -> Result<(), WebError> {
     let passes = scene_pass_draws(runtime);
     let gpu = if runtime.postfx.is_none() {
         runtime.query_ring.as_ref().and_then(|ring| ring.latest())
