@@ -70,16 +70,18 @@ for (const dist of [false, true]) {
                 else expect(row.pipelines).toContain('forge3d-web-scene-overlay-pipeline');
             }
         });
-        for (const kind of ['layers', 'effects', 'water', 'environment', 'terrain-environment']) test(`W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output`, async ({ page }, info) => {
+        for (const kind of ['layers', 'vector-alpha', 'vector-clipped', 'scatter-alpha', 'effects', 'water', 'environment', 'terrain-environment']) test(`W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output`, async ({ page }, info) => {
             test.setTimeout(60000);
             await page.addInitScript(() => {
                 (window as any).__mapOfflineCompilations = [];
                 (window as any).__mapReferencePasses = [];
                 (window as any).__mapColorPasses = [];
                 (window as any).__mapEnvironmentCompilations = [];
+                (window as any).__mapCaptureCompilations = [];
                 const renderPipeline = GPUDevice.prototype.createRenderPipeline;
                 GPUDevice.prototype.createRenderPipeline = function (descriptor) {
                     if (descriptor.label === 'environment-water-aov-pipeline') (window as any).__mapEnvironmentCompilations.push(descriptor.fragment?.entryPoint);
+                    if (['fs_capture_primary', 'fs_capture_surface', 'fs_aov', 'fs_surface'].includes(descriptor.fragment?.entryPoint ?? '')) (window as any).__mapCaptureCompilations.push(descriptor.fragment?.entryPoint);
                     return renderPipeline.call(this, descriptor);
                 };
                 const renderPass = GPUCommandEncoder.prototype.beginRenderPass;
@@ -98,6 +100,15 @@ for (const dist of [false, true]) {
             await page.reload(); await page.waitForFunction(() => window.__w18?.ready);
             const result = await page.evaluate(async kind => {
                 const { api, fullRecipe, baseRecipe } = window.__w18, recipe = kind === 'terrain-environment' ? baseRecipe() : fullRecipe(api);
+                if (kind.startsWith('vector-')) {
+                    recipe.layers.find((l: any) => l.kind === 'vector').source.data.features = [
+                        { id: 1, kind: 'point', position: [0, 8, 0], style: { shape: 'circle', pointSize: 64, color: [1, 0, 0, .35] } },
+                        { id: 2, kind: 'point', position: [0, 7, 0], style: { shape: 'diamond', pointSize: 96, color: [0, 0, 1, .65] } },
+                        { id: 3, kind: 'line', positions: [[kind === 'vector-clipped' ? -1000 : -10, 8, 0], [kind === 'vector-clipped' ? 1000 : 10, 8, 0]], style: { lineWidth: 6, color: [0, 1, 0, .4] } },
+                    ];
+                    if (kind === 'vector-clipped') recipe.camera = { ...recipe.camera, far: 65 };
+                }
+                if (kind === 'scatter-alpha') recipe.layers.find((l: any) => l.kind === 'scatter').batches[0].color[3] = .35;
                 if (kind === 'terrain-environment') recipe.terrain.source.data.material = { ...api.getTerrainMaterialDefaults(), pom: { enabled: true }, layers: { snow: { enabled: true, altitudeMin: .3, altitudeBlend: .2 } } };
                 if (kind === 'terrain-environment') recipe.shadows = { enabled: true, filter: 'pcf' };
                 if (kind === 'effects') recipe.postFx = { effects: [{ kind: 'taa' }, { kind: 'tonemap', operator: 'exposure', exposure: 2 }] };
@@ -113,11 +124,13 @@ for (const dist of [false, true]) {
                     (window as any).__mapEnvironmentCompilations.length = 0;
                     (window as any).__mapReferencePasses.length = 0;
                     (window as any).__mapColorPasses.length = 0;
+                    (window as any).__mapCaptureCompilations.length = 0;
                     const after = await candidate.render();
                     return { kind, same: before.frame.data.every((v: number, i: number) => v === after.frame.data[i]),
                         beforeCoverage: before.metrics.coveragePixels, afterCoverage: after.metrics.coveragePixels,
                         offlineCompilations: [...(window as any).__mapOfflineCompilations], gpuBytes: candidate.getMemoryReport().gpuBytes,
                         referencePasses: [...(window as any).__mapReferencePasses], environmentCompilations: [...(window as any).__mapEnvironmentCompilations],
+                        captureCompilations: [...(window as any).__mapCaptureCompilations],
                         colorPasses: [...(window as any).__mapColorPasses], drawCalls: after.metrics.drawCalls };
                 } finally { baseline.dispose(); candidate.dispose(); }
             }, kind);
@@ -130,7 +143,11 @@ for (const dist of [false, true]) {
             if (kind === 'water') expect(result.referencePasses).toContain('environment-water-aov-pass');
             // The fixture has one world scene and one separately composited overlay.
             if (kind !== 'effects') expect(result.colorPasses).toEqual(Array(kind === 'terrain-environment' ? 1 : 2).fill('forge3d-web-readback-pass'));
-            if (kind === 'terrain-environment') expect(result.referencePasses).toEqual([]);
+            if (kind === 'vector-clipped') expect(result.referencePasses).toContain('forge3d-web-capture-primary');
+            if (kind !== 'water' && kind !== 'effects' && kind !== 'vector-clipped') {
+                expect(result.referencePasses).toEqual([]);
+                expect(result.captureCompilations).toEqual([]);
+            }
             expect(result.drawCalls).toBeGreaterThan(0);
         });
         test(`W18 ${label}: opaque readback preserves exact pixels and coverage without an offline capture`, async ({ page }, info) => {

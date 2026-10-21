@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "451d3e3e73ed6e76aec1eea718bc6897b1018b441355b7af18bc0bb271616dc8",
+      "sha256": "0d156d5ab71b985e53c87acd593193766be79612feda5f66bd220bd179966951",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -1907,7 +1907,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:d9e863f4c80b11179603842da1a3cee7550ffd81:crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "git:a2408b4685f4dd406a2984b046301c641754b200:crates/forge3d-web/docs/evidence-sources/provenance.json"
       ]
     },
     {
@@ -2312,8 +2312,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w06_capture.spec.ts.txt",
-      "sha256": "f372f7d9b735f03b179f8449f5c78f6c32965fdfc00045365da86d7b3e046ad0",
-      "bytes": 14939,
+      "sha256": "d9c39a3b6d1944b172ec7865ec58709ff5f7ec7f45bd38b4768b5fb6f6325200",
+      "bytes": 17929,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2323,7 +2323,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w06_capture.spec.ts",
-            "sha256": "f372f7d9b735f03b179f8449f5c78f6c32965fdfc00045365da86d7b3e046ad0",
+            "sha256": "d9c39a3b6d1944b172ec7865ec58709ff5f7ec7f45bd38b4768b5fb6f6325200",
             "hashMode": "utf8-lf"
           }
         ],
@@ -2687,8 +2687,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt",
-      "sha256": "f5a4c8544c7c10169058e9b8becb965c7853b51896eeb7521ca60b5d45584d83",
-      "bytes": 36212,
+      "sha256": "baf23fd3dc10b980f36c6719bdb24a7ae7da328144462983071e8625ea01e1fe",
+      "bytes": 37854,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2698,7 +2698,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-            "sha256": "f5a4c8544c7c10169058e9b8becb965c7853b51896eeb7521ca60b5d45584d83",
+            "sha256": "baf23fd3dc10b980f36c6719bdb24a7ae7da328144462983071e8625ea01e1fe",
             "hashMode": "utf8-lf"
           }
         ],
@@ -2707,7 +2707,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-        "git:d9e863f4c80b11179603842da1a3cee7550ffd81:crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
+        "git:a2408b4685f4dd406a2984b046301c641754b200:crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
       ]
     },
     {

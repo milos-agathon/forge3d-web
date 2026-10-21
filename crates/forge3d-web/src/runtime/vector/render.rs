@@ -1,5 +1,23 @@
 use super::*;
 impl Resources {
+    pub(in crate::runtime) fn needs_reference_depth(
+        &self,
+        camera: &forge3d_core::camera::CameraInput,
+    ) -> bool {
+        // Screen extrusion biases and rounds clip depth toward the camera.
+        // A vector crossing the far plane can therefore still write hardware
+        // depth while its original W06 world-space depth clamps to 1. Keep the
+        // reference whenever any vertex approaches that plane; interpolation
+        // cannot exceed all vertex depths for an entirely interior triangle.
+        let eye = glam::Vec3::from_array(camera.position);
+        let forward = (glam::Vec3::from_array(camera.target) - eye).normalize();
+        self.vertices.iter().any(|v| {
+            let world =
+                glam::Vec3::new(v.position[0], v.position[1] + v.position[3], v.position[2]);
+            let depth = (world - eye).dot(forward);
+            !depth.is_finite() || depth >= camera.far * 0.99
+        })
+    }
     pub(super) fn prepare_frame(
         &self,
         runtime: &Forge3DRuntime,
@@ -277,7 +295,20 @@ pub(crate) fn encode_capture(
             gpu::attachment(&targets.id.view, None),
         ];
         let mut pass = gpu::pass(encoder, &colors, Some(&targets.depth_stencil.view), true);
-        v.draw(&mut pass, &v.aov_pipeline);
+        let pipeline = v.aov_pipeline.get_or_init(|| {
+            gpu::pipeline(
+                &runtime.context.as_ref().expect("live context").device,
+                &v.draw_layout,
+                &v.draw_shader,
+                "fs_aov",
+                &[
+                    gpu::target(wgpu::TextureFormat::R32Float, None),
+                    gpu::target(wgpu::TextureFormat::R32Uint, None),
+                ],
+                Some(true),
+            )
+        });
+        v.draw(&mut pass, pipeline);
     }
     if surface {
         let colors = [
@@ -285,6 +316,19 @@ pub(crate) fn encode_capture(
             gpu::attachment(&targets.normal.view, None),
         ];
         let mut pass = gpu::pass(encoder, &colors, Some(&targets.depth_stencil.view), false);
-        v.draw(&mut pass, &v.surface_pipeline);
+        let pipeline = v.surface_pipeline.get_or_init(|| {
+            gpu::pipeline(
+                &runtime.context.as_ref().expect("live context").device,
+                &v.draw_layout,
+                &v.draw_shader,
+                "fs_surface",
+                &[
+                    gpu::target(wgpu::TextureFormat::Rgba32Float, None),
+                    gpu::target(wgpu::TextureFormat::Rgba32Float, None),
+                ],
+                Some(false),
+            )
+        });
+        v.draw(&mut pass, pipeline);
     }
 }

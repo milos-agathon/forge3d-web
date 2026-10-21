@@ -254,28 +254,6 @@ impl Resources {
             ],
             Some(true),
         );
-        let aov_pipeline = gpu::pipeline(
-            d,
-            &draw_layout,
-            &shader,
-            "fs_aov",
-            &[
-                gpu::target(wgpu::TextureFormat::R32Float, None),
-                gpu::target(wgpu::TextureFormat::R32Uint, None),
-            ],
-            Some(true),
-        );
-        let surface_pipeline = gpu::pipeline(
-            d,
-            &draw_layout,
-            &shader,
-            "fs_surface",
-            &[
-                gpu::target(wgpu::TextureFormat::Rgba32Float, None),
-                gpu::target(wgpu::TextureFormat::Rgba32Float, None),
-            ],
-            Some(false),
-        );
         let make = |name, format| Target::new(d, name, format, width, height);
         let highlight_values = highlight_values(&packet.highlights);
         let (highlight_count, highlight_radius, highlight_bound) =
@@ -379,8 +357,10 @@ impl Resources {
             color_pipeline,
             opaque_pipeline,
             pick_pipeline,
-            aov_pipeline,
-            surface_pipeline,
+            draw_layout,
+            draw_shader: shader,
+            aov_pipeline: Default::default(),
+            surface_pipeline: Default::default(),
             accum: make("vector:accum", wgpu::TextureFormat::Rgba16Float),
             opaque: make("vector:opaque", wgpu::TextureFormat::Rgba16Float),
             reveal: make("vector:reveal", wgpu::TextureFormat::R16Float),

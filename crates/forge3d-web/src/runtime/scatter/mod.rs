@@ -108,8 +108,9 @@ pub(super) struct ScatterResources {
     features: ShaderFeatures,
     format: wgpu::TextureFormat,
     pipeline: wgpu::RenderPipeline,
-    primary: wgpu::RenderPipeline,
-    surface: wgpu::RenderPipeline,
+    capture_shader: wgpu::ShaderModule,
+    primary: std::cell::OnceCell<wgpu::RenderPipeline>,
+    surface: std::cell::OnceCell<wgpu::RenderPipeline>,
     pub stats: ScatterStats,
     pub memory: MemoryReport,
 }

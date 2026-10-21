@@ -113,7 +113,7 @@ pub(crate) fn build(
         &textures.bind_group_layout,
         &ibl.bind_group_layout,
     ];
-    let (display, primary, surface) = pipelines(device, layouts, features, format);
+    let (display, capture_shader) = pipelines(device, layouts, features, format);
     let mut id_start = 0x100000;
     let batches = inputs
         .into_iter()
@@ -172,8 +172,9 @@ pub(crate) fn build(
         features,
         format,
         pipeline: display,
-        primary,
-        surface,
+        capture_shader,
+        primary: Default::default(),
+        surface: Default::default(),
         stats: Default::default(),
         memory: report,
     }))
