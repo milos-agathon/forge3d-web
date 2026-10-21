@@ -46,11 +46,17 @@ pub(super) async fn read_map_frame_runtime(
         return Ok(JsValue::UNDEFINED);
     }
     let started = super::timing::now_ms();
+    // Color-only weather leaves the canonical unjittered geometry depth intact.
+    // MapScene routes heightfields containing nodata through full capture.
     let frame = if runtime.postfx.is_some()
-        || runtime.environment.is_some()
+        || runtime
+            .environment
+            .as_ref()
+            .is_some_and(|e| !e.snapshot.water.is_empty())
         || runtime.vectors.is_some()
         || runtime.scatter.is_some()
         || runtime.depth_attachment.is_none()
+        || runtime.terrain.as_ref().is_some_and(|t| t.render_mode == 1)
     {
         let depth = reference::read_depth(runtime).await?;
         let mut frame = read_frame_runtime(runtime, false).await?;

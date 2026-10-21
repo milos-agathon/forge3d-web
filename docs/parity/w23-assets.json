@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "6e8e57fefd41715b8c4b9e5dfc989bb200574372b733a7858c147d37d606c306",
+      "sha256": "451d3e3e73ed6e76aec1eea718bc6897b1018b441355b7af18bc0bb271616dc8",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -1907,7 +1907,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:78495205120ab36d3dda0af25f9140129c2f4b83:crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "git:d9e863f4c80b11179603842da1a3cee7550ffd81:crates/forge3d-web/docs/evidence-sources/provenance.json"
       ]
     },
     {
@@ -2687,8 +2687,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt",
-      "sha256": "18a23773855397149394932f9bbf6d9b6d6d68a3b461aad60dc1132c6f9ff057",
-      "bytes": 33355,
+      "sha256": "f5a4c8544c7c10169058e9b8becb965c7853b51896eeb7521ca60b5d45584d83",
+      "bytes": 36212,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2698,7 +2698,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-            "sha256": "18a23773855397149394932f9bbf6d9b6d6d68a3b461aad60dc1132c6f9ff057",
+            "sha256": "f5a4c8544c7c10169058e9b8becb965c7853b51896eeb7521ca60b5d45584d83",
             "hashMode": "utf8-lf"
           }
         ],
@@ -2707,7 +2707,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-        "git:78495205120ab36d3dda0af25f9140129c2f4b83:crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
+        "git:d9e863f4c80b11179603842da1a3cee7550ffd81:crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
       ]
     },
     {
@@ -63242,7 +63242,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-            "sha256": "18a23773855397149394932f9bbf6d9b6d6d68a3b461aad60dc1132c6f9ff057",
+            "sha256": "f5a4c8544c7c10169058e9b8becb965c7853b51896eeb7521ca60b5d45584d83",
             "hashMode": "utf8-lf"
           }
         ],
@@ -63265,7 +63265,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-            "sha256": "18a23773855397149394932f9bbf6d9b6d6d68a3b461aad60dc1132c6f9ff057",
+            "sha256": "f5a4c8544c7c10169058e9b8becb965c7853b51896eeb7521ca60b5d45584d83",
             "hashMode": "utf8-lf"
           }
         ],
@@ -63693,7 +63693,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-            "sha256": "18a23773855397149394932f9bbf6d9b6d6d68a3b461aad60dc1132c6f9ff057",
+            "sha256": "f5a4c8544c7c10169058e9b8becb965c7853b51896eeb7521ca60b5d45584d83",
             "hashMode": "utf8-lf"
           }
         ],
@@ -63716,7 +63716,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-            "sha256": "18a23773855397149394932f9bbf6d9b6d6d68a3b461aad60dc1132c6f9ff057",
+            "sha256": "f5a4c8544c7c10169058e9b8becb965c7853b51896eeb7521ca60b5d45584d83",
             "hashMode": "utf8-lf"
           }
         ],
@@ -63739,7 +63739,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-            "sha256": "18a23773855397149394932f9bbf6d9b6d6d68a3b461aad60dc1132c6f9ff057",
+            "sha256": "f5a4c8544c7c10169058e9b8becb965c7853b51896eeb7521ca60b5d45584d83",
             "hashMode": "utf8-lf"
           }
         ],

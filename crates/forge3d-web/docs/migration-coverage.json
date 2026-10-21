@@ -5408,8 +5408,9 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-      "sha256": "18a23773855397149394932f9bbf6d9b6d6d68a3b461aad60dc1132c6f9ff057",
+      "sha256": "f5a4c8544c7c10169058e9b8becb965c7853b51896eeb7521ca60b5d45584d83",
       "declarations": [
+        "W18 ${label}: ${kind} terrain preserves original capture coverage",
         "W18 ${label}: scene pipelines compile only for geometry that exists",
         "W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output",
         "W18 ${label}: opaque readback preserves exact pixels and coverage without an offline capture",

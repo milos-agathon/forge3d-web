@@ -109,7 +109,12 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
         runtime.setCamera(camera);
         // Default offscreen output is drawn by readback itself. Explicit canvas
         // presentation and temporal effects still need their display lifecycle.
-        const privateReadback = !options.canvas && !layers.points.length;
+        // Display depth includes nodata's clear-colored placeholder triangles;
+        // only the original capture depth excludes those samples from coverage.
+        const heightmap = terrainNode?.kind === 'terrain' ? terrainNode.terrain : undefined;
+        const nodata = heightmap?.nodata === undefined ? undefined : Math.fround(heightmap.nodata);
+        const needsCapturedCoverage = heightmap?.heights.some(h => !Number.isFinite(h) || Math.fround(h) === nodata) ?? false;
+        const privateReadback = !options.canvas && !layers.points.length && !needsCapturedCoverage;
         let direct = privateReadback && !input.postFx ? await tryReadMapFrame(runtime) : undefined;
         if (!direct) {
             if (!runtime.render())

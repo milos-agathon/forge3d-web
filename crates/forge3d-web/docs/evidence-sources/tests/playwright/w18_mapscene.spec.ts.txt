@@ -8,6 +8,32 @@ declare global {
 for (const dist of [false, true]) {
     const label = dist ? 'dist' : 'source';
     test.describe(label, () => {
+        for (const kind of ['sentinel', 'rounded-sentinel', 'nan', 'screen']) test(`W18 ${label}: ${kind} terrain preserves original capture coverage`, async ({ page }, info) => {
+            test.setTimeout(60000);
+            const result = await page.evaluate(async kind => {
+                const { api, baseRecipe } = window.__w18, recipe = baseRecipe(), terrain = recipe.terrain.source.data;
+                if (kind === 'screen') terrain.renderMode = 'screen';
+                else {
+                    if (kind !== 'nan') terrain.nodata = kind === 'rounded-sentinel' ? -9999.1 : -9999;
+                    for (let y = 0; y < terrain.height; y++) for (let x = 0; x < terrain.width / 2; x++) terrain.heights[y * terrain.width + x] = kind === 'nan' ? NaN : terrain.nodata;
+                }
+                const run = async (canvas?: HTMLCanvasElement) => {
+                    const scene = new api.MapScene(recipe);
+                    try { return { result: await scene.render(canvas ? { canvas } : {}), reason: null }; }
+                    catch (error: any) { return { result: null, reason: error.details?.reason ?? error.message }; }
+                    finally { scene.dispose(); if (scene.getMemoryReport().gpuBytes !== 0) throw Error('Scene retained GPU memory'); }
+                };
+                const before = await run(document.createElement('canvas')), after = await run();
+                return { kind, beforeReason: before.reason, afterReason: after.reason, beforeCoverage: before.result?.metrics.coveragePixels,
+                    afterCoverage: after.result?.metrics.coveragePixels, same: before.result && after.result ? before.result.frame.data.every((v: number, i: number) => v === after.result.frame.data[i]) : null };
+            }, kind);
+            await info.attach('map-special-terrain-coverage.json', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
+            expect(result.afterReason).toBe(result.beforeReason);
+            if (result.beforeReason === null) {
+                expect(result.beforeCoverage).toBeGreaterThan(500);
+                expect(result.afterCoverage).toBe(result.beforeCoverage); expect(result.same).toBe(true);
+            } else expect(result.beforeReason).toBe('empty-render-output');
+        });
         test(`W18 ${label}: scene pipelines compile only for geometry that exists`, async ({ page }, info) => {
             test.setTimeout(60000);
             await page.addInitScript(() => {
@@ -44,7 +70,7 @@ for (const dist of [false, true]) {
                 else expect(row.pipelines).toContain('forge3d-web-scene-overlay-pipeline');
             }
         });
-        for (const kind of ['layers', 'effects', 'water', 'environment']) test(`W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output`, async ({ page }, info) => {
+        for (const kind of ['layers', 'effects', 'water', 'environment', 'terrain-environment']) test(`W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output`, async ({ page }, info) => {
             test.setTimeout(60000);
             await page.addInitScript(() => {
                 (window as any).__mapOfflineCompilations = [];
@@ -71,10 +97,12 @@ for (const dist of [false, true]) {
             });
             await page.reload(); await page.waitForFunction(() => window.__w18?.ready);
             const result = await page.evaluate(async kind => {
-                const { api, fullRecipe } = window.__w18, recipe = fullRecipe(api);
+                const { api, fullRecipe, baseRecipe } = window.__w18, recipe = kind === 'terrain-environment' ? baseRecipe() : fullRecipe(api);
+                if (kind === 'terrain-environment') recipe.terrain.source.data.material = { ...api.getTerrainMaterialDefaults(), pom: { enabled: true }, layers: { snow: { enabled: true, altitudeMin: .3, altitudeBlend: .2 } } };
+                if (kind === 'terrain-environment') recipe.shadows = { enabled: true, filter: 'pcf' };
                 if (kind === 'effects') recipe.postFx = { effects: [{ kind: 'taa' }, { kind: 'tonemap', operator: 'exposure', exposure: 2 }] };
                 if (kind === 'water') recipe.environment = new api.Forge3DEnvironment({ water: [{ bounds: [-12, -12, 12, 12], height: 2, mode: 'animated' }] }).snapshot();
-                if (kind === 'environment') {
+                if (kind === 'environment' || kind === 'terrain-environment') {
                     const haze = await api.generateDensityVolume({ preset: 'localized_haze', bounds: [-12, 0, -12, 12, 10, 12], dimensions: [8, 8, 8], densityScale: 2, wind: [2, 0, .5], seed: 23 });
                     recipe.environment = new api.Forge3DEnvironment({ sky: { model: 'hosek-wilkie', turbidity: 2 }, fog: { mode: 'height', density: .01 }, clouds: { mode: 'hybrid', preset: 'gentle', height: 40, thickness: 20, wind: [2, .5], animationSpeed: 1, seed: 23 }, volumes: [haze] }).snapshot();
                 }
@@ -101,7 +129,8 @@ for (const dist of [false, true]) {
             expect(result.environmentCompilations).toEqual(kind === 'water' ? ['fs_water_primary'] : []);
             if (kind === 'water') expect(result.referencePasses).toContain('environment-water-aov-pass');
             // The fixture has one world scene and one separately composited overlay.
-            if (kind !== 'effects') expect(result.colorPasses).toEqual(['forge3d-web-readback-pass', 'forge3d-web-readback-pass']);
+            if (kind !== 'effects') expect(result.colorPasses).toEqual(Array(kind === 'terrain-environment' ? 1 : 2).fill('forge3d-web-readback-pass'));
+            if (kind === 'terrain-environment') expect(result.referencePasses).toEqual([]);
             expect(result.drawCalls).toBeGreaterThan(0);
         });
         test(`W18 ${label}: opaque readback preserves exact pixels and coverage without an offline capture`, async ({ page }, info) => {
