@@ -22,6 +22,8 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
   let application,overlayImage,meshPrototype,simulationTime=0,pointBounds,pointOrbit;
   /** @type {Array<{frame:import('../../types/index.js').Frame,index:number,timestampUs:number,durationUs:number}>|undefined} */
   let animationFrames;
+  /** @type {{key:string,frame:import('../../types/index.js').Frame,pixels:Uint8Array}|undefined} */
+  let renderedBaseline;
   /** @returns {import('../../types/index.js').TerrainHeightmapInput} */
   const input = () => ({ width: terrainWidth, height: terrainHeight, heights: heights.slice(), spacing: [24 / (terrainWidth - 1), 24 / (terrainHeight - 1)], bounds: [-12, -12, 12, 12], domain, crs: 'LOCAL', ...terrainSettings, ...(terrainMaterial ? {material:terrainMaterial} : {}) });
   const image = () => ({ width: 4, height: 4, data: Uint8Array.from({ length: 64 }, (_, i) => i % 4 === 3 ? 255 : i % 4 === 0 ? 210 : 90) });
@@ -55,26 +57,67 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
   const vectorLayer = () => ({ kind: 'vector', layerId: 'rivers', source: { id: 'rivers', format: 'vector', crs: 'LOCAL', data: vectorData() } });
   /** @returns {import('../../types/index.js').MapSceneLabelLayerInput} */
   const labelLayer = () => ({ kind: 'labels', layerId: 'labels', source: { id: 'labels', format: 'labels', crs: 'LOCAL', data: [{ id: 'summit', text: 'Summit', geometry: { type: 'Point', coordinates: [32, 24, 0] } }] }, style: { fontSize: 14, color: [1, 1, 1, 1], haloWidth: 0 } });
+  /** @param {import('../../types/index.js').Frame} frame @param {boolean} [publish] */
+  async function present(frame, publish = true) {
+    state.frame = frame;
+    canvas.width = frame.width; canvas.height = frame.height;
+    canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(frame.data), frame.width, frame.height), 0, 0);
+    if(publish)onOutput?.(await frame.toPng(), 'scene.png');
+  }
+  /** Reuse only the unchanged preceding real frame as a before-change baseline. */
+  async function baseline() {
+    signal.throwIfAborted();
+    const saved = renderedBaseline;
+    if (saved && state.frame === saved.frame && new api.SceneRecipe(recipe(state.layers)).serialize() === saved.key
+      && saved.pixels.length === saved.frame.data.length && saved.pixels.every((v, i) => v === saved.frame.data[i])) {
+      animationFrames = undefined;
+      await present(saved.frame);
+      return { frame: saved.frame };
+    }
+    return render();
+  }
+  /** @param {import('../../types/index.js').MapScene[]} scenes */
+  async function renderScenes(scenes) {
+    /** @type {Awaited<ReturnType<import('../../types/index.js').MapScene['render']>>[]} */
+    const results = [];
+    // Independent owners use at most two GPU contexts at once. Settle each
+    // pair before propagating failure so an in-flight control is never abandoned.
+    for (let i = 0; i < scenes.length; i += 2) {
+      const pair = await Promise.allSettled(scenes.slice(i, i + 2).map(scene => scene.render({ signal })));
+      for (const result of pair) if (result.status === 'rejected') throw result.reason;
+      for (const result of pair) if (result.status === 'fulfilled') results.push(result.value);
+    }
+    return results;
+  }
   /** @param {import('../../types/index.js').MapSceneLayerInput[]} [layers] @param {boolean} [publish] */
   async function render(layers = [], publish = true) {
     animationFrames=undefined;
     for (const layer of layers) { state.layers = state.layers.filter(l => l.layerId !== layer.layerId); state.layers.push(layer); }
-    const scene = new api.MapScene(recipe(state.layers));
+    const sceneInput = recipe(state.layers);
+    const renderedKey = typeof api.SceneRecipe === 'function' ? new api.SceneRecipe(sceneInput).serialize() : undefined;
+    const scene = new api.MapScene(sceneInput);
+    /** @type {import('../../types/index.js').MapScene[]} */ const controls = [];
     try {
-      const result = await scene.render({ signal });
+      for (const layer of layers) controls.push(new api.MapScene(recipe(state.layers.filter(l => l.layerId !== layer.layerId))));
+      const rendered = await renderScenes([scene, ...controls]), result = rendered[0];
       check(result.metrics.coveragePixels > 500, 'Rendered frame has no covered surface');
       check(layers.every(l => result.executedLayerIds.includes(l.layerId)), 'A requested layer did not execute');
-      for (const layer of layers) {
-        const control = new api.MapScene(recipe(state.layers.filter(l => l.layerId !== layer.layerId)));
-        try { const base = await control.render({signal}); state.deltas[layer.layerId] = requirePixelChange(base.frame.data, result.frame.data, layer.layerId); }
-        finally { control.dispose(); }
+      for (const [index, layer] of layers.entries()) {
+        state.deltas[layer.layerId] = requirePixelChange(rendered[index + 1].frame.data, result.frame.data, layer.layerId);
       }
-      state.frame = result.frame;
-      canvas.width = result.frame.width; canvas.height = result.frame.height;
-      canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(result.frame.data), result.frame.width, result.frame.height), 0, 0);
-      if(publish)onOutput?.(await result.frame.toPng(), 'scene.png');
+      // Retain only bounded CPU pixels, never a live renderer or GPU owner.
+      // Full recipe serialization covers camera/time, typed arrays and every
+      // material/environment/layer setting; frame identity and bytes guard
+      // intervening outputs and callers that mutate a previously returned frame.
+      const saved = renderedKey === undefined ? undefined
+        : { key: renderedKey, frame: result.frame, pixels: result.frame.data.slice() };
+      await present(result.frame, publish);
+      renderedBaseline = saved;
       return { frame: result.frame, coveragePixels: result.metrics.coveragePixels, layers: result.executedLayerIds, changedPixels: {...state.deltas} };
-    } finally { scene.dispose(); check(scene.getMemoryReport().cpuBytes === 0 && scene.getMemoryReport().gpuBytes === 0, 'MapScene disposal retained memory'); }
+    } finally {
+      try { for (const control of controls) control.dispose(); }
+      finally { scene.dispose(); check(scene.getMemoryReport().cpuBytes === 0 && scene.getMemoryReport().gpuBytes === 0, 'MapScene disposal retained memory'); }
+    }
   }
   /** @template T @param {(runtime: import('../../types/index.js').Forge3DRuntime) => Promise<T>} work */
   async function withRuntime(work) {
@@ -133,13 +176,16 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
     // the actual scene's delta is recorded separately and its DEM stays intact.
     /** @type {import('../../types/index.js').TerrainHeightmapInput} */
     const source={...input(),width:17,height:17,spacing:[1.5,1.5],heights:Float32Array.from({length:289},(_,i)=>i%17===8||i%17===9?5:0),domain:[0,5]};delete source.material;
-    const frames=[];
-    for(const enabled of [false,true]){
-      const control=recipe([]);delete control.environment;delete control.ibl;delete control.postFx;
-      const scene=new api.MapScene({...control,terrain:{source:{id:'shadow-control',format:'heightmap',crs:'LOCAL',data:source}},lighting:{sunDirection:[.55,-1,.3],intensity:1.6},shadows:{enabled,filter:'pcf'}});
-      try{const result=await scene.render({signal});check(result.metrics.coveragePixels>500,'Shadow control has no surface');frames.push(result.frame.data);}finally{scene.dispose();}
-    }
-    return requirePixelChange(frames[0],frames[1],'Shadows');
+    /** @type {import('../../types/index.js').MapScene[]} */ const scenes=[];
+    try {
+      for(const enabled of [false,true]){
+        const control=recipe([]);delete control.environment;delete control.ibl;delete control.postFx;
+        scenes.push(new api.MapScene({...control,terrain:{source:{id:'shadow-control',format:'heightmap',crs:'LOCAL',data:source}},lighting:{sunDirection:[.55,-1,.3],intensity:1.6},shadows:{enabled,filter:'pcf'}}));
+      }
+      const frames = await renderScenes(scenes);
+      for (const result of frames) check(result.metrics.coveragePixels>500,'Shadow control has no surface');
+      return requirePixelChange(frames[0].frame.data,frames[1].frame.data,'Shadows');
+    } finally { for (const scene of scenes) scene.dispose(); }
   }
   const workflows = {
     async application() {
@@ -375,7 +421,7 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
       return results;
     },
     async materials() {
-      const before=(await render()).frame.data;
+      const before=(await baseline()).frame.data;
       terrainMaterial={ ...api.getTerrainMaterialDefaults(), pom: { enabled: true }, layers: { snow: { enabled: true, altitudeMin: .3, altitudeBlend: .2 } } };
       const after=await render(),changed=requirePixelChange(before,after.frame.data,'Materials');
       state.shadows={enabled:true,filter:'pcf'};const shadowFrame=await render(),sceneShadowPixels=changedPixels(after.frame.data,shadowFrame.frame.data,1),shadowControlPixels=await shadowControl();
@@ -409,11 +455,11 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
       const haze = await api.generateDensityVolume({ preset:['smoke','wildfire','storm'].includes(application?.kind)?'plume':'localized_haze', bounds: [-12, 0, -12, 12, 10, 12], dimensions: [8, 8, 8], densityScale: 2, wind:[2,0,.5], seed: 23 });
       if(application?.densityFrames)haze.data=volumeDensity(application.densityFrames[0]);
       const environment = new api.Forge3DEnvironment({ sunClock: { latitude: 52, longitude: 4, unixSeconds: Date.parse('2026-06-21T12:00:00Z') / 1000, timeScale: /daycycle|transit|solar/.test(example.name??'')?6*3600:1 }, sky: { model: 'hosek-wilkie', turbidity: 2 }, fog: { mode: 'height', density: .01 }, clouds: { mode: 'hybrid', preset: 'gentle', height: 40, thickness: 20,wind:[2,.5],animationSpeed:1, seed: 23 }, volumes: [haze] });
-      const before=(await render()).frame.data;state.environment=environment.snapshot();const after=await render();return {sun,bytes:after.frame.data.length,changedPixels:requirePixelChange(before,after.frame.data,'Environment')};
+      const before=(await baseline()).frame.data;state.environment=environment.snapshot();const after=await render();return {sun,bytes:after.frame.data.length,changedPixels:requirePixelChange(before,after.frame.data,'Environment')};
     },
     async water() {
       state.environment??=new api.Forge3DEnvironment({}).snapshot();
-      const before=(await render()).frame.data;state.environment={...state.environment,water:[{bounds:[-12,-12,12,12],height:2,mode:'animated',...(application?.kind==='flood'?{maskDimensions:[8,8],mask:application.evidence.activation.map(v=>v<=2?1:0)}:{})}]};const after=await render();return {bytes:after.frame.data.length,changedPixels:requirePixelChange(before,after.frame.data,'Water')};
+      const before=(await baseline()).frame.data;state.environment={...state.environment,water:[{bounds:[-12,-12,12,12],height:2,mode:'animated',...(application?.kind==='flood'?{maskDimensions:[8,8],mask:application.evidence.activation.map(v=>v<=2?1:0)}:{})}]};const after=await render();return {bytes:after.frame.data.length,changedPixels:requirePixelChange(before,after.frame.data,'Water')};
     },
     async viewer() {
       if(pointBounds){
@@ -426,7 +472,7 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
       if(state.layers.length){
         const target=camera.target,dx=camera.position[0]-target[0],dy=camera.position[1]-target[1],dz=camera.position[2]-target[2];
         const orbit=new api.OrbitController({target,distance:Math.hypot(dx,dy,dz),yawDegrees:Math.atan2(dx,dz)*180/Math.PI,pitchDegrees:Math.atan2(dy,Math.hypot(dx,dz))*180/Math.PI,near:camera.near,far:camera.far,fovYDegrees:camera.fovYDegrees});
-        const before=(await render()).frame;orbit.orbitBy(12,3);camera=orbit.getCamera();const after=await render();
+        const before=(await baseline()).frame;orbit.orbitBy(12,3);camera=orbit.getCamera();const after=await render();
         const delta=requirePixelChange(before.data,after.frame.data,'Interactive composed view');
         if(example.interactive&&retain)retain(attachOrbitInput(canvas,orbit,async next=>{camera=next;await render([],false);},signal));
         return {pngBytes:(await after.frame.toPng()).size,viewerContent:'mapscene',layers:after.layers,orbitChangedPixels:delta};

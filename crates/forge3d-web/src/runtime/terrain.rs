@@ -1347,7 +1347,7 @@ pub(super) struct TerrainPipelineCache {
     variants: std::collections::HashMap<(u64, wgpu::TextureFormat), TerrainPipelineVariant>,
     /// Offline capture pipelines keyed by capture-specialized features.
     capture_variants:
-        std::collections::HashMap<(u64, super::offline::CapturePass), wgpu::RenderPipeline>,
+        std::collections::HashMap<(u64, super::offline::CapturePass, bool), wgpu::RenderPipeline>,
 }
 
 #[derive(Clone)]
@@ -1493,6 +1493,30 @@ impl TerrainPipelineCache {
         features: ShaderFeatures,
         pass: super::offline::CapturePass,
     ) -> wgpu::RenderPipeline {
+        self.capture_variant_for(device, features, pass, false)
+    }
+
+    /// The private unjittered map reference consumes depth, not lit terrain RGB.
+    pub(super) fn depth_reference_variant(
+        &mut self,
+        device: &wgpu::Device,
+        features: ShaderFeatures,
+    ) -> wgpu::RenderPipeline {
+        self.capture_variant_for(
+            device,
+            features,
+            super::offline::CapturePass::Primary,
+            true,
+        )
+    }
+
+    fn capture_variant_for(
+        &mut self,
+        device: &wgpu::Device,
+        features: ShaderFeatures,
+        pass: super::offline::CapturePass,
+        depth_only: bool,
+    ) -> wgpu::RenderPipeline {
         let features = features.with_capture();
         let pipeline_layout = if features.masked_reflection() || features.aerial() {
             &self.masked_layouts[usize::from(features.probes()) * 8
@@ -1508,7 +1532,7 @@ impl TerrainPipelineCache {
             }
         };
         self.capture_variants
-            .entry((features.bits(), pass))
+            .entry((features.bits(), pass, depth_only))
             .or_insert_with(|| {
                 let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                     label: Some("forge3d-web-terrain-capture-shader"),
@@ -1518,7 +1542,11 @@ impl TerrainPipelineCache {
                     device,
                     pipeline_layout,
                     &shader,
-                    pass.entry_point(),
+                    if depth_only {
+                        "fs_capture_depth"
+                    } else {
+                        pass.entry_point()
+                    },
                     &pass.color_targets_for(features.capture_blend()),
                 )
             })
@@ -4552,6 +4580,27 @@ fn capture_motion(world_position: vec3<f32>) -> vec2<f32> {
     }
     let delta = current.xy / current.w - previous.xy / previous.w;
     return delta * vec2<f32>(0.5 * camera.capture_params.z, -0.5 * camera.capture_params.w);
+}
+
+@fragment
+fn fs_capture_depth(input: VertexOutput) -> CapturePrimaryOutput {
+    // Perspective coverage depends only on height validity and the clipmap
+    // footprint. Material layers, POM, IBL and shadows never change that mask.
+    var covered = is_valid_height(input.height);
+    // #if terrain_clipmap
+    covered = covered
+        && all(input.uv >= vec2<f32>(0.0))
+        && all(input.uv <= vec2<f32>(1.0));
+    // #endif
+    if (params.render_mode == 1u) {
+        covered = terrain_capture_sample(input).covered;
+    }
+    var output: CapturePrimaryOutput;
+    output.color = vec4<f32>(0.0);
+    output.depth = select(1.0, capture_linear_depth(input.world_position), covered);
+    output.id = 0u;
+    output.motion = vec2<f32>(0.0);
+    return output;
 }
 
 @fragment

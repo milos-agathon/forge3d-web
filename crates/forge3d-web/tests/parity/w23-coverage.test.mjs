@@ -4,6 +4,7 @@ import './w23-public-contracts.test.mjs';
 import './w23-application-analysis.test.mjs';
 import './w23-review-regressions.test.mjs';
 import './w23-animation-reuse.test.mjs';
+import './w23-baseline-reuse.test.mjs';
 import { changedPixels, requirePixelChange } from '../../examples/migration/checks.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

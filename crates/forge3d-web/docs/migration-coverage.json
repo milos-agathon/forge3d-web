@@ -5409,11 +5409,12 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-      "sha256": "4fe2db44ca150a1c85059d0efbd38ec3f40ea444ee622ddc1f17fae982dce506",
+      "sha256": "639f60429f1094a42a47da313629d5c1059da0726f3cb6351b703dc4ebcbe458",
       "declarations": [
         "W18 ${label}: ${kind} terrain preserves original capture coverage",
         "W18 ${label}: scene pipelines compile only for geometry that exists",
         "W18 ${label}: public and map bootstrap preserve structured shader failures",
+        "W18 ${label}: reference depth omits terrain shading and shadow redraws",
         "W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output",
         "W18 ${label}: opaque readback preserves exact pixels and coverage without an offline capture",
         "W18 ${label}: post-processing cannot conceal empty geometry and overlay-only output is covered",

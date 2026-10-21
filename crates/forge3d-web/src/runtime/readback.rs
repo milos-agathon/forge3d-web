@@ -201,7 +201,9 @@ async fn capture_frame_rgba(
             label: Some("forge3d-web-readback-encoder"),
         });
 
-    super::shadows::encode_shadow_passes(runtime, &mut encoder);
+    if super::postfx::readback_needs_scene_render(runtime) {
+        super::shadows::encode_shadow_passes(runtime, &mut encoder);
+    }
     if runtime.postfx.is_some() {
         super::postfx::encode(runtime, &mut encoder, &view, false)?;
     } else {

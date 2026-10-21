@@ -81,7 +81,9 @@ async fn capture(runtime: &mut Forge3DRuntime, context: &GpuContext) -> Result<V
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("forge3d-web-map-depth-reference"),
             });
-        super::super::shadows::encode_shadow_passes(runtime, &mut encoder);
+        // This unjittered reference reads geometric depth only. Its terrain
+        // entry point omits lighting, so the canonical frame's shadow maps do
+        // not need to be redrawn for this discarded color target.
         frame.encode_reference(runtime, &mut encoder, uniform.base.view_projection);
         context.queue.submit(std::iter::once(encoder.finish()));
         Ok::<_, WebError>(frame)

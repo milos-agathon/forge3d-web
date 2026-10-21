@@ -54,7 +54,11 @@ impl CaptureFrame {
             (Some(t), Some(cache)) => {
                 let f = t.specialize(features);
                 Some(TerrainCapture {
-                    primary: cache.capture_variant(device, f, CapturePass::Primary),
+                    primary: if surface {
+                        cache.capture_variant(device, f, CapturePass::Primary)
+                    } else {
+                        cache.depth_reference_variant(device, f)
+                    },
                     surface: surface
                         .then(|| cache.capture_variant(device, f, CapturePass::Surface)),
                     bind_group: t.capture_bind_group(device, cache.group0_for(f), &camera_buffer),

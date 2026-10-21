@@ -100,6 +100,46 @@ for (const dist of [false, true]) {
             expect(result.mapCode).toBe('SHADER_COMPILATION_FAILED');
             expect(result.lastRender).toBeNull(); expect(result.memory).toBe(0);
         });
+        test(`W18 ${label}: reference depth omits terrain shading and shadow redraws`, async ({ page }, info) => {
+            test.setTimeout(60000);
+            await page.addInitScript(() => {
+                (window as any).__referenceDepthPipelines = [];
+                (window as any).__referenceDepthShadows = [];
+                (window as any).__readbackShadows = [];
+                const pipeline = GPUDevice.prototype.createRenderPipeline;
+                GPUDevice.prototype.createRenderPipeline = function (descriptor) {
+                    if (descriptor.fragment?.entryPoint === 'fs_capture_depth') (window as any).__referenceDepthPipelines.push(descriptor.fragment.entryPoint);
+                    return pipeline.call(this, descriptor);
+                };
+                const pass = GPUCommandEncoder.prototype.beginRenderPass;
+                GPUCommandEncoder.prototype.beginRenderPass = function (descriptor) {
+                    if (this.label === 'forge3d-web-map-depth-reference' && descriptor.label === 'forge3d-shadow-depth-pass') (window as any).__referenceDepthShadows.push(descriptor.label);
+                    if (this.label === 'forge3d-web-readback-encoder' && descriptor.label === 'forge3d-shadow-depth-pass') (window as any).__readbackShadows.push(descriptor.label);
+                    return pass.call(this, descriptor);
+                };
+            });
+            await page.reload(); await page.waitForFunction(() => window.__w18?.ready);
+            const result = await page.evaluate(async () => {
+                const { api, baseRecipe } = window.__w18, recipe = baseRecipe();
+                recipe.terrain.source.data.material = { ...api.getTerrainMaterialDefaults(), pom: { enabled: true }, layers: { snow: { enabled: true, altitudeMin: .3, altitudeBlend: .2 } } };
+                recipe.shadows = { enabled: true, filter: 'pcf' };
+                recipe.postFx = { effects: [{ kind: 'taa' }] };
+                recipe.environment = new api.Forge3DEnvironment({ water: [{ bounds: [-12, -12, 12, 12], height: 2, mode: 'animated' }] }).snapshot();
+                const baseline = new api.MapScene(recipe), candidate = new api.MapScene(recipe);
+                try {
+                    const before = await baseline.render({ canvas: document.createElement('canvas') });
+                    (window as any).__referenceDepthPipelines.length = 0; (window as any).__referenceDepthShadows.length = 0;
+                    (window as any).__readbackShadows.length = 0;
+                    const after = await candidate.render();
+                    return { same: before.frame.data.every((v: number, i: number) => v === after.frame.data[i]), beforeCoverage: before.metrics.coveragePixels, afterCoverage: after.metrics.coveragePixels,
+                        depthPipelines: [...(window as any).__referenceDepthPipelines], shadowRedraws: [...(window as any).__referenceDepthShadows], readbackShadowRedraws: [...(window as any).__readbackShadows], gpuBytes: candidate.getMemoryReport().gpuBytes };
+                } finally { baseline.dispose(); candidate.dispose(); }
+            });
+            await info.attach('map-reference-depth-demand.json', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
+            expect(result.same).toBe(true); expect(result.afterCoverage).toBe(result.beforeCoverage); expect(result.afterCoverage).toBeGreaterThan(500);
+            expect(result.depthPipelines).toEqual(['fs_capture_depth']); expect(result.shadowRedraws).toEqual([]); expect(result.gpuBytes).toBe(0);
+            expect(result.readbackShadowRedraws).toEqual([]);
+        });
         for (const kind of ['layers', 'vector-alpha', 'vector-clipped', 'scatter-alpha', 'effects', 'water', 'environment', 'terrain-environment']) test(`W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output`, async ({ page }, info) => {
             test.setTimeout(60000);
             await page.addInitScript(() => {
