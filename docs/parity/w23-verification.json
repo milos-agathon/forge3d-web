@@ -11752,5 +11752,969 @@
       "threeExistingJobsAndRequiredContexts": true,
       "declaredLimits": true
     }
+  },
+  "scenePipelineDemandFollowup": {
+    "recordedAt": "2026-10-21T01:42:47.020500+00:00",
+    "implementationRevision": "d9e863f4c80b11179603842da1a3cee7550ffd81",
+    "environment": {
+      "CARGO_TARGET_DIR": "C:\\devin-target\\forge3d-web"
+    },
+    "browserEnvironment": {
+      "FORGE3D_TEST_PORT": "57923"
+    },
+    "fix": "NativeScene builds world and overlay display pipelines only when the corresponding vertex geometry exists. Rebuilds retain that condition; overlay resizing creates its pipeline if new geometry needs it. MapScene aggregates actual overlay draw statistics through the private readback, or the original display path for fallback bridges.",
+    "regression": {
+      "before": "Terrain-only real GPU rendering compiled both a world mesh pipeline and an overlay pipeline. The external GPU-call assertion failed.",
+      "intermediate": "After absent-geometry pipelines were removed, the same test exposed the pre-existing overlay-only drawCalls=0 metric. This assertion was retained.",
+      "after": {
+        "map-scene-pipeline-demand.json": [
+          {
+            "sha256": "393932bcbd80f5fe580425f43b8803c6f74be77175bbb42298c236d0d74b3ae2",
+            "observed": [
+              {
+                "kind": "terrain",
+                "pipelines": [],
+                "coverage": 6506,
+                "drawCalls": 1
+              },
+              {
+                "kind": "mesh",
+                "pipelines": [
+                  "forge3d-web-scene-world-pipeline"
+                ],
+                "coverage": 6506,
+                "drawCalls": 2
+              },
+              {
+                "kind": "overlay",
+                "pipelines": [
+                  "forge3d-web-scene-overlay-pipeline"
+                ],
+                "coverage": 600,
+                "drawCalls": 1
+              }
+            ]
+          },
+          {
+            "sha256": "393932bcbd80f5fe580425f43b8803c6f74be77175bbb42298c236d0d74b3ae2",
+            "observed": [
+              {
+                "kind": "terrain",
+                "pipelines": [],
+                "coverage": 6506,
+                "drawCalls": 1
+              },
+              {
+                "kind": "mesh",
+                "pipelines": [
+                  "forge3d-web-scene-world-pipeline"
+                ],
+                "coverage": 6506,
+                "drawCalls": 2
+              },
+              {
+                "kind": "overlay",
+                "pipelines": [
+                  "forge3d-web-scene-overlay-pipeline"
+                ],
+                "coverage": 600,
+                "drawCalls": 1
+              }
+            ]
+          }
+        ],
+        "map-reference-depth.json": [
+          {
+            "sha256": "1edd42034ae300e8c5b4d79c0ec1a69d673ad2e214c6c914c606d26ef9f8eaa8",
+            "observed": {
+              "kind": "layers",
+              "same": true,
+              "beforeCoverage": 7389,
+              "afterCoverage": 7389,
+              "offlineCompilations": [],
+              "gpuBytes": 0,
+              "referencePasses": [
+                "forge3d-web-capture-primary",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass"
+              ],
+              "environmentCompilations": [],
+              "colorPasses": [
+                "forge3d-web-readback-pass",
+                "forge3d-web-readback-pass"
+              ],
+              "drawCalls": 6
+            }
+          },
+          {
+            "sha256": "1b98ea41c1c653d30660580283165dace89ddb0f2a8e77a99dfa31edd59d27b8",
+            "observed": {
+              "kind": "effects",
+              "same": true,
+              "beforeCoverage": 7389,
+              "afterCoverage": 7389,
+              "offlineCompilations": [],
+              "gpuBytes": 0,
+              "referencePasses": [
+                "forge3d-web-capture-primary",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass"
+              ],
+              "environmentCompilations": [],
+              "colorPasses": [
+                "forge3d-web-readback-pass"
+              ],
+              "drawCalls": 6
+            }
+          },
+          {
+            "sha256": "f547975a812927193eb59b333370478eb5b942982d097fd28311d612c9fbc924",
+            "observed": {
+              "kind": "water",
+              "same": true,
+              "beforeCoverage": 8016,
+              "afterCoverage": 8016,
+              "offlineCompilations": [],
+              "gpuBytes": 0,
+              "referencePasses": [
+                "forge3d-web-capture-primary",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "environment-water-aov-pass"
+              ],
+              "environmentCompilations": [
+                "fs_water_primary"
+              ],
+              "colorPasses": [
+                "forge3d-web-readback-pass",
+                "forge3d-web-readback-pass"
+              ],
+              "drawCalls": 6
+            }
+          },
+          {
+            "sha256": "a764b6d46669a518b76cc539e8696c6187efb99e0ecf1c6281241ac7ccf378c9",
+            "observed": {
+              "kind": "environment",
+              "same": true,
+              "beforeCoverage": 7389,
+              "afterCoverage": 7389,
+              "offlineCompilations": [],
+              "gpuBytes": 0,
+              "referencePasses": [
+                "forge3d-web-capture-primary",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass"
+              ],
+              "environmentCompilations": [],
+              "colorPasses": [
+                "forge3d-web-readback-pass",
+                "forge3d-web-readback-pass"
+              ],
+              "drawCalls": 6
+            }
+          },
+          {
+            "sha256": "1edd42034ae300e8c5b4d79c0ec1a69d673ad2e214c6c914c606d26ef9f8eaa8",
+            "observed": {
+              "kind": "layers",
+              "same": true,
+              "beforeCoverage": 7389,
+              "afterCoverage": 7389,
+              "offlineCompilations": [],
+              "gpuBytes": 0,
+              "referencePasses": [
+                "forge3d-web-capture-primary",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass"
+              ],
+              "environmentCompilations": [],
+              "colorPasses": [
+                "forge3d-web-readback-pass",
+                "forge3d-web-readback-pass"
+              ],
+              "drawCalls": 6
+            }
+          },
+          {
+            "sha256": "1b98ea41c1c653d30660580283165dace89ddb0f2a8e77a99dfa31edd59d27b8",
+            "observed": {
+              "kind": "effects",
+              "same": true,
+              "beforeCoverage": 7389,
+              "afterCoverage": 7389,
+              "offlineCompilations": [],
+              "gpuBytes": 0,
+              "referencePasses": [
+                "forge3d-web-capture-primary",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass"
+              ],
+              "environmentCompilations": [],
+              "colorPasses": [
+                "forge3d-web-readback-pass"
+              ],
+              "drawCalls": 6
+            }
+          },
+          {
+            "sha256": "f547975a812927193eb59b333370478eb5b942982d097fd28311d612c9fbc924",
+            "observed": {
+              "kind": "water",
+              "same": true,
+              "beforeCoverage": 8016,
+              "afterCoverage": 8016,
+              "offlineCompilations": [],
+              "gpuBytes": 0,
+              "referencePasses": [
+                "forge3d-web-capture-primary",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "environment-water-aov-pass"
+              ],
+              "environmentCompilations": [
+                "fs_water_primary"
+              ],
+              "colorPasses": [
+                "forge3d-web-readback-pass",
+                "forge3d-web-readback-pass"
+              ],
+              "drawCalls": 6
+            }
+          },
+          {
+            "sha256": "a764b6d46669a518b76cc539e8696c6187efb99e0ecf1c6281241ac7ccf378c9",
+            "observed": {
+              "kind": "environment",
+              "same": true,
+              "beforeCoverage": 7389,
+              "afterCoverage": 7389,
+              "offlineCompilations": [],
+              "gpuBytes": 0,
+              "referencePasses": [
+                "forge3d-web-capture-primary",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass",
+                "vector:pass"
+              ],
+              "environmentCompilations": [],
+              "colorPasses": [
+                "forge3d-web-readback-pass",
+                "forge3d-web-readback-pass"
+              ],
+              "drawCalls": 6
+            }
+          }
+        ]
+      },
+      "focusedBrowserCasesPassed": 59,
+      "rustCasesPassed": 192
+    },
+    "focusedCommands": [
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "npm run build:wasm"
+      },
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "npm run build:ts"
+      },
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "npm run prepare-dist"
+      },
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "cargo test -p forge3d-web --lib"
+      },
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "node node_modules/typescript/bin/tsc -p tsconfig.migration.json"
+      },
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "npx playwright test tests/playwright/w18_mapscene.spec.ts --project=chromium-preflight --grep 'source: scene pipelines' '--reporter=list,json' --output=test-results/w18-scene-demand-before",
+        "expected": "red: absent geometry pipelines compiled",
+        "PLAYWRIGHT_JSON_OUTPUT_FILE": "test-results/w18-scene-demand-before.json"
+      },
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "npx playwright test tests/playwright/w18_mapscene.spec.ts --project=chromium-preflight --grep 'scene pipelines' '--reporter=list,json' --output=test-results/w18-scene-demand-after",
+        "expected": "red: overlay-only draw count omitted",
+        "PLAYWRIGHT_JSON_OUTPUT_FILE": "test-results/w18-scene-demand-after.json"
+      },
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "npx playwright test tests/playwright/w18_mapscene.spec.ts --project=chromium-preflight --grep 'scene pipelines|coverage needs no offline' '--reporter=list,json' --output=test-results/w18-scene-demand-final",
+        "PLAYWRIGHT_JSON_OUTPUT_FILE": "test-results/w18-scene-demand-final.json"
+      },
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "npx playwright test tests/playwright/w02_runtime.spec.ts tests/playwright/w18_mapscene.spec.ts tests/playwright/w06_capture.spec.ts tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight '--grep=W02 runtime integrates|W18|exact HDR|optional kernels|native session semantics|CPU reference|native-saver' --reporter=list --output=test-results/w23-scene-demand-focused"
+      },
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "node ../../scripts/generate-w23.mjs"
+      }
+    ],
+    "commands": [
+      {
+        "name": "verify",
+        "command": "npm run verify:w23",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:31:14.091Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:31:47.578Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-verify.log",
+        "sha256": "3ea9f99478bfbb209ad64b57382e71b73ef3ccfb11262ee1ca36efcb1a0e2c4e",
+        "argv": [
+          "npm",
+          "run",
+          "verify:w23"
+        ]
+      },
+      {
+        "name": "parity",
+        "command": "npm run verify:parity",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:31:47.625Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:31:50.901Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-parity.log",
+        "sha256": "5023e2c364839f6067c1865ad69937ac87f920691f2b0ac9e955e4a34d660635",
+        "argv": [
+          "npm",
+          "run",
+          "verify:parity"
+        ]
+      },
+      {
+        "name": "api",
+        "command": "npm run test:api",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:31:50.948Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:32:00.582Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-api.log",
+        "sha256": "7400eb2e75890505b9c2aea600711378db12d52db4385ac97e9530a338a0f2d0",
+        "argv": [
+          "npm",
+          "run",
+          "test:api"
+        ]
+      },
+      {
+        "name": "unit-1",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:32:00.624Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:32:24.698Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-unit-1.log",
+        "sha256": "ca845eca6ee16583c9719db8e7347b72b22d69fe1e452a669e9ff7cbe6ec48be",
+        "argv": [
+          "npm",
+          "run",
+          "test:unit"
+        ]
+      },
+      {
+        "name": "unit-2",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:32:24.746Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:32:49.384Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-unit-2.log",
+        "sha256": "5708d1408bcd92fe127ccdafbf2e545a8f2623018f93de38126553ff24eeaa7c",
+        "argv": [
+          "npm",
+          "run",
+          "test:unit"
+        ]
+      },
+      {
+        "name": "unit-3",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:32:49.432Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:33:13.446Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-unit-3.log",
+        "sha256": "904613f76910e133c99269f41f6a94f6df9e139ebd467b3935a7f0557413ea76",
+        "argv": [
+          "npm",
+          "run",
+          "test:unit"
+        ]
+      },
+      {
+        "name": "example-build",
+        "command": "npm run build:example",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:33:13.496Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:33:17.373Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-example-build.log",
+        "sha256": "366509a49d9da0e2496b81566738b6d2752f76f5be87681c25714395bc1e2110",
+        "argv": [
+          "npm",
+          "run",
+          "build:example"
+        ]
+      },
+      {
+        "name": "package",
+        "command": "npm run test:package",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:33:17.421Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:33:54.507Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-package.log",
+        "sha256": "25beca0f35fb86a389cfb977b1e74b900b71f24430c4903e29803f36b511d365",
+        "argv": [
+          "npm",
+          "run",
+          "test:package"
+        ]
+      },
+      {
+        "name": "browser",
+        "command": "npm run test:w23 -- --reporter=list,json --output=test-results/w23-review13-browser-output",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:33:54.557Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:39:17.684Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-browser.log",
+        "sha256": "dda1d4b1250f00e9ba17826fdb5ac07b0a68439109d1804e10639ea8e5dc4fd5",
+        "argv": [
+          "npm",
+          "run",
+          "test:w23",
+          "--",
+          "--reporter=list,json",
+          "--output=test-results/w23-review13-browser-output"
+        ]
+      },
+      {
+        "name": "installed",
+        "command": "npm run test:package-consumer:w23",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:39:17.734Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:41:56.034Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-installed.log",
+        "sha256": "096caab5641e3ae6dbba7643c5e73d503c30cf74d9851bab9af0f25d1413892b",
+        "argv": [
+          "npm",
+          "run",
+          "test:package-consumer:w23"
+        ]
+      },
+      {
+        "name": "single-tile-oracle",
+        "command": "python scripts/generate-w23-goldens.py --check",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:41:56.082Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:41:56.394Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-single-tile-oracle.log",
+        "sha256": "67b6cd00347972bb347a8b49a197c0a37e1f5a0e93addf8e5d942ae9daf5f8e0",
+        "argv": [
+          "python",
+          "scripts/generate-w23-goldens.py",
+          "--check"
+        ]
+      },
+      {
+        "name": "regional-oracle",
+        "command": "python scripts/generate-w23-application-fixtures.py --check",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T01:41:56.443Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:42:00.167Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-regional-oracle.log",
+        "sha256": "174700903fa15996234210069851e1a8513fa092775f7fa7ad6bab491f2941b6",
+        "argv": [
+          "python",
+          "scripts/generate-w23-application-fixtures.py",
+          "--check"
+        ]
+      },
+      {
+        "name": "native-audit",
+        "command": "python scripts/audit-w23-native.py",
+        "cwd": "D:/forge3d-web/.worktrees/w23",
+        "startedAt": "2026-10-21T01:42:00.214Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:42:09.080Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-native-audit.log",
+        "sha256": "0672845d937280a57e8d4aac6ccecc51c13e7b772b3f363d09bb3eb89f014d94",
+        "argv": [
+          "python",
+          "scripts/audit-w23-native.py"
+        ]
+      },
+      {
+        "name": "semantic-audit",
+        "command": "node scripts/audit-w23-semantics.mjs",
+        "cwd": "D:/forge3d-web/.worktrees/w23",
+        "startedAt": "2026-10-21T01:42:09.127Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T01:42:10.839Z",
+        "log": "crates/forge3d-web/test-results/w23-review13-semantic-audit.log",
+        "sha256": "63c6c51d1818dd7c8cc9a53a1a2781cf6ad76c5e3262f52563ae6628f5666dd8",
+        "argv": [
+          "node",
+          "scripts/audit-w23-semantics.mjs"
+        ]
+      }
+    ],
+    "commandExecution": "The required commands were spawned sequentially without a shell by run-w23-review13.mjs, with npm resolved through the Node npm CLI.",
+    "unit": [
+      {
+        "run": 1,
+        "filesPassed": 92,
+        "testsPassed": 1960,
+        "fontShapingAssertionMs": 20
+      },
+      {
+        "run": 2,
+        "filesPassed": 92,
+        "testsPassed": 1960,
+        "fontShapingAssertionMs": 26
+      },
+      {
+        "run": 3,
+        "filesPassed": 92,
+        "testsPassed": 1960,
+        "fontShapingAssertionMs": 31
+      }
+    ],
+    "browserCases": [
+      {
+        "title": "W23 source: all 54 migrated example workflows execute",
+        "status": "passed",
+        "durationMs": 70016,
+        "attachments": [
+          {
+            "name": "forge3d-webgpu-probe.json",
+            "sha256": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6"
+          },
+          {
+            "name": "w23-independent-stage-observations.json",
+            "sha256": "ffbdc5f81af687c8367639794e33adc4d0c18cf98fc40abfaf14257fc0b79414"
+          },
+          {
+            "name": "w23-negative-controls.json",
+            "sha256": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c"
+          },
+          {
+            "name": "w23-literal-stage-negative-controls.json",
+            "sha256": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6"
+          },
+          {
+            "name": "w23-workflows.json",
+            "sha256": "1a7a0eefb53e61483dcd4e0bea611938c9b63cd534f72b4796508f920e178c20"
+          }
+        ],
+        "negativeControls": [
+          {
+            "feature": "materials",
+            "rejected": true,
+            "message": "Materials contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "environment",
+            "rejected": true,
+            "message": "Environment contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "water",
+            "rejected": true,
+            "message": "Water contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "vectors",
+            "rejected": true,
+            "message": "rivers contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "shadows",
+            "rejected": true,
+            "message": "Shadows contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "pointcloud",
+            "rejected": true,
+            "message": "Point cloud GPU draw has no coverage"
+          },
+          {
+            "feature": "taa",
+            "rejected": true,
+            "message": "TAA did not accumulate temporal history"
+          },
+          {
+            "feature": "oit",
+            "rejected": true,
+            "message": "Weighted OIT depends on draw order"
+          },
+          {
+            "feature": "ibl",
+            "rejected": true,
+            "message": "HDR IBL contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "rigs",
+            "rejected": true,
+            "message": "Rig clearance failed: orbit"
+          }
+        ],
+        "literalStages": {
+          "matchingManifest": true,
+          "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+          "integrityVerified": 17,
+          "outcomes": [
+            {
+              "workflow": "triangle",
+              "name": "triangle_png.py",
+              "rejected": true,
+              "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "cog",
+              "name": "cog_streaming_demo.py",
+              "rejected": true,
+              "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "video",
+              "name": "camera_animation_demo.py",
+              "rejected": true,
+              "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+              "observedEvents": 0
+            }
+          ]
+        }
+      },
+      {
+        "title": "W23 dist: all 54 migrated example workflows execute",
+        "status": "passed",
+        "durationMs": 211683,
+        "attachments": [
+          {
+            "name": "forge3d-webgpu-probe.json",
+            "sha256": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6"
+          },
+          {
+            "name": "w23-independent-stage-observations.json",
+            "sha256": "c0caab49acb5cbbaf0834ede24e8c60255f64d0188367bdb4a40c1c46cd51ecf"
+          },
+          {
+            "name": "w23-negative-controls.json",
+            "sha256": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c"
+          },
+          {
+            "name": "w23-literal-stage-negative-controls.json",
+            "sha256": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6"
+          },
+          {
+            "name": "w23-workflows.json",
+            "sha256": "8aa4f1c9209f110fb247c346d56edaa7cd37fae9f4d00604201605304a36cfe6"
+          }
+        ],
+        "negativeControls": [
+          {
+            "feature": "materials",
+            "rejected": true,
+            "message": "Materials contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "environment",
+            "rejected": true,
+            "message": "Environment contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "water",
+            "rejected": true,
+            "message": "Water contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "vectors",
+            "rejected": true,
+            "message": "rivers contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "shadows",
+            "rejected": true,
+            "message": "Shadows contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "pointcloud",
+            "rejected": true,
+            "message": "Point cloud GPU draw has no coverage"
+          },
+          {
+            "feature": "taa",
+            "rejected": true,
+            "message": "TAA did not accumulate temporal history"
+          },
+          {
+            "feature": "oit",
+            "rejected": true,
+            "message": "Weighted OIT depends on draw order"
+          },
+          {
+            "feature": "ibl",
+            "rejected": true,
+            "message": "HDR IBL contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "rigs",
+            "rejected": true,
+            "message": "Rig clearance failed: orbit"
+          }
+        ],
+        "literalStages": {
+          "matchingManifest": true,
+          "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+          "integrityVerified": 17,
+          "outcomes": [
+            {
+              "workflow": "triangle",
+              "name": "triangle_png.py",
+              "rejected": true,
+              "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "cog",
+              "name": "cog_streaming_demo.py",
+              "rejected": true,
+              "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "video",
+              "name": "camera_animation_demo.py",
+              "rejected": true,
+              "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+              "observedEvents": 0
+            }
+          ]
+        }
+      },
+      {
+        "title": "W23 dist: all 54 migrated example workflows execute",
+        "status": "passed",
+        "durationMs": 71555,
+        "attachments": [
+          {
+            "name": "forge3d-webgpu-probe.json",
+            "sha256": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6"
+          },
+          {
+            "name": "w23-independent-stage-observations.json",
+            "sha256": "d5516e6f3315faa57e8277877dcf5cd3777e13eb9abd7616edd8e4b103bdf4ed"
+          },
+          {
+            "name": "w23-negative-controls.json",
+            "sha256": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c"
+          },
+          {
+            "name": "w23-literal-stage-negative-controls.json",
+            "sha256": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6"
+          },
+          {
+            "name": "w23-workflows.json",
+            "sha256": "fa69f7dc47f8a1b312c7b4abd47dcf18f9e362ee9c2e5a3a3d3e251e3b469389"
+          }
+        ],
+        "negativeControls": [
+          {
+            "feature": "materials",
+            "rejected": true,
+            "message": "Materials contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "environment",
+            "rejected": true,
+            "message": "Environment contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "water",
+            "rejected": true,
+            "message": "Water contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "vectors",
+            "rejected": true,
+            "message": "rivers contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "shadows",
+            "rejected": true,
+            "message": "Shadows contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "pointcloud",
+            "rejected": true,
+            "message": "Point cloud GPU draw has no coverage"
+          },
+          {
+            "feature": "taa",
+            "rejected": true,
+            "message": "TAA did not accumulate temporal history"
+          },
+          {
+            "feature": "oit",
+            "rejected": true,
+            "message": "Weighted OIT depends on draw order"
+          },
+          {
+            "feature": "ibl",
+            "rejected": true,
+            "message": "HDR IBL contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "rigs",
+            "rejected": true,
+            "message": "Rig clearance failed: orbit"
+          }
+        ],
+        "literalStages": {
+          "matchingManifest": true,
+          "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+          "integrityVerified": 17,
+          "outcomes": [
+            {
+              "workflow": "triangle",
+              "name": "triangle_png.py",
+              "rejected": true,
+              "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "cog",
+              "name": "cog_streaming_demo.py",
+              "rejected": true,
+              "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "video",
+              "name": "camera_animation_demo.py",
+              "rejected": true,
+              "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+              "observedEvents": 0
+            }
+          ]
+        }
+      }
+    ],
+    "installed": {
+      "revision": "d9e863f4c80b11179603842da1a3cee7550ffd81",
+      "exitCode": 0,
+      "packageSha256": "216aff7d41ee51edf7050d6f2f0c35284a593b4ff709e380caa6ec0162ddaa6e",
+      "wasmSha256": "f2d9e52ae5ce5be6a05afac58b40646c1b18916254e11366d9c8c891771e47be",
+      "assetsVerified": 207,
+      "migrationTextHeadBlobsVerified": 18,
+      "documents": 38,
+      "browserLane": "chromium-preflight",
+      "sourceImplementationAvailable": false,
+      "strictCsp": true,
+      "rangeSupport": true
+    },
+    "w23NodeChecksPassed": 69,
+    "manifestDigests": {
+      "docs/parity/w23-coverage.json": "92689befaa63902f8482b1b5fafcfa1a7b136e867702caa49ef43490ea3aa105",
+      "docs/parity/w23-assets.json": "203b78eefdfc6bdd9402e8a983fed0c76b19e9b76c5219575f5ccb0da60ad6d0"
+    },
+    "logs": [
+      {
+        "path": "crates/forge3d-web/test-results/w18-scene-demand-before.log",
+        "sha256": "1db4b6fe9dc2261802db2061f596b318f7d5514efc1bf6d85e09b0f2f54cd007"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w18-scene-demand-after.log",
+        "sha256": "1406d1bec528d13c4c10e6512db6740fbe6aeb8cf1b2a7b9c5b56265da82b990"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w18-scene-demand-final.log",
+        "sha256": "79842bc75ad3d8bf3933ced61a48e828f36c0b632bba63b49d51f62b6fc6f396"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-scene-demand-focused.log",
+        "sha256": "6dad7946ed770d07830fd7d827a34c67c99967f0ae115f06af8b6bd58c3d6a3c"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-scene-demand-rust.log",
+        "sha256": "c8d8494273d03277c7a5af232211885540c2ed71ea7fa7e470ee17471bb25e60"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-scene-demand-build.log",
+        "sha256": "9ce317c2a77904f0631bc341776f1ef785c98d37dd4d29ded63463fac4dcf769"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-scene-demand-ts.log",
+        "sha256": "11d3bf61f65d6c4496259c8f97c199d5c89253eeed06b89b084bf04d148a8381"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-scene-demand-ts-final.log",
+        "sha256": "11d3bf61f65d6c4496259c8f97c199d5c89253eeed06b89b084bf04d148a8381"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-scene-demand-types.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-scene-demand-generate.log",
+        "sha256": "82a985e62565c834d537902f182666f371c0057998552afc5f235a0ee76d1cb8"
+      }
+    ],
+    "checksRetained": {
+      "all54Examples": true,
+      "allContributionAndLiteralControls": true,
+      "w23TestTimeoutMs": 600000,
+      "nativeProbeTimeoutMs": 30000,
+      "fontTestTimeoutMs": 5000,
+      "rawOracleByteEquality": true,
+      "originalLateOracleGate": true,
+      "threeExistingJobsAndRequiredContexts": true,
+      "declaredLimits": true
+    }
   }
 }
