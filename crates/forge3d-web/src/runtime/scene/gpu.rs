@@ -59,8 +59,8 @@ pub(crate) struct NativeScene {
     /// Shader features `world_shader`/`world_pipeline` were specialized for.
     world_features: ShaderFeatures,
     overlay_shader: wgpu::ShaderModule,
-    world_pipeline: wgpu::RenderPipeline,
-    overlay_pipeline: wgpu::RenderPipeline,
+    world_pipeline: Option<wgpu::RenderPipeline>,
+    overlay_pipeline: Option<wgpu::RenderPipeline>,
     format: wgpu::TextureFormat,
     pub(crate) world_vertex_buffer: Option<wgpu::Buffer>,
     pub(crate) overlay_vertex_buffer: Option<wgpu::Buffer>,
@@ -130,16 +130,19 @@ impl NativeScene {
                 label: Some("forge3d-web-scene-overlay-shader"),
                 source: wgpu::ShaderSource::Wgsl(OVERLAY_SHADER.into()),
             });
-        let world_pipeline = create_world_pipeline(
-            &context.device,
-            format,
-            &camera_layout,
-            &lighting.bind_group_layout,
-            &textures.bind_group_layout,
-            &ibl.bind_group_layout,
-            &world_shader,
-        );
-        let overlay_pipeline = create_overlay_pipeline(&context.device, format, &overlay_shader);
+        let world_pipeline = (!geometry.world_vertices.is_empty()).then(|| {
+            create_world_pipeline(
+                &context.device,
+                format,
+                &camera_layout,
+                &lighting.bind_group_layout,
+                &textures.bind_group_layout,
+                &ibl.bind_group_layout,
+                &world_shader,
+            )
+        });
+        let overlay_pipeline = (!geometry.overlay_vertices.is_empty())
+            .then(|| create_overlay_pipeline(&context.device, format, &overlay_shader));
 
         let mut scene = Self {
             motion_vertices: geometry.world_vertices.clone(),
@@ -259,7 +262,11 @@ impl NativeScene {
                         sample_count: 1,
                         multiview: None,
                     });
-            encoder.set_pipeline(&self.world_pipeline);
+            encoder.set_pipeline(
+                self.world_pipeline
+                    .as_ref()
+                    .expect("world geometry pipeline"),
+            );
             encoder.set_bind_group(0, &self.camera_bind_group, &[]);
             encoder.set_bind_group(1, &self.lighting_bind_group, &[]);
             encoder.set_bind_group(3, &ibl.bind_group, &[]);
@@ -286,7 +293,11 @@ impl NativeScene {
                         sample_count: 1,
                         multiview: None,
                     });
-            encoder.set_pipeline(&self.overlay_pipeline);
+            encoder.set_pipeline(
+                self.overlay_pipeline
+                    .as_ref()
+                    .expect("overlay geometry pipeline"),
+            );
             encoder.set_vertex_buffer(0, buffer.slice(..));
             for range in &self.overlay_ranges {
                 encoder.draw(
@@ -363,6 +374,11 @@ impl NativeScene {
             )
         };
         self.overlay_ranges = ranges;
+        if self.overlay_vertex_buffer.is_some() {
+            self.overlay_pipeline.get_or_insert_with(|| {
+                create_overlay_pipeline(&context.device, self.format, &self.overlay_shader)
+            });
+        }
         self.encode_bundles(context, textures, ibl);
     }
 
@@ -395,15 +411,17 @@ impl NativeScene {
         }
         self.world_shader = create_world_shader(context, features);
         self.world_features = features;
-        self.world_pipeline = create_world_pipeline(
-            &context.device,
-            self.format,
-            &self.camera_layout,
-            &self.lighting_layout,
-            &self.texture_layout,
-            &self.ibl_layout,
-            &self.world_shader,
-        );
+        self.world_pipeline = self.world_vertex_buffer.as_ref().map(|_| {
+            create_world_pipeline(
+                &context.device,
+                self.format,
+                &self.camera_layout,
+                &self.lighting_layout,
+                &self.texture_layout,
+                &self.ibl_layout,
+                &self.world_shader,
+            )
+        });
         self.encode_bundles(context, textures, ibl);
     }
 
@@ -414,17 +432,21 @@ impl NativeScene {
         textures: &TextureResources,
         ibl: &IblResources,
     ) {
-        self.world_pipeline = create_world_pipeline(
-            &context.device,
-            format,
-            &self.camera_layout,
-            &self.lighting_layout,
-            &self.texture_layout,
-            &self.ibl_layout,
-            &self.world_shader,
-        );
-        self.overlay_pipeline =
-            create_overlay_pipeline(&context.device, format, &self.overlay_shader);
+        self.world_pipeline = self.world_vertex_buffer.as_ref().map(|_| {
+            create_world_pipeline(
+                &context.device,
+                format,
+                &self.camera_layout,
+                &self.lighting_layout,
+                &self.texture_layout,
+                &self.ibl_layout,
+                &self.world_shader,
+            )
+        });
+        self.overlay_pipeline = self
+            .overlay_vertex_buffer
+            .as_ref()
+            .map(|_| create_overlay_pipeline(&context.device, format, &self.overlay_shader));
         self.format = format;
         self.encode_bundles(context, textures, ibl);
     }
@@ -519,7 +541,11 @@ impl NativeScene {
         let Some(buffer) = &self.world_vertex_buffer else {
             return;
         };
-        pass.set_pipeline(&self.world_pipeline);
+        pass.set_pipeline(
+            self.world_pipeline
+                .as_ref()
+                .expect("world geometry pipeline"),
+        );
         pass.set_bind_group(0, camera, &[]);
         pass.set_bind_group(1, &self.lighting_bind_group, &[]);
         pass.set_bind_group(3, &ibl.bind_group, &[]);

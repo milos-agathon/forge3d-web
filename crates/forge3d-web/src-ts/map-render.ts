@@ -119,6 +119,7 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
         let rgba: Uint8Array, baseBytes = runtime.getMemoryReport().currentBytes, pointCount = 0,pointBytes=0;
         memory(baseBytes);
         const stats = runtime.getRenderStats();
+        let drawCalls = stats.drawCalls;
         let baseDepth: Float32Array, covered: Float32Array;
         if (direct) {
             rgba = direct.rgba; covered = Float32Array.from(direct.coverage); baseDepth = new Float32Array();
@@ -156,9 +157,11 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
                 mapCancelled(signal);
                 overlay.setScene(overlayScene.snapshot());
                 overlay.setCamera(camera);
-                if (options.canvas && !overlay.render())
+                if (!direct && !overlay.render())
                     throw Error('Overlay render declined');
-                const front = await overlay.readRgba();
+                const overlayFrame = direct ? await tryReadMapFrame(overlay) : undefined;
+                const front = overlayFrame?.rgba ?? await overlay.readRgba();
+                drawCalls += overlay.getRenderStats().drawCalls;
                 mapCancelled(signal);
                 memory(baseBytes + pointBytes + overlay.getMemoryReport().currentBytes);
                 for (let i = 0; i < width * height; i++) {
@@ -175,7 +178,7 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
         const coverage=covered.reduce((n,v)=>n+v,0);
         if (!coverage)
             throw new Forge3DError('UNSUPPORTED_FEATURE', 'MapScene rendered only the clear background', { reason: 'empty-render-output' });
-        return { frame: new Frame(width, height, rgba), metrics: { gpuBytes: current, peakGpuBytes: peak, coveragePixels: coverage, drawCalls: stats.drawCalls, pointCount, backend: 'webgpu' } };
+        return { frame: new Frame(width, height, rgba), metrics: { gpuBytes: current, peakGpuBytes: peak, coveragePixels: coverage, drawCalls, pointCount, backend: 'webgpu' } };
     }
     finally {
         for (const release of releases.reverse())

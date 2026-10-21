@@ -8,6 +8,42 @@ declare global {
 for (const dist of [false, true]) {
     const label = dist ? 'dist' : 'source';
     test.describe(label, () => {
+        test(`W18 ${label}: scene pipelines compile only for geometry that exists`, async ({ page }, info) => {
+            test.setTimeout(60000);
+            await page.addInitScript(() => {
+                (window as any).__mapScenePipelines = [];
+                const original = GPUDevice.prototype.createRenderPipeline;
+                GPUDevice.prototype.createRenderPipeline = function (descriptor) {
+                    if (descriptor.label === 'forge3d-web-scene-world-pipeline' || descriptor.label === 'forge3d-web-scene-overlay-pipeline') (window as any).__mapScenePipelines.push(descriptor.label);
+                    return original.call(this, descriptor);
+                };
+            });
+            await page.reload(); await page.waitForFunction(() => window.__w18?.ready);
+            const rows = await page.evaluate(async () => {
+                const { api, baseRecipe } = window.__w18, rows = [];
+                for (const kind of ['terrain', 'mesh', 'overlay']) {
+                    const recipe = baseRecipe(); recipe.layers = [];
+                    if (kind === 'mesh') recipe.layers = [{ kind: 'nodes', layerId: 'ground', nodes: [{ kind: 'ground-plane', name: 'ground', size: [20, 20], height: 0, color: [.25, .4, .6, 1] }] }];
+                    if (kind === 'overlay') { delete recipe.terrain; recipe.layers = [{ kind: 'nodes', layerId: 'panel', nodes: [{ kind: 'overlay', name: 'panel', bounds: [20, 20, 30, 20], color: [1, .2, .1, 1] }] }]; }
+                    const scene = new api.MapScene(recipe);
+                    try {
+                        (window as any).__mapScenePipelines.length = 0;
+                        const result = await scene.render();
+                        rows.push({ kind, pipelines: [...(window as any).__mapScenePipelines], coverage: result.metrics.coveragePixels, drawCalls: result.metrics.drawCalls });
+                    } finally { scene.dispose(); }
+                    if (scene.getMemoryReport().gpuBytes !== 0) throw Error('Scene retained GPU memory');
+                }
+                return rows;
+            });
+            await info.attach('map-scene-pipeline-demand.json', { body: JSON.stringify(rows, null, 2), contentType: 'application/json' });
+            for (const row of rows) {
+                expect(row.coverage).toBeGreaterThan(500); expect(row.drawCalls).toBeGreaterThan(0);
+                if (row.kind !== 'mesh') expect(row.pipelines).not.toContain('forge3d-web-scene-world-pipeline');
+                else expect(row.pipelines).toContain('forge3d-web-scene-world-pipeline');
+                if (row.kind !== 'overlay') expect(row.pipelines).not.toContain('forge3d-web-scene-overlay-pipeline');
+                else expect(row.pipelines).toContain('forge3d-web-scene-overlay-pipeline');
+            }
+        });
         for (const kind of ['layers', 'effects', 'water', 'environment']) test(`W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output`, async ({ page }, info) => {
             test.setTimeout(60000);
             await page.addInitScript(() => {
