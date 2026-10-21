@@ -18523,5 +18523,1028 @@
       "allExistingJobsAndContexts": true,
       "declaredLimits": true
     }
+  },
+  "node20LatchFollowup": {
+    "recordedAt": "2026-10-21T09:49:10.288827+00:00",
+    "implementationRevision": "f10c730fe78f3584acafe638da02189a2af1883f",
+    "productionImplementationRevision": "bb55aebb5699fa426db2272918aa664984a9d235",
+    "environment": {
+      "CARGO_TARGET_DIR": "C:\\devin-target\\forge3d-web"
+    },
+    "browserEnvironment": {
+      "FORGE3D_TEST_PORT": "57923"
+    },
+    "ciReproduction": {
+      "run": "https://github.com/milos-agathon/forge3d-web/actions/runs/39570122453",
+      "head": "a26b2f2a033147423b5df3f0abdbce9ec526ae62",
+      "result": "Windows passed 192 Rust contracts, all 1960 unit tests across 92 files (font shaping assertion 17 ms), and Build browser package, then Test browser package and infrastructure contracts failed in two new concurrency tests because project Node 20 lacks Promise.withResolvers. Dependent macOS and WebKit jobs were skipped; this run provides no browser or macOS timing evidence.",
+      "log": "crates/forge3d-web/test-results/w23-pr-depth-paired-build-failure.log",
+      "logSha256": "77742c75d15c860572d6b1b9cc35b3436ef0d2e585fffccbcf9c32b3867fe86a"
+    },
+    "fix": "Replace two Promise.withResolvers calls in the new test fixtures with a plain Promise latch supported by project Node 20. Production code is unchanged. The concurrency limit, actual work and peer-settlement/owner-cleanup assertions remain unchanged.",
+    "targeted": {
+      "cwd": "crates/forge3d-web",
+      "command": "node --import 'data:text/javascript,Promise.withResolvers=undefined' --test tests/parity/w23-baseline-reuse.test.mjs tests/parity/w23-animation-reuse.test.mjs",
+      "passed": 15,
+      "failed": 0,
+      "log": "crates/forge3d-web/test-results/w23-node20-latch.log",
+      "logSha256": "2e85d46afe62e54df16b0e17366e76551a3fd601d5bb5b3352a4e671956cf919"
+    },
+    "commands": [
+      {
+        "name": "verify",
+        "command": "npm run verify:w23",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:38:32.437Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:39:26.585Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-verify.log",
+        "sha256": "d8c2eba9d685495f8e10001bd35310089585735f2f8e08acfca5e77e480dae8a",
+        "argv": [
+          "npm",
+          "run",
+          "verify:w23"
+        ]
+      },
+      {
+        "name": "parity",
+        "command": "npm run verify:parity",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:39:26.664Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:39:37.301Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-parity.log",
+        "sha256": "444568aebe69ecc98bce35af21ee1998ba48ce5349fb5a3ecff0bb6f582b70c6",
+        "argv": [
+          "npm",
+          "run",
+          "verify:parity"
+        ]
+      },
+      {
+        "name": "api",
+        "command": "npm run test:api",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:39:37.350Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:39:55.594Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-api.log",
+        "sha256": "7400eb2e75890505b9c2aea600711378db12d52db4385ac97e9530a338a0f2d0",
+        "argv": [
+          "npm",
+          "run",
+          "test:api"
+        ]
+      },
+      {
+        "name": "unit-1",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:39:55.658Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:40:35.471Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-unit-1.log",
+        "sha256": "df22a7da2835f32b0f7c1cfeee5a7f76af8e211194f4896ea2b2c7bbe566aea5",
+        "argv": [
+          "npm",
+          "run",
+          "test:unit"
+        ]
+      },
+      {
+        "name": "unit-2",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:40:35.525Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:41:05.295Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-unit-2.log",
+        "sha256": "5b776f5edfd0cf7aa1d24510bd14db58c2d81e05f85ff678e85158e014e18f6e",
+        "argv": [
+          "npm",
+          "run",
+          "test:unit"
+        ]
+      },
+      {
+        "name": "unit-3",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:41:05.345Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:41:31.655Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-unit-3.log",
+        "sha256": "6c57ed0661ad898c7f02e392e99e1c0b92185cad8ffadb6fd46058b044f3a56a",
+        "argv": [
+          "npm",
+          "run",
+          "test:unit"
+        ]
+      },
+      {
+        "name": "example-build",
+        "command": "npm run build:example",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:41:31.705Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:41:40.721Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-example-build.log",
+        "sha256": "dbb79b265d47a48119da1c683a867c6a359ea7c88d6a5b7834d8b5d67577d868",
+        "argv": [
+          "npm",
+          "run",
+          "build:example"
+        ]
+      },
+      {
+        "name": "package",
+        "command": "npm run test:package",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:41:40.771Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:42:32.445Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-package.log",
+        "sha256": "e148bd8b44bfab87667141f7a22a87535fd882f28383f800b03438a5fe563f9d",
+        "argv": [
+          "npm",
+          "run",
+          "test:package"
+        ]
+      },
+      {
+        "name": "browser",
+        "command": "npm run test:w23 -- --reporter=list,json --output=test-results/w23-review22-browser-output",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:42:32.494Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:45:29.958Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-browser.log",
+        "sha256": "1c30a26aa10c9e3250eef9eb32e28e6f41e7a98d14344f943161ca0c541066c9",
+        "argv": [
+          "npm",
+          "run",
+          "test:w23",
+          "--",
+          "--reporter=list,json",
+          "--output=test-results/w23-review22-browser-output"
+        ]
+      },
+      {
+        "name": "installed",
+        "command": "npm run test:package-consumer:w23",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:45:30.011Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:48:42.248Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-installed.log",
+        "sha256": "678c87cb48e393a898aaa87ea60bb4d00c729523f89083cf46af162cccc5b414",
+        "argv": [
+          "npm",
+          "run",
+          "test:package-consumer:w23"
+        ]
+      },
+      {
+        "name": "single-tile-oracle",
+        "command": "python scripts/generate-w23-goldens.py --check",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:48:42.318Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:48:42.645Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-single-tile-oracle.log",
+        "sha256": "67b6cd00347972bb347a8b49a197c0a37e1f5a0e93addf8e5d942ae9daf5f8e0",
+        "argv": [
+          "python",
+          "scripts/generate-w23-goldens.py",
+          "--check"
+        ]
+      },
+      {
+        "name": "regional-oracle",
+        "command": "python scripts/generate-w23-application-fixtures.py --check",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-21T09:48:42.695Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:48:46.731Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-regional-oracle.log",
+        "sha256": "174700903fa15996234210069851e1a8513fa092775f7fa7ad6bab491f2941b6",
+        "argv": [
+          "python",
+          "scripts/generate-w23-application-fixtures.py",
+          "--check"
+        ]
+      },
+      {
+        "name": "native-audit",
+        "command": "python scripts/audit-w23-native.py",
+        "cwd": "D:/forge3d-web/.worktrees/w23",
+        "startedAt": "2026-10-21T09:48:46.778Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:48:55.569Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-native-audit.log",
+        "sha256": "0672845d937280a57e8d4aac6ccecc51c13e7b772b3f363d09bb3eb89f014d94",
+        "argv": [
+          "python",
+          "scripts/audit-w23-native.py"
+        ]
+      },
+      {
+        "name": "semantic-audit",
+        "command": "node scripts/audit-w23-semantics.mjs",
+        "cwd": "D:/forge3d-web/.worktrees/w23",
+        "startedAt": "2026-10-21T09:48:55.620Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-21T09:48:57.359Z",
+        "log": "crates/forge3d-web/test-results/w23-review22-semantic-audit.log",
+        "sha256": "63c6c51d1818dd7c8cc9a53a1a2781cf6ad76c5e3262f52563ae6628f5666dd8",
+        "argv": [
+          "node",
+          "scripts/audit-w23-semantics.mjs"
+        ]
+      }
+    ],
+    "commandExecution": "All 14 required commands ran sequentially through run-w23-review22.mjs, checking a clean committed tree before each command.",
+    "unit": [
+      {
+        "run": 1,
+        "filesPassed": 92,
+        "testsPassed": 1960,
+        "fontShapingAssertionMs": 16
+      },
+      {
+        "run": 2,
+        "filesPassed": 92,
+        "testsPassed": 1960,
+        "fontShapingAssertionMs": 27
+      },
+      {
+        "run": 3,
+        "filesPassed": 92,
+        "testsPassed": 1960,
+        "fontShapingAssertionMs": 33
+      }
+    ],
+    "w23NodeChecksPassed": 81,
+    "browserCases": [
+      {
+        "title": "W23 source: all 54 migrated example workflows execute",
+        "status": "passed",
+        "durationMs": 60696,
+        "attachments": [
+          {
+            "name": "forge3d-webgpu-probe.json",
+            "sha256": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6"
+          },
+          {
+            "name": "w23-independent-stage-observations.json",
+            "sha256": "cda6bb6e87d306c3a3bf7d00e4be8b1f8db0070368d282da8273eded6fad3543"
+          },
+          {
+            "name": "w23-negative-controls.json",
+            "sha256": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c"
+          },
+          {
+            "name": "w23-literal-stage-negative-controls.json",
+            "sha256": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6"
+          },
+          {
+            "name": "w23-workflows.json",
+            "sha256": "908c427c89174855b05948b7bbdcf275d592c3157a7ece40fe4a3203c6bf78be"
+          }
+        ],
+        "negativeControls": [
+          {
+            "feature": "materials",
+            "rejected": true,
+            "message": "Materials contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "environment",
+            "rejected": true,
+            "message": "Environment contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "water",
+            "rejected": true,
+            "message": "Water contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "vectors",
+            "rejected": true,
+            "message": "rivers contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "shadows",
+            "rejected": true,
+            "message": "Shadows contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "pointcloud",
+            "rejected": true,
+            "message": "Point cloud GPU draw has no coverage"
+          },
+          {
+            "feature": "taa",
+            "rejected": true,
+            "message": "TAA did not accumulate temporal history"
+          },
+          {
+            "feature": "oit",
+            "rejected": true,
+            "message": "Weighted OIT depends on draw order"
+          },
+          {
+            "feature": "ibl",
+            "rejected": true,
+            "message": "HDR IBL contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "rigs",
+            "rejected": true,
+            "message": "Rig clearance failed: orbit"
+          }
+        ],
+        "literalStages": {
+          "matchingManifest": true,
+          "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+          "integrityVerified": 17,
+          "outcomes": [
+            {
+              "workflow": "triangle",
+              "name": "triangle_png.py",
+              "rejected": true,
+              "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "cog",
+              "name": "cog_streaming_demo.py",
+              "rejected": true,
+              "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "video",
+              "name": "camera_animation_demo.py",
+              "rejected": true,
+              "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+              "observedEvents": 0
+            }
+          ]
+        }
+      },
+      {
+        "title": "W23 dist: all 54 migrated example workflows execute",
+        "status": "passed",
+        "durationMs": 77681,
+        "attachments": [
+          {
+            "name": "forge3d-webgpu-probe.json",
+            "sha256": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6"
+          },
+          {
+            "name": "w23-independent-stage-observations.json",
+            "sha256": "d45a47a45df94745f9b63d64e20ce2d0308e0a65e180c9d781fa5ca707dd4f6b"
+          },
+          {
+            "name": "w23-negative-controls.json",
+            "sha256": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c"
+          },
+          {
+            "name": "w23-literal-stage-negative-controls.json",
+            "sha256": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6"
+          },
+          {
+            "name": "w23-workflows.json",
+            "sha256": "5ca1a5ac6317917eaa799deef7464001c0ed726dce6d8d1b6276cc76b418c318"
+          }
+        ],
+        "negativeControls": [
+          {
+            "feature": "materials",
+            "rejected": true,
+            "message": "Materials contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "environment",
+            "rejected": true,
+            "message": "Environment contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "water",
+            "rejected": true,
+            "message": "Water contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "vectors",
+            "rejected": true,
+            "message": "rivers contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "shadows",
+            "rejected": true,
+            "message": "Shadows contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "pointcloud",
+            "rejected": true,
+            "message": "Point cloud GPU draw has no coverage"
+          },
+          {
+            "feature": "taa",
+            "rejected": true,
+            "message": "TAA did not accumulate temporal history"
+          },
+          {
+            "feature": "oit",
+            "rejected": true,
+            "message": "Weighted OIT depends on draw order"
+          },
+          {
+            "feature": "ibl",
+            "rejected": true,
+            "message": "HDR IBL contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "rigs",
+            "rejected": true,
+            "message": "Rig clearance failed: orbit"
+          }
+        ],
+        "literalStages": {
+          "matchingManifest": true,
+          "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+          "integrityVerified": 17,
+          "outcomes": [
+            {
+              "workflow": "triangle",
+              "name": "triangle_png.py",
+              "rejected": true,
+              "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "cog",
+              "name": "cog_streaming_demo.py",
+              "rejected": true,
+              "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "video",
+              "name": "camera_animation_demo.py",
+              "rejected": true,
+              "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+              "observedEvents": 0
+            }
+          ]
+        }
+      },
+      {
+        "title": "W23 dist: all 54 migrated example workflows execute",
+        "status": "passed",
+        "durationMs": 60549,
+        "attachments": [
+          {
+            "name": "forge3d-webgpu-probe.json",
+            "sha256": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6"
+          },
+          {
+            "name": "w23-independent-stage-observations.json",
+            "sha256": "054544b699b9999ea1a89980bc48cec850df0c75b11443b03632f71fd3f1a2f9"
+          },
+          {
+            "name": "w23-negative-controls.json",
+            "sha256": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c"
+          },
+          {
+            "name": "w23-literal-stage-negative-controls.json",
+            "sha256": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6"
+          },
+          {
+            "name": "w23-workflows.json",
+            "sha256": "0e7a145faba38aa196eb109c8f297ec65187dd9d964eaaf2688a4eaa423ef4b2"
+          }
+        ],
+        "negativeControls": [
+          {
+            "feature": "materials",
+            "rejected": true,
+            "message": "Materials contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "environment",
+            "rejected": true,
+            "message": "Environment contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "water",
+            "rejected": true,
+            "message": "Water contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "vectors",
+            "rejected": true,
+            "message": "rivers contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "shadows",
+            "rejected": true,
+            "message": "Shadows contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "pointcloud",
+            "rejected": true,
+            "message": "Point cloud GPU draw has no coverage"
+          },
+          {
+            "feature": "taa",
+            "rejected": true,
+            "message": "TAA did not accumulate temporal history"
+          },
+          {
+            "feature": "oit",
+            "rejected": true,
+            "message": "Weighted OIT depends on draw order"
+          },
+          {
+            "feature": "ibl",
+            "rejected": true,
+            "message": "HDR IBL contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "rigs",
+            "rejected": true,
+            "message": "Rig clearance failed: orbit"
+          }
+        ],
+        "literalStages": {
+          "matchingManifest": true,
+          "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+          "integrityVerified": 17,
+          "outcomes": [
+            {
+              "workflow": "triangle",
+              "name": "triangle_png.py",
+              "rejected": true,
+              "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "cog",
+              "name": "cog_streaming_demo.py",
+              "rejected": true,
+              "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "video",
+              "name": "camera_animation_demo.py",
+              "rejected": true,
+              "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+              "observedEvents": 0
+            }
+          ]
+        }
+      }
+    ],
+    "independentStageObservations": [
+      {
+        "attachmentSha256": "cda6bb6e87d306c3a3bf7d00e4be8b1f8db0070368d282da8273eded6fad3543",
+        "observedEvents": 623,
+        "triangleChangedPixels": 629,
+        "triangleRgbaSha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5",
+        "decodedPngRgbaSha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5",
+        "cogOverviewLevels": [
+          0,
+          1,
+          2
+        ],
+        "cogAcceptedUploads": 8,
+        "encodedFrames": 35,
+        "mp4Artifacts": [
+          {
+            "label": "Running helsinki_transit_daycycle.py: video…",
+            "name": "helsinki_transit_daycycle.py-video-animation.mp4",
+            "bytes": 17190,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running camera_animation_demo.py: video…",
+            "name": "camera_animation_demo.py-video-animation.mp4",
+            "bytes": 7780,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running bryce_canyon_storm_timelapse.py: video…",
+            "name": "bryce_canyon_storm_timelapse.py-video-animation.mp4",
+            "bytes": 13204,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running california_wildfire_smoke_video.py: video…",
+            "name": "california_wildfire_smoke_video.py-video-animation.mp4",
+            "bytes": 14216,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running terrain_camera_rigs_demo.py: video…",
+            "name": "terrain_camera_rigs_demo.py-video-animation.mp4",
+            "bytes": 11833,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+            "name": "rotterdam_solar_potential_shadow_study.py-video-animation.mp4",
+            "bytes": 17410,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running osm_city_daycycle.py: video…",
+            "name": "osm_city_daycycle.py-video-animation.mp4",
+            "bytes": 15236,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running pnoa_river_showcase_video.py: video…",
+            "name": "pnoa_river_showcase_video.py-video-animation.mp4",
+            "bytes": 15385,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+            "name": "khumbu_icefall_sentinel_timelapse.py-video-animation.mp4",
+            "bytes": 12151,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                8
+              ]
+            }
+          },
+          {
+            "label": "Running osm_city_flood_daycycle.py: video…",
+            "name": "osm_city_flood_daycycle.py-video-animation.mp4",
+            "bytes": 19031,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "attachmentSha256": "d45a47a45df94745f9b63d64e20ce2d0308e0a65e180c9d781fa5ca707dd4f6b",
+        "observedEvents": 623,
+        "triangleChangedPixels": 629,
+        "triangleRgbaSha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5",
+        "decodedPngRgbaSha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5",
+        "cogOverviewLevels": [
+          0,
+          1,
+          2
+        ],
+        "cogAcceptedUploads": 8,
+        "encodedFrames": 35,
+        "mp4Artifacts": [
+          {
+            "label": "Running helsinki_transit_daycycle.py: video…",
+            "name": "helsinki_transit_daycycle.py-video-animation.mp4",
+            "bytes": 17190,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running camera_animation_demo.py: video…",
+            "name": "camera_animation_demo.py-video-animation.mp4",
+            "bytes": 7780,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running bryce_canyon_storm_timelapse.py: video…",
+            "name": "bryce_canyon_storm_timelapse.py-video-animation.mp4",
+            "bytes": 13204,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running california_wildfire_smoke_video.py: video…",
+            "name": "california_wildfire_smoke_video.py-video-animation.mp4",
+            "bytes": 14216,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running terrain_camera_rigs_demo.py: video…",
+            "name": "terrain_camera_rigs_demo.py-video-animation.mp4",
+            "bytes": 11833,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+            "name": "rotterdam_solar_potential_shadow_study.py-video-animation.mp4",
+            "bytes": 17410,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running osm_city_daycycle.py: video…",
+            "name": "osm_city_daycycle.py-video-animation.mp4",
+            "bytes": 15236,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running pnoa_river_showcase_video.py: video…",
+            "name": "pnoa_river_showcase_video.py-video-animation.mp4",
+            "bytes": 15385,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+            "name": "khumbu_icefall_sentinel_timelapse.py-video-animation.mp4",
+            "bytes": 12151,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                8
+              ]
+            }
+          },
+          {
+            "label": "Running osm_city_flood_daycycle.py: video…",
+            "name": "osm_city_flood_daycycle.py-video-animation.mp4",
+            "bytes": 19031,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "attachmentSha256": "054544b699b9999ea1a89980bc48cec850df0c75b11443b03632f71fd3f1a2f9",
+        "observedEvents": 623,
+        "triangleChangedPixels": 629,
+        "triangleRgbaSha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5",
+        "decodedPngRgbaSha256": "093a5ec572894747d3e9f1ce06ef5f0296f003b4ad4aeeae642a9746d1ab40f5",
+        "cogOverviewLevels": [
+          0,
+          1,
+          2
+        ],
+        "cogAcceptedUploads": 8,
+        "encodedFrames": 35,
+        "mp4Artifacts": [
+          {
+            "label": "Running helsinki_transit_daycycle.py: video…",
+            "name": "helsinki_transit_daycycle.py-video-animation.mp4",
+            "bytes": 17190,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running camera_animation_demo.py: video…",
+            "name": "camera_animation_demo.py-video-animation.mp4",
+            "bytes": 7780,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running bryce_canyon_storm_timelapse.py: video…",
+            "name": "bryce_canyon_storm_timelapse.py-video-animation.mp4",
+            "bytes": 13204,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running california_wildfire_smoke_video.py: video…",
+            "name": "california_wildfire_smoke_video.py-video-animation.mp4",
+            "bytes": 14216,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running terrain_camera_rigs_demo.py: video…",
+            "name": "terrain_camera_rigs_demo.py-video-animation.mp4",
+            "bytes": 11833,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running rotterdam_solar_potential_shadow_study.py: video…",
+            "name": "rotterdam_solar_potential_shadow_study.py-video-animation.mp4",
+            "bytes": 17410,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running osm_city_daycycle.py: video…",
+            "name": "osm_city_daycycle.py-video-animation.mp4",
+            "bytes": 15236,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running pnoa_river_showcase_video.py: video…",
+            "name": "pnoa_river_showcase_video.py-video-animation.mp4",
+            "bytes": 15385,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          },
+          {
+            "label": "Running khumbu_icefall_sentinel_timelapse.py: video…",
+            "name": "khumbu_icefall_sentinel_timelapse.py-video-animation.mp4",
+            "bytes": 12151,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                8
+              ]
+            }
+          },
+          {
+            "label": "Running osm_city_flood_daycycle.py: video…",
+            "name": "osm_city_flood_daycycle.py-video-animation.mp4",
+            "bytes": 19031,
+            "mp4": {
+              "ftyp": true,
+              "avc1": true,
+              "sampleCounts": [
+                3
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "installed": {
+      "revision": "f10c730fe78f3584acafe638da02189a2af1883f",
+      "exitCode": 0,
+      "packageSha256": "8589b7040583a181d1144fffea883bead2a8e9316f7bb9df01ead7fd0604e31e",
+      "wasmSha256": "55a728615261f1add05b661028ba216144cb1643f5f83c59440dfbbf8b32311c",
+      "assetsVerified": 207,
+      "migrationTextHeadBlobsVerified": 18,
+      "documents": 38,
+      "browserLane": "chromium-preflight",
+      "sourceImplementationAvailable": false,
+      "strictCsp": true,
+      "rangeSupport": true
+    },
+    "manifestDigests": {
+      "docs/parity/w23-coverage.json": "7126929da4c2dcfc605f5e1fdfcfb622458eb638babfaa8893f8c12178b689b5",
+      "docs/parity/w23-assets.json": "517bbdbd4d393dea166f269d9b8a42b309cf875e1ecb7b2c458cad3d4a4327ef"
+    },
+    "checksRetained": {
+      "all54Examples": true,
+      "allContributionAndLiteralControls": true,
+      "rawOracleByteEquality": true,
+      "originalLateOracleGate": true,
+      "w23TestTimeoutMs": 600000,
+      "nativeProbeTimeoutMs": 30000,
+      "fontTestTimeoutMs": 5000,
+      "allExistingJobsAndContexts": true,
+      "declaredLimits": true
+    }
   }
 }
