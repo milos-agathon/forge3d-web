@@ -1,24 +1,37 @@
-import { test, expect } from "../browser/webgpu-fixture";
+import { test, expect, type Page } from "../browser/webgpu-fixture";
 import * as ed from '@noble/ed25519';
 import { createHash } from 'node:crypto';
 import { observeStages, readStageEvidence, assertStageEvidence } from '../browser/w23-stage-observer';
 declare global { interface Window { __w23: any } }
-for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all 54 migrated example workflows execute`, async ({ page }, info) => {
-  test.setTimeout(600_000);
+
+async function openMigration(page: Page, source: boolean) {
   const failures: string[] = [];
   page.on('pageerror', error => failures.push(error.message));
   await page.goto('/examples/migration/index.html' + (source ? '?source' : ''));
   await page.waitForFunction(() => window.__w23?.ready);
   expect(await page.evaluate(()=>window.__w23.integrity.verified)).toBeGreaterThan(10);
+  return failures;
+}
+
+async function grantLicense(page: Page) {
+  const secret = ed.utils.randomSecretKey(), publicKey = await ed.getPublicKeyAsync(secret), message = 'F3D-PRO-w23-example-test-20991231';
+  const hex = (bytes: Uint8Array) => [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+  const license = { publicKey: hex(publicKey), key: message + '-' + hex(await ed.signAsync(new TextEncoder().encode(message), secret)) };
+  await page.evaluate(async value => { const { api } = window.__w23; api.configureLicenseIssuer(value.publicKey); await api.setLicenseKey(value.key); }, license);
+}
+
+// The full migration corpus and its independent controls each retain the
+// ten-minute deadline, without making late viewer input share the corpus budget.
+for (const source of [true, false]) {
+test(`W23 ${source ? 'source' : 'dist'}: all 54 migrated example workflows execute`, async ({ page }, info) => {
+  test.setTimeout(600_000);
+  const failures = await openMigration(page, source);
   for(const name of ['sample_style.json','mapscene_vector_labels.py']){
     const unlicensed=await page.evaluate(name=>window.__w23.run(name),name);
     expect(unlicensed.examples[0].status).toBe('blocked-license');
     expect(unlicensed.examples[0].steps.at(-1).error.code).toBe('LICENSE_REQUIRED');
   }
-  const secret = ed.utils.randomSecretKey(), publicKey = await ed.getPublicKeyAsync(secret), message = 'F3D-PRO-w23-example-test-20991231';
-  const hex = (bytes: Uint8Array) => [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
-  const license = { publicKey: hex(publicKey), key: message + '-' + hex(await ed.signAsync(new TextEncoder().encode(message), secret)) };
-  await page.evaluate(async value => { const { api } = window.__w23; api.configureLicenseIssuer(value.publicKey); await api.setLicenseKey(value.key); }, license);
+  await grantLicense(page);
   await observeStages(page);
   const report = await page.evaluate(() => window.__w23.run('all'));
   const observed=await readStageEvidence(page);
@@ -34,10 +47,6 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
     for (const workflow of example.workflows) expect(report.workflows[workflow], example.name + ': ' + workflow).toBeDefined();
   }
   expect(Object.keys(report.workflows).length).toBeGreaterThanOrEqual(33);
-  const docs=await page.evaluate(()=>window.__w23.verifyGuideExamples());
-  expect(docs.snapshotBytes).toBeGreaterThan(100);
-  expect(docs.roundTripBytes).toBeGreaterThan(20);
-  expect(docs.snapshotCoverage).toBeGreaterThan(50);
   expect(report.workflows.singleTile.oracleExact).toBe(true);
   expect(report.workflows.triangle.changedPixels).toBeGreaterThan(8);
   expect(report.workflows.rigs.rail.minimumClearance).toBeGreaterThanOrEqual(1.99);
@@ -87,6 +96,18 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
     return { released, downloads: document.querySelectorAll('#downloads a').length };
   });
   expect(replay).toEqual({ released: true, downloads: 1 });
+  expect(failures).toEqual([]);
+  await info.attach('w23-workflows.json', { body: JSON.stringify(report, null, 2), contentType: 'application/json' });
+});
+
+test(`W23 ${source ? 'source' : 'dist'}: guide examples and contribution controls reject missing execution`, async ({ page }, info) => {
+  test.setTimeout(600_000);
+  const failures = await openMigration(page, source);
+  await grantLicense(page);
+  const docs=await page.evaluate(()=>window.__w23.verifyGuideExamples());
+  expect(docs.snapshotBytes).toBeGreaterThan(100);
+  expect(docs.roundTripBytes).toBeGreaterThan(20);
+  expect(docs.snapshotCoverage).toBeGreaterThan(50);
   const controls=await page.evaluate(async()=>{
     const {api,createWorkflows}=window.__w23,outcomes=[];
     for(const feature of ['materials','environment','water','vectors','shadows']){
@@ -132,6 +153,13 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
   });
   await info.attach('w23-negative-controls.json',{body:JSON.stringify({controls,docs},null,2),contentType:'application/json'});
   for(const control of controls)expect(control.rejected,control.feature+': '+control.message).toBe(true);
+  expect(failures).toEqual([]);
+});
+
+test(`W23 ${source ? 'source' : 'dist'}: interactive viewers render input and release retained owners`, async ({ page }) => {
+  test.setTimeout(600_000);
+  const failures = await openMigration(page, source);
+  await grantLicense(page);
   for(const [name,content]of [['buildings_viewer_interactive.py','mapscene'],['pointcloud_viewer_interactive.py','pointcloud']]){
     const sample=await page.evaluate(name=>window.__w23.run(name),name);
     expect(sample.workflows.viewer.viewerContent).toBe(content);
@@ -146,6 +174,12 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
   expect(await page.evaluate(()=>window.__w23.retainedViewers())).toBe(0);
   expect(await page.evaluate(()=>window.__w23.inspectViewer())).toBeNull();
   expect(failures).toEqual([]);
+});
+
+test(`W23 ${source ? 'source' : 'dist'}: integrity and independent observers reject substituted workflows`, async ({ page }, info) => {
+  test.setTimeout(600_000);
+  const failures = await openMigration(page, source);
+  await grantLicense(page);
   const tampered=await page.context().newPage(),integrityErrors:string[]=[];
   try{
     tampered.on('pageerror',error=>integrityErrors.push(error.message));
@@ -187,5 +221,6 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
     }
     await info.attach('w23-literal-stage-negative-controls.json',{body:JSON.stringify({matchingManifest:true,workflowsSha256:literalSha256,integrityVerified,outcomes},null,2),contentType:'application/json'});
   }finally{await literals.close();}
-  await info.attach('w23-workflows.json', { body: JSON.stringify(report, null, 2), contentType: 'application/json' });
+  expect(failures).toEqual([]);
 });
+}
