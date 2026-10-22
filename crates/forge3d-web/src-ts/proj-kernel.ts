@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { CrsMetadata, CrsAxis } from "./crs-types.js";
 
 export interface ProjModule {

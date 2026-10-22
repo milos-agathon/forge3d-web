@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import { Frame } from './frames.js';
 import { BBox, PlateRegion, fitPlateImage, positionPlateElement, type MapPlateConfig, type PlateLayout, type PositionAnchor } from './map-layout.js';
 import { CARTOGRAPHY_MAX_BYTES, cancelled, checkBytes, color, css, finite, integer, cartographicError, type CartographicColor } from './cartography-common.js';

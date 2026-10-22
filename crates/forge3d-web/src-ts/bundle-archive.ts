@@ -1,5 +1,5 @@
 import { Unzip, UnzipInflate, zipSync, type Zippable } from 'fflate';
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 export interface BundleLimits { maxBytes?: number; maxExpandedBytes?: number; maxEntries?: number; }
 export function bundleLimits(input: BundleLimits = {}) {
     const result = { maxBytes: input.maxBytes ?? 128 * 1024 * 1024, maxExpandedBytes: input.maxExpandedBytes ?? 256 * 1024 * 1024, maxEntries: input.maxEntries ?? 4096 };

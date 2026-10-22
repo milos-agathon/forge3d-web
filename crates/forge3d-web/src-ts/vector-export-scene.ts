@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import { cartographicError, checkBytes, color, finite, type CartographicColor } from './cartography-common.js';
 import type { LabelPlanData } from './label-types.js';
 import type { VectorLayerInput } from './vector-types.js';

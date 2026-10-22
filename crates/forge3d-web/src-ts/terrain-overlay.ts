@@ -19,7 +19,7 @@ import type {
   TerrainVtFamily,
   TerrainVtSupportReport,
 } from "./index.js";
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 
 const MAX_VISIBLE_LAYERS = 8;
 const VISIBLE_OPACITY_EPSILON = 0.001;

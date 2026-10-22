@@ -1,6 +1,6 @@
 import { requirePro, LicenseError } from './license.js';
 import { proGatedPathDiagnostic } from './diagnostic-paths.js';
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import type { TerrainHeightmapInput } from './index.js';
 import { readByteSource } from './browser-io.js';
 import { decodeOverlayImage } from './terrain-overlay.js';

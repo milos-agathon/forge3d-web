@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { PointCloudLayer, normalizePointStyle } from "./pointcloud-layer.js";
 import type { PointCloudLayerSnapshot } from "./pointcloud-layer.js";
 import { PointBuffer } from "./pointcloud-buffer.js";

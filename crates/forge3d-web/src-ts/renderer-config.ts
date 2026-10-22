@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { normalizeLightInput } from "./lighting.js";
 import { resolveBrdfModel } from "./materials.js";
 import type {

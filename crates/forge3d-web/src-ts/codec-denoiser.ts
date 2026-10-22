@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import { DenoiseSettings } from './offline.js';
 import { HdrFrame, AovFrame } from './frames.js';
 import { DENOISER_REVISION } from './codec-catalog.js';

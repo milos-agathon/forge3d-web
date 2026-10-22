@@ -5,7 +5,7 @@
 // default, validation messages keep the native wording under a
 // `material.<field>` path, and images are copied so later caller mutation
 // cannot change a committed material.
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type {
   TerrainAlbedoMode,
   TerrainHeightCurveMode,

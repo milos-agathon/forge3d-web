@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 
 /** Straight RGBA, sRGB unless a particular API explicitly says linear. */
 export type CartographicColor = readonly [number, number, number, number];

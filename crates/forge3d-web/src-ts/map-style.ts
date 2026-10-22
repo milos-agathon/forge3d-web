@@ -1,5 +1,6 @@
 import { requirePro, PRO_FEATURES } from './license.js';
-import { Forge3DError, type BrowserByteSource } from './index.js';
+import { type BrowserByteSource } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { readByteSource } from './browser-io.js';
 import { validateStyleSupport } from './diagnostic-style.js';
 import { Diagnostic, ValidationReport } from './diagnostics.js';

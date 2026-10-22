@@ -1,4 +1,4 @@
-import { Forge3DError, type Forge3DErrorCode } from "./index.js";
+import { Forge3DError, type Forge3DErrorCode } from "./runtime-failure.js";
 import type { ProbeReflectionMaterial } from "./probe-bake-options.js";
 import { loadProbeWorkerWasmAssets } from "./runtime-internals.js";
 

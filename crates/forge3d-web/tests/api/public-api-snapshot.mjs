@@ -345,7 +345,7 @@ for (const expected of [
   "@forge3d/web.wasm-bridge-coordinator",
   "fetchValidatedWasm",
   "const { wasmUrl: _wasmUrl, ...runtimeOptions } = options",
-  "const fallback = \"INTERNAL_ERROR\"",
+  "export { Forge3DError } from './runtime-failure.js'",
   "export { Forge3DViewer } from \"./viewer.js\"",
   "export { Forge3DScene } from \"./scene.js\"",
   "export { Forge3DSession } from \"./session.js\"",

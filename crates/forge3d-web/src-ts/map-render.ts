@@ -1,4 +1,5 @@
-import { Forge3DRuntime, Forge3DError } from './index.js';
+import { Forge3DRuntime } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { Forge3DRuntimeOptions, CameraInput } from './index.js';
 import { Camera } from './camera.js';
 import { Forge3DScene } from './scene.js';

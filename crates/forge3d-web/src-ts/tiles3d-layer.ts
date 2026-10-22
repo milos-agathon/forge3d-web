@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { Forge3DScene } from "./index.js";
 import type {
   PointData,

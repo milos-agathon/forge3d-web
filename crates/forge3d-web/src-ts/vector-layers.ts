@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { reprojectVectorLayer, type GeospatialVectorLayerInput, type CrsLayerTarget } from './crs-layers.js';
 import type { CrsTransformer } from './crs.js';
 import type { CrsTransformOptions } from './crs-types.js';

@@ -11,7 +11,7 @@ import {
 import type { KTX2Container } from "ktx-parse";
 
 import { readByteSource } from "./browser-io.js";
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type {
   BasisTranscoderAdapter,
   BrowserByteSource,

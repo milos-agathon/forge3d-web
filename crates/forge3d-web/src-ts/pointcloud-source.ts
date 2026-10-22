@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { PointDatasetOptions, PointData } from "./pointcloud-types.js";
 import { RangeScheduler } from "./range-scheduler.js";
 import { MemoryByteCache } from "./byte-cache.js";

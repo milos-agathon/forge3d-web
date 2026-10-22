@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import { NativeTuple, scalar, numeric, number, floating, result, unwrap, nativeTruth, nativeEqual, nativeString, nativeFloat } from './style-native-values.js';
 export interface StyleEvalContext { properties?: Record<string, unknown>; zoom?: number; geometryType?: string; }
 export const STYLE_EXPRESSION_OPERATORS = new Set('get has at length interpolate interpolate-hcl interpolate-lab step match case coalesce == != < <= > >= all any ! + - * / % ^ abs ceil floor round min max ln log10 log2 sin cos tan sqrt concat downcase upcase to-number to-string to-boolean typeof rgb rgba zoom geometry-type literal'.split(' '));

@@ -1,5 +1,5 @@
 import { normalizeVectorStyle, vectorInvalid, VectorLayers } from "./vector-layers.js";
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { TerrainDataset } from "./terrain-dataset.js";
 import type { TerrainHeightmapInput } from "./index.js";
 import type { VectorPosition, VectorSnapshot, VectorSelectionStyle } from "./vector-types.js";

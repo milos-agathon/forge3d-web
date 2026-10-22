@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { ScatterMesh, ScatterBounds, ScatterLevel } from "./scatter-types.js";
 import { nativeAreaWeightedNormals, nativeQemSimplify } from "./scatter-qem.js";
 

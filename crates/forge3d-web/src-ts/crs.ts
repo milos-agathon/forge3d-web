@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { Forge3DWorkerPool } from "./browser-resources.js";
 import { createPersistentByteCache } from "./byte-cache.js";
 import { VerifiedAssetStore, assetAbort } from "./verified-assets.js";

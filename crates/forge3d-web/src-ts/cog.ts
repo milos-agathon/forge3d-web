@@ -24,7 +24,7 @@ import type {
   IfdInfo,
   PersistentByteCache,
 } from "./index.js";
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { MemoryByteCache } from "./byte-cache.js";
 import { RangeScheduler } from "./range-scheduler.js";
 

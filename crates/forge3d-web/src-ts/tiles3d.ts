@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { BrowserByteSource } from "./index.js";
 import { readByteSource } from "./browser-io.js";
 import type {

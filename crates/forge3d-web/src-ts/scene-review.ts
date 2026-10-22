@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import { SceneRecipe, encodeMapData, decodeMapData, mapRecipeByteLimit } from './map-recipe.js';
 import type { SceneRecipeInput, MapSceneLayerInput } from './map-scene-types.js';
 import type { ValidationReportData, JsonValue } from './diagnostics.js';

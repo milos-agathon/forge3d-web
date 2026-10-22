@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { PointVec3, PointBounds, PointView } from "./pointcloud-types.js";
 export const POINT_MAX_BYTES = 256 * 1024 * 1024;
 export function pointError(

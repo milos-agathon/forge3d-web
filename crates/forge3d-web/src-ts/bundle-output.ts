@@ -1,4 +1,5 @@
-import { Forge3DError, type BrowserByteSink } from './index.js';
+import { type BrowserByteSink } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { writeByteSink } from './browser-io.js';
 import { bundleCancelled, bundlePath } from './bundle-archive.js';
 /** Abortable output with stream backpressure and staged filesystem writes. */

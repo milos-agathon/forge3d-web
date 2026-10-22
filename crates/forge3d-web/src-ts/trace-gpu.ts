@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { TRACE_PATH_WGSL } from "./trace-wgsl.js";
 import { TraceScene } from "./trace-scene.js";
 import type { CpuTraceSettings } from "./trace-cpu.js";
