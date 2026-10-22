@@ -602,6 +602,20 @@ describe("Forge3DWorkerRenderer", () => {
     renderer.dispose();
   });
 
+  it("transfers complete vector, post-FX, scatter and probe state without detaching callers",async()=>{
+    const {VectorLayers,PostFxChain,TerrainScatterBatch,makeScatterTransform}=await import('../../src-ts/index.js');
+    setSessionRuntimeFactoryForTests(()=>{const runtime=new FakeRuntime();runtimes.push(runtime);return Promise.resolve(runtime);});
+    const fake=createFakeWorker();hostDisposers.push(installForge3DWorkerHost(fake.worker as never));
+    const renderer=await Forge3DWorkerRenderer.create(new FakeCanvas() as unknown as HTMLCanvasElement,{worker:fake.worker as unknown as Worker,controls:false});
+    const scene=Forge3DScene.create(),vectors=new VectorLayers();vectors.add({name:'point',features:[{id:7,kind:'point',position:[0,1,0]}]});scene.setVectorLayers(vectors);
+    scene.setPostFx(new PostFxChain([{kind:'bloom',id:'glow'}]));
+    const positions=new Float32Array([0,0,0,1,0,0,0,1,0]);scene.setScatterBatches([new TerrainScatterBatch({levels:[{mesh:{positions,normals:new Float32Array([0,0,1,0,0,1,0,0,1]),indices:new Uint32Array([0,1,2])}}],transforms:makeScatterTransform([0,0,0])})]);
+    scene.setLightingProbes({grid:{origin:[0,0],spacing:[10,10],dims:[1,1],heightOffset:5,edgeBlend:[10,10]},positions:new Float32Array([0,5,0]),coefficients:new Float32Array(27),reflectionResolution:1,reflectionMips:[new Float32Array(24)],strength:1,reflectionStrength:1,debug:'none'});
+    const before=scene.snapshot();await renderer.setScene(scene);const received=latestRuntime().scenes.at(-1)!;
+    for(const key of ['vectors','postFx','scatter','probes'] as const)expect(received[key]).toEqual(before[key]);
+    expect(positions.byteLength).toBe(36);expect(scene.snapshot().scatter).toEqual(before.scatter);renderer.dispose();scene.dispose();vectors.dispose();
+  });
+
   it("hashes cyclic custom payloads deterministically", async () => {
     setSessionRuntimeFactoryForTests(() => {
       const runtime = new FakeRuntime();

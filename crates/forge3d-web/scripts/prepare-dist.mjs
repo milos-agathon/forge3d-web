@@ -19,14 +19,14 @@ copyRequired(join(pkg, "forge3d_web_bg.wasm"), join(dist, "forge3d_web_bg.wasm")
 copyRequired(join(repoRoot, "LICENSE"), join(root, "LICENSE"));
 copyRequired(join(repoRoot, "LICENSE-APACHE"), join(root, "LICENSE-APACHE"));
 
-const facadePath = join(dist, "index.js");
+const facadePath = join(dist, "wasm-realm.js");
 let facade = readRequired(facadePath);
-facade = facade.replace(
+facade = facade.replaceAll(
   "\"../pkg/forge3d_web.js\"",
   "\"./forge3d_web.js\""
 );
 if (facade.includes("../pkg/forge3d_web.js")) {
-  throw new Error("dist/index.js still references unpublished pkg directory");
+  throw new Error("dist/wasm-realm.js still references unpublished pkg directory");
 }
 writeFileSync(facadePath, facade);
 

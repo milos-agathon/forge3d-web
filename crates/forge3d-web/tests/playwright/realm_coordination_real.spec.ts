@@ -268,7 +268,7 @@ test("installed facade canonical WASM URL survives parent conformance work and g
       submittedFrames: diagnostics.submittedFrames,
     };
   });
-  expect(result.selectedUrl).toBe("http://127.0.0.1:57883/tests/realm-fixture/a/forge3d_web_bg.wasm");
+  expect(result.selectedUrl).toBe(new URL("/tests/realm-fixture/a/forge3d_web_bg.wasm", page.url()).href);
   expect(result.screenshotType).toBe("image/png");
   expect(result.submittedFrames).toBeGreaterThan(0);
 });

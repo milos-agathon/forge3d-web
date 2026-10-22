@@ -14,14 +14,8 @@ import { OrbitController, defaultOrbitView } from "./orbit-controller.js";
 import { ResizeController } from "./resize-controller.js";
 import { validateExplicitResize } from "./resource-policy.js";
 import { RendererConfig } from "./renderer-config.js";
-import {
-  Forge3DScene,
-  restoreSceneIbl,
-  restoreSceneLighting,
-  restoreSceneMaterials,
-  restoreSceneShadows,
-} from "./scene.js";
-import { defaultShadowSnapshot } from "./shadows.js";
+import { Forge3DScene } from './scene.js';
+import { prepareScenePacket, reconstructScene } from './scene-packet.js';
 import { Forge3DSession } from "./session.js";
 import { ViewerControls } from "./viewer-controls.js";
 
@@ -185,25 +179,7 @@ export class Forge3DWorkerRenderer {
         "scene must be a live Forge3DScene",
       );
     }
-    const snapshot = scene.copy().snapshot();
-    const transfer: Transferable[] = [];
-    for (const node of snapshot.nodes) {
-      if (node.node.kind === "terrain") {
-        transfer.push(node.node.terrain.heights.buffer as ArrayBuffer);
-      }
-    }
-    if (snapshot.ibl !== null) {
-      transfer.push(snapshot.ibl.source.data.buffer as ArrayBuffer);
-      if (snapshot.ibl.prepared !== undefined) {
-        transfer.push(
-          snapshot.ibl.prepared.irradiance.buffer as ArrayBuffer,
-          snapshot.ibl.prepared.specular.buffer as ArrayBuffer,
-          snapshot.ibl.prepared.brdfLut.buffer as ArrayBuffer,
-        );
-      }
-    }
-    const committed =
-      transfer.length > 0 ? scene.copy().snapshot() : snapshot;
+    const {snapshot,transfer,committed}=prepareScenePacket(scene);
     const previous = this.#state.scene;
     this.#state.scene = committed;
     try {
@@ -395,7 +371,7 @@ export function installForge3DWorkerHost(scope?: Worker): () => void {
       setScene: async (payload) => {
         const snapshot = payload as SceneSnapshot;
         const scene = reconstructScene(snapshot);
-        (await session()).setScene(scene);
+        try { (await session()).setScene(scene); } finally { scene.dispose(); }
         state.scene = snapshot;
       },
       setCamera: async (payload) => {
@@ -437,47 +413,6 @@ export function installForge3DWorkerHost(scope?: Worker): () => void {
     teardown(active);
     active = undefined;
   };
-}
-
-function reconstructScene(snapshot: SceneSnapshot): Forge3DScene {
-  const scene = Forge3DScene.create();
-  const ids = new Map<number, number>();
-  for (const node of snapshot.nodes) {
-    const id = scene.addNode(node.node);
-    ids.set(node.id, id);
-    if (node.parent !== null) {
-      const parent = ids.get(node.parent);
-      if (parent === undefined) {
-        throw new Forge3DError(
-          "INVALID_INPUT",
-          `scene node ${node.id} references unknown or later parent ${node.parent}`,
-        );
-      }
-      scene.setParent(id, parent);
-    }
-    scene.setTransform(id, node.transform);
-    if (!node.visible) {
-      scene.setVisible(id, false);
-    }
-  }
-  for (const pass of snapshot.passes) {
-    scene.addPass(pass);
-  }
-  if (snapshot.lighting !== undefined) {
-    restoreSceneLighting(scene, snapshot.environmentLighting ?? snapshot.lighting);
-  }
-  if (snapshot.materials !== undefined) {
-    restoreSceneMaterials(scene, snapshot.materials);
-  }
-  restoreSceneIbl(scene, snapshot.ibl ?? null);
-  restoreSceneShadows(scene, snapshot.shadows ?? defaultShadowSnapshot());
-  if (snapshot.environment !== undefined) scene.setEnvironment(snapshot.environment);
-  if (snapshot.vectors !== undefined) scene.setVectorLayers(snapshot.vectors);
-  if (snapshot.postFx !== undefined) scene.setPostFx(snapshot.postFx);
-  if (snapshot.scatter !== undefined) scene.setScatterBatches(snapshot.scatter);
-  if (snapshot.probes !== undefined) scene.setLightingProbes(snapshot.probes);
-  if (snapshot.timeSeconds !== undefined) scene.setTimeSeconds(snapshot.timeSeconds);
-  return scene;
 }
 
 function serializeSessionOptions(

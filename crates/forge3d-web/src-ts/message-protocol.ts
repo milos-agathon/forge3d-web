@@ -1,3 +1,4 @@
+import { collectTransfer } from './owned-transfer.js';
 import { Forge3DError, normalizeErrorCode, transportFailure } from "./runtime-failure.js";
 import type {
   Forge3DMessageCallOptions,
@@ -89,22 +90,6 @@ function errorEnvelope(id: number,error: Forge3DError): ErrorEnvelope {
   return {forge3d:PROTOCOL,type:'error',id,error:transportFailure(error)};
 }
 
-function collectTransfer(value: unknown): Transferable[] {
-  const buffers = new Set<ArrayBuffer>();
-  const seen = new Set<object>();
-  const visit = (item: unknown): void => {
-    if (item instanceof ArrayBuffer) buffers.add(item);
-    else if (ArrayBuffer.isView(item)) {
-      if (item.buffer instanceof ArrayBuffer) buffers.add(item.buffer);
-    } else if (item && typeof item === "object" && !seen.has(item)) {
-      seen.add(item);
-      if (Array.isArray(item)) item.forEach(visit);
-      else if (Object.getPrototypeOf(item) === Object.prototype) Object.values(item).forEach(visit);
-    }
-  };
-  visit(value);
-  return [...buffers];
-}
 
 export class Forge3DMessageClient {
   readonly #port: MessagePortLike;
