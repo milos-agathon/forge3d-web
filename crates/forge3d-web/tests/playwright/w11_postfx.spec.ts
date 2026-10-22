@@ -53,3 +53,73 @@ test("W11 module worker consumes and clears serialized post-FX",async({page,webg
   skipRenderAssertionsWhenProbing(webgpuAvailability);await page.goto("/examples/test-w11-postfx.html");await page.waitForFunction(()=>(window as any).__w11Ready);
   const r=await page.evaluate(()=>(window as any).__w11Worker());expect(r.covered).toBeGreaterThan(1000);expect(r.delta).toBe(0);expect(r.disabledDelta).toBeGreaterThan(1);
 });
+
+
+test("architecture #31: covered display/readback/offline/display transitions preserve history", async ({page,webgpuAvailability}) => {
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  await page.goto("/examples/test-w11-postfx.html");
+  await page.waitForFunction(()=>(window as any).__w11Ready);
+  const result=await page.evaluate(async()=>{
+    const {make,difference}=(window as any).__w11;
+    const subject=await make(), control=await make();
+    try {
+      for(const {r} of [subject,control]) {r.setPostFx([{kind:"taa",id:"aa",jitter:false},{kind:"tonemap",operator:"aces"}]);for(let i=0;i<4;i++)r.render();}
+      const r=subject.r, before=r.getPostFxReport(), display=await r.readRgba();
+      const depth=await r.readPostFxIntermediate("depth");
+      const readback=await r.readRgba(), afterRead=r.getPostFxReport();
+      const offline=await r.capture({samples:2,aovs:["id","depth"]});
+      const afterOffline=r.getPostFxReport(), afterCapture=await r.readRgba();
+      r.render(); control.r.render();
+      const final=await r.readRgba(), reference=await control.r.readRgba();
+      return {covered:Array.from(depth.data as Float32Array).filter(x=>x<.999).length,
+        offlineCovered:Array.from(offline.aovFrame.id() as Uint32Array).filter(x=>x!==0).length,
+        before,afterRead,afterOffline,afterDisplay:r.getPostFxReport(),control:control.r.getPostFxReport(),
+        readDelta:difference(display,readback),captureDelta:difference(display,afterCapture),finalDelta:difference(final,reference)};
+    } finally {for(const x of [subject,control]){x.r.dispose();x.canvas.remove();}}
+  });
+  expect(result.covered).toBeGreaterThan(1000);expect(result.offlineCovered).toBeGreaterThan(1000);
+  expect(result.before.historyFrames).toBeGreaterThan(1);
+  for(const state of [result.afterRead,result.afterOffline]) {
+    expect(state.historyFrames).toBe(result.before.historyFrames);
+    expect(state.historyValid).toBe(result.before.historyValid);
+    expect(state.historyReason).toBe(result.before.historyReason);
+  }
+  expect(result.afterDisplay.historyFrames).toBe(result.before.historyFrames+1);
+  expect(result.afterDisplay.historyFrames).toBe(result.control.historyFrames);
+  expect(result.readDelta).toBe(0);expect(result.captureDelta).toBe(0);expect(result.finalDelta).toBe(0);
+});
+
+test("architecture #32: rejected commits preserve history and camera edits refresh picks", async ({page,webgpuAvailability}) => {
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  await page.goto("/examples/test-w11-postfx.html");await page.waitForFunction(()=>(window as any).__w11Ready);
+  const result=await page.evaluate(async()=>{
+    const api=await import(/* @vite-ignore */ "/src-ts/index.ts");
+    const {make,camera,difference}=(window as any).__w11;
+    const {r,canvas}=await make();
+    try {
+      const vectors=new api.VectorLayers();vectors.add({name:"pick",features:[{id:7,kind:"point",position:[0,2,0],style:{shape:"square",pointSize:18,color:[1,0,0,1]}}]});
+      r.setVectorLayers(vectors);r.setPostFx([{kind:"taa",id:"aa",jitter:false},{kind:"tonemap",operator:"aces"}]);for(let i=0;i<4;i++)r.render();
+      const before=r.getPostFxReport(),pixels=await r.readRgba(),memory=r.getMemoryReport().currentBytes;
+      const invalid=api.normalizePostFx([{kind:"tonemap"}]);invalid.effects[0].params[15]=1;
+      let rejection;try{r.setPostFx(invalid);}catch(error){rejection=(error as any).code;}
+      const after=r.getPostFxReport(),afterPixels=await r.readRgba(),afterMemory=r.getMemoryReport().currentBytes;
+      const original=await r.readVectorPickMap(),count=r.getVectorReport().pickRenderCount;
+      r.setCamera({...camera,position:[5,3,5],target:[1,.4,0]});
+      const shifted=await r.readVectorPickMap(),afterCamera=r.getVectorReport().pickRenderCount;
+      const repeated=await r.readVectorPickMap(),afterRepeat=r.getVectorReport().pickRenderCount;
+      // Rebuild the vectors to obtain an independent fresh-pick reference at the new camera.
+      r.setVectorLayers(vectors);const rebuilt=await r.readVectorPickMap();
+      return {rejection,before,after,memory,afterMemory,pixelDelta:difference(pixels,afterPixels),
+        covered:Array.from(original.ids).filter(x=>x===7).length,
+        shiftedCovered:Array.from(shifted.ids).filter(x=>x===7).length,
+        changed:original.ids.some((id:number,i:number)=>id!==shifted.ids[i]),
+        agrees:shifted.ids.every((id:number,i:number)=>id===rebuilt.ids[i]),
+        repeated:shifted.ids.every((id:number,i:number)=>id===repeated.ids[i]),count,afterCamera,afterRepeat};
+    }finally{r.dispose();canvas.remove();}
+  });
+  expect(result.rejection).toBe("INVALID_INPUT");expect(result.before.historyFrames).toBeGreaterThan(1);
+  expect(result.after).toEqual(result.before);expect(result.pixelDelta).toBe(0);expect(result.afterMemory).toBe(result.memory);
+  expect(result.covered).toBeGreaterThan(20);expect(result.shiftedCovered).toBeGreaterThan(20);expect(result.changed).toBe(true);
+  expect(result.agrees).toBe(true);expect(result.repeated).toBe(true);
+  expect(result.afterCamera).toBe(result.count+1);expect(result.afterRepeat).toBe(result.afterCamera);
+});

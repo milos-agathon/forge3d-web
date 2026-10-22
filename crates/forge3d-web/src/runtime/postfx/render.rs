@@ -45,19 +45,16 @@ pub(crate) fn encode(
             || fx.last_camera != Some(runtime.camera)
             || fx.last_time != runtime.time_seconds
         {
-            if fx.temporal.camera_cut(&runtime.camera) {
-                fx.temporal.reset("camera-cut");
-            }
             let accumulation =
                 fx.config.effects.iter().any(|e| {
                     e.enabled && e.kind == forge3d_core::postfx::EffectKind::AccumulationAa
                 });
-            if accumulation
-                && (fx.temporal.previous.is_some_and(|c| c != runtime.camera)
-                    || fx.last_time != runtime.time_seconds)
-            {
-                fx.temporal.reset("scene");
-            }
+            super::super::render_change::observe_frame(
+                &mut fx.temporal,
+                &runtime.camera,
+                accumulation,
+                fx.last_time != runtime.time_seconds,
+            );
             let jitter = fx.config.effects.iter().any(|e| {
                 e.enabled
                     && ((e.kind == forge3d_core::postfx::EffectKind::Taa && e.params[4] != 0.)

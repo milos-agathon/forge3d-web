@@ -10,7 +10,10 @@ impl EnvironmentResources {
             .view_projection_matrix(self.width as f32 / self.height as f32)
             .map_err(map_core_error)?;
         let matrix = glam::Mat4::from_cols_array_2d(&vp);
-        if self.last_time.get() != runtime.time_seconds {
+        if crate::runtime::render_change::environment_time_changed(
+            self.last_time.get(),
+            runtime.time_seconds,
+        ) {
             self.history_valid.set(false);
         }
         let s = &self.snapshot;

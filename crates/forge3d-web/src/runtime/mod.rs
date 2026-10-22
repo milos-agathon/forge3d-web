@@ -3,6 +3,7 @@ mod canvas;
 mod device_health;
 mod diagnostics;
 mod environment;
+mod frame;
 mod ibl;
 mod init;
 mod lighting;
@@ -13,6 +14,7 @@ mod postfx;
 mod probes;
 mod readback;
 mod render;
+mod render_change;
 mod scatter;
 mod scene;
 mod shader_variants;
@@ -271,7 +273,7 @@ impl Forge3DRuntime {
     pub fn set_environment(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
         environment::set(self, snapshot).map_err(to_js_error)?;
-        postfx::invalidate(self, "scene", true);
+        render_change::applied(self, render_change::Change::Scene);
         Ok(())
     }
     #[wasm_bindgen(js_name = setVectorLayers)]
@@ -314,7 +316,7 @@ impl Forge3DRuntime {
     #[wasm_bindgen(js_name = resetPostFxHistory)]
     pub fn reset_post_fx_history(&mut self) -> Result<(), JsValue> {
         self.guard_mutation()?;
-        postfx::invalidate(self, "explicit", false);
+        render_change::applied(self, render_change::Change::Explicit);
         Ok(())
     }
     #[wasm_bindgen(js_name = readPostFxIntermediate)]
@@ -341,7 +343,7 @@ impl Forge3DRuntime {
     pub fn set_scatter_batches(&mut self, batches: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
         scatter::set(self, batches).map_err(to_js_error)?;
-        postfx::invalidate(self, "scene", true);
+        render_change::applied(self, render_change::Change::Scene);
         Ok(())
     }
 
@@ -359,7 +361,7 @@ impl Forge3DRuntime {
     pub fn set_lighting_probes(&mut self, input: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
         probes::set(self, input).map_err(to_js_error)?;
-        postfx::invalidate(self, "scene", true);
+        render_change::applied(self, render_change::Change::Lighting);
         Ok(())
     }
 
@@ -417,7 +419,7 @@ impl Forge3DRuntime {
     pub fn set_lighting(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
         lighting::set_lighting_runtime(self, snapshot).map_err(to_js_error)?;
-        postfx::invalidate(self, "scene", true);
+        render_change::applied(self, render_change::Change::Lighting);
         Ok(())
     }
 
@@ -425,7 +427,7 @@ impl Forge3DRuntime {
     pub fn set_materials(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
         lighting::set_materials_runtime(self, snapshot).map_err(to_js_error)?;
-        postfx::invalidate(self, "scene", true);
+        render_change::applied(self, render_change::Change::Lighting);
         Ok(())
     }
 
@@ -433,7 +435,7 @@ impl Forge3DRuntime {
     pub fn set_ibl(&mut self, input: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
         ibl::set_ibl_runtime(self, input).map_err(to_js_error)?;
-        postfx::invalidate(self, "scene", true);
+        render_change::applied(self, render_change::Change::Lighting);
         Ok(())
     }
 
@@ -449,7 +451,7 @@ impl Forge3DRuntime {
     pub fn set_shadows(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
         shadows::set_shadows_runtime(self, snapshot).map_err(to_js_error)?;
-        postfx::invalidate(self, "scene", true);
+        render_change::applied(self, render_change::Change::Lighting);
         Ok(())
     }
 
@@ -620,7 +622,7 @@ impl Forge3DRuntime {
     pub fn set_terrain(&mut self, terrain: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
         set_terrain_runtime(self, terrain).map_err(to_js_error)?;
-        postfx::invalidate(self, "scene", true);
+        render_change::applied(self, render_change::Change::Scene);
         Ok(())
     }
 
@@ -637,7 +639,7 @@ impl Forge3DRuntime {
             .map_err(to_js_error)?;
         self.guard_mutation()?;
         set_terrain_options_runtime(self, terrain).map_err(to_js_error)?;
-        postfx::invalidate(self, "scene", true);
+        render_change::applied(self, render_change::Change::Scene);
         Ok(())
     }
 

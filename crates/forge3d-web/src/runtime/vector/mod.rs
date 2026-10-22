@@ -232,7 +232,7 @@ pub(super) fn set(
     let resources = prepare(runtime, packet, &mut memory, runtime.width, runtime.height)?;
     runtime.memory = memory;
     runtime.vectors = resources;
-    super::postfx::invalidate(runtime, "scene", true);
+    super::render_change::applied(runtime, super::render_change::Change::Scene);
     Ok(())
 }
 pub(super) fn same_geometry(runtime: &Forge3DRuntime, next: &Packet) -> bool {
@@ -417,9 +417,7 @@ pub(super) fn apply_highlights(runtime: &mut Forge3DRuntime, update: HighlightUp
     v.packet.highlights = update.highlights;
     v.bytes = update.bytes;
     // Selection changes color, but the geometry pick targets stay valid.
-    if let Some(fx) = runtime.postfx.as_mut() {
-        fx.temporal.reset("vectors-highlight");
-    }
+    super::render_change::applied(runtime, super::render_change::Change::Selection);
 }
 pub(super) fn invalidate_pick(runtime: &Forge3DRuntime) {
     if let Some(v) = runtime.vectors.as_ref() {

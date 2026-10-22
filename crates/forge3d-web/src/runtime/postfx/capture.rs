@@ -1,10 +1,10 @@
-//! Persistent realtime G-buffer using the W06 capture variants.
+use super::super::frame::CaptureView;
 use super::super::{offline, Forge3DRuntime};
 use crate::error::WebError;
 use forge3d_core::{camera::CameraInput, gpu::GpuContext};
 use offline::{
     gpu::{uniform_buffer, CaptureTargets, Target},
-    CapturePass, CaptureView, TerrainCapture,
+    CapturePass, TerrainCapture,
 };
 
 pub(in crate::runtime) struct CaptureFrame {
@@ -142,7 +142,7 @@ impl CaptureFrame {
         realtime: bool,
         vector_view_projection: Option<[[f32; 4]; 4]>,
     ) {
-        offline::encode_capture_view(
+        super::super::frame::encode_capture_view(
             runtime,
             &CaptureView {
                 width: self.width,

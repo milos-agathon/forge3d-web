@@ -841,15 +841,12 @@ pub(super) fn set_camera_runtime(
         scene.update_camera(context, &camera, runtime.width, runtime.height)?;
     }
     runtime.camera = camera;
-    if let Some(e) = &runtime.environment {
-        e.history_valid.set(false);
-    }
     if let (Some(shadows), Some(prepared)) = (runtime.shadows.as_mut(), prepared_shadows) {
         prepared.write(context, shadows);
     }
     // Pick targets and highlight bounds contain pixels from the previous view.
     // Invalidate only after the complete camera update succeeds.
-    super::vector::invalidate_pick(runtime);
+    super::render_change::applied(runtime, super::render_change::Change::Camera);
     Ok(())
 }
 
@@ -987,6 +984,7 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
     if let (Some(shadows), Some(prepared)) = (runtime.shadows.as_mut(), prepared_shadows) {
         prepared.write(&context, shadows);
     }
+    super::render_change::applied(runtime, super::render_change::Change::Size);
     Ok(())
 }
 
@@ -1502,12 +1500,7 @@ impl TerrainPipelineCache {
         device: &wgpu::Device,
         features: ShaderFeatures,
     ) -> wgpu::RenderPipeline {
-        self.capture_variant_for(
-            device,
-            features,
-            super::offline::CapturePass::Primary,
-            true,
-        )
+        self.capture_variant_for(device, features, super::offline::CapturePass::Primary, true)
     }
 
     fn capture_variant_for(
