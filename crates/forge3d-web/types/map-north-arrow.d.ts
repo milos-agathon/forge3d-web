@@ -1,6 +1,6 @@
 import { type CartographicColor } from './cartography-common.js';
 import { type CartographicRenderOptions } from './cartography-canvas.js';
-import type { Frame } from "./index.js";
+import type { Frame } from './index.js';
 export interface NorthArrowConfig {
     style?: 'arrow' | 'compass' | 'simple';
     size?: number;

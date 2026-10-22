@@ -1,7 +1,7 @@
 import { Colormap } from './colormaps.js';
 import { type CartographicColor } from './cartography-common.js';
 import { type CartographicRenderOptions } from './cartography-canvas.js';
-import { Frame } from "./index.js";
+import { Frame } from './index.js';
 export interface LegendConfig {
     orientation?: 'vertical' | 'horizontal';
     barWidth?: number;

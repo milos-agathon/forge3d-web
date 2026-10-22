@@ -1,4 +1,4 @@
-import { Frame } from "./index.js";
+import { Frame } from './index.js';
 import { BBox, PlateRegion, type MapPlateConfig, type PlateLayout, type PositionAnchor } from './map-layout.js';
 import { type CartographicColor } from './cartography-common.js';
 import { type PlateImage } from './cartography-canvas.js';

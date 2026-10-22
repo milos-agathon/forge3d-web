@@ -41,6 +41,9 @@ describe('M2 persistent replay implementation identity',()=>{
     ['laz','src-ts/pointcloud-las.ts'],['laz','src-ts/laz-worker.ts'],['laz','src-ts/laz-admission.ts'],
     ['exr','src-ts/frames.ts'],['exr','src/offline_api.rs'],['glb','src-ts/mesh.ts'],
     ['tiff','src-ts/range-scheduler.ts'],['tiff','src-ts/byte-cache.ts'],
+    ['tiff','scripts/vendored-assets.mjs'],
+    ['ktx2','scripts/vendored-assembly.mjs'],
+    ['exr','scripts/declaration-contract.mjs'],
   ])('invalidates %s when its delegated implementation %s changes',(format,path)=>{
     const target=join(packageCopy,path),original=readFileSync(target);
     let changed:any[];

@@ -1,4 +1,4 @@
-import { Frame } from "./index.js";
+import { Frame } from './index.js';
 export interface CartographicRenderOptions {
     signal?: AbortSignal;
     maxBytes?: number;

@@ -20,6 +20,8 @@ function collect(directory){
   }
 }
 for(const path of ['src-ts','src','../forge3d-core/src'])collect(path);
+// Packaging helpers affect emitted codec bytes and the published contract.
+for (const path of ['scripts/vendored-assets.mjs', 'scripts/vendored-assembly.mjs', 'scripts/declaration-contract.mjs']) inputs.push(path);
 for(const path of ['scripts/generate-codec-catalog.mjs','scripts/prepare-dist.mjs','scripts/embed-proj-worker.mjs','scripts/prepare-basis-csp.mjs','scripts/basis-csp-invoker.js.txt','scripts/basis-csp-emval.js.txt','package.json','package-lock.json','Cargo.toml','build.rs','../forge3d-core/Cargo.toml','../forge3d-core/build.rs','../../Cargo.toml','../../Cargo.lock','../../rust-toolchain.toml'])if(existsSync(new URL(path,root)))inputs.push(path);
 const implementation=createHash('sha256');
 for(const path of inputs.sort())implementation.update(path+'\0'+readFileSync(new URL(path,root),'utf8').replace(/\r\n?/g,'\n')+'\0');
