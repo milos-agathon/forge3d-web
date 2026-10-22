@@ -259,9 +259,9 @@ jobs:
     name: Web Runtime / Browser Preflight
     needs: build-and-contract
     runs-on: macos-15
-    # The pre-W22 two-engine corpus already takes about 123 minutes on hosted macOS.
-    # Allow W22 full-resolution coverage and runner variation; per-test budgets stay fixed.
-    timeout-minutes: 180
+    # W23 Chromium takes about 100m plus 20m of setup/probes on slower hosted macOS.
+    # Leave room for the full Firefox corpus too; per-test budgets stay fixed.
+    timeout-minutes: 300
 
     steps:
       - name: Check out the protected source
