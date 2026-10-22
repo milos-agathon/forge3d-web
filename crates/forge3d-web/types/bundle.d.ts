@@ -1,4 +1,4 @@
-import { type BrowserByteSource, type BrowserByteSink } from './index.js';
+import { type BrowserByteSource, type BrowserByteSink } from "./index.js";
 import { SceneState, type SceneStateInput } from './scene-review.js';
 import { ValidationReport } from './diagnostics.js';
 import type { SceneRecipeInput } from './map-scene-types.js';
