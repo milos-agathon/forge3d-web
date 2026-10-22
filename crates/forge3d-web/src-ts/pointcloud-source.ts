@@ -1,3 +1,4 @@
+import {PointNodeProduction} from "./point-node-production.js";
 import {SourceEntities,entityIfMatch} from "./source-entity.js";
 import { Forge3DError } from "./runtime-failure.js";
 import type { PointDatasetOptions, PointData } from "./pointcloud-types.js";
@@ -20,6 +21,7 @@ import type { PointCloudWorkerRequest } from "./pointcloud.js";
 import { getWorkerJobTimeoutMs } from "./browser-resources.js";
 /** Dataset lifecycle, split compressed/decoded budgets and cancellable W02 worker dispatch. */
 export class PointSource {
+  readonly #nodes=new PointNodeProduction();
   readonly scheduler: RangeScheduler;
   readonly entities:SourceEntities;
   readonly decoded: PointCache<PointData>;
@@ -115,6 +117,10 @@ export class PointSource {
       );
     }
   }
+  async produceNode(key:string,produce:(signal:AbortSignal)=>Promise<PointData>,signal?:AbortSignal):Promise<PointData>{
+    const subscriber=this.signal(signal),cached=this.cached(key);if(cached)return cached;
+    return this.#nodes.get(key,subscriber,s=>produce(this.signal(s)),data=>this.admit(key,data));
+  }
   async decode(
     request: unknown,
     main: (signal: AbortSignal) => Promise<PointData>,
@@ -175,6 +181,7 @@ export class PointSource {
     if (this.disposed) return;
     this.disposed = true;
     this.abort.abort();
+    this.#nodes.dispose();
     this.scheduler.dispose();
     this.compressed.clear();
     this.decoded.clear();

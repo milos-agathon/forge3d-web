@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+import * as processing from '../../src-ts/mesh-processing.js';
+import { preparedTileMeshCount } from '../../src-ts/tiles3d-layer.js';
+import { Forge3DScene } from '../../src-ts/scene.js';
+import { describe, it, expect, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   Tileset,
@@ -334,6 +337,25 @@ describe("W16 real PNTS/B3DM payload contracts", () => {
     layer.dispose();
     expect(layer.stats().loadedBytes).toBe(0);
     t.dispose();
+  });
+  it('reuses committed transforms and keeps returned mesh/point views defensive across replacement',async()=>{
+    const tiles=await Tileset.load('https://example.org/external.json',{fetch:async uri=>new Response(fixture(new URL(uri).pathname.slice(1)))});
+    const layer=new Tiles3dLayer(tiles,{origin:[0,0,0]}),scene=Forge3DScene.create();
+    const transform=vi.spyOn(processing,'transformMesh');
+    try {
+      await layer.update({...view,position:[0,0,10]});
+      layer.addMeshesToScene(scene); const calls=transform.mock.calls.length;
+      const first=layer.meshes(),points=layer.pointData();
+      first[0]!.mesh.positions.fill(999);points.positions.fill(999);
+      for(let i=0;i<3;i++) {layer.addMeshesToScene(scene);expect(preparedTileMeshCount(layer)).toBe(1);expect(layer.meshes()[0]!.mesh.positions[0]).toBe(4);expect(layer.pointData().positions[0]).not.toBe(999);}
+      expect(transform.mock.calls.length).toBe(calls);
+      const pointLayer=layer.asPointCloudLayer();
+      const selection=vi.spyOn(layer.traverser,'visibleTiles').mockReturnValue([]);
+      await layer.update(view); expect(preparedTileMeshCount(layer)).toBe(0);expect(layer.pointData().positions.length).toBe(0);
+      // An independently returned point layer retains its own lifetime.
+      expect(pointLayer.dataset.totalPoints).toBe(3);pointLayer.dispose();selection.mockRestore();
+    } finally {transform.mockRestore();scene.dispose();layer.dispose();tiles.dispose();}
+    expect(()=>preparedTileMeshCount(layer)).toThrow();
   });
   it("detects an external tileset cycle and keeps a loaded view on failure", async () => {
     const cycle = {

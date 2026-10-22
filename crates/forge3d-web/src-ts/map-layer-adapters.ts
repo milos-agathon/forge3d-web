@@ -7,7 +7,7 @@ import { VectorLayers } from './vector-layers.js';
 import { MeshLayer } from './mesh.js';
 import { BuildingLayer } from './buildings.js';
 import { PointCloudLayer } from './pointcloud-layer.js';
-import { Tiles3dLayer } from './tiles3d-layer.js';
+import { Tiles3dLayer, preparedTileMeshCount } from './tiles3d-layer.js';
 import { Tileset } from './tiles3d.js';
 import { FontAtlas, type FontSource } from './typography.js';
 import { LabelLayer } from './labels.js';
@@ -119,7 +119,7 @@ export async function prepareMapLayers(input: SceneRecipeInput, resources: Reado
                         releases.push(() => tiles.dispose());
                         await tiles.update(view, signal);
                         tiles.addMeshesToScene(scene);
-                        let count = tiles.meshes().length;
+                        let count = preparedTileMeshCount(tiles);
                         const point = tiles.asPointCloudLayer();
                         releases.push(() => point.dispose());
                         await point.update(view, signal);

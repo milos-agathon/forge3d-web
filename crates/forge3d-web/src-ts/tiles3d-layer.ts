@@ -1,3 +1,4 @@
+import { CommittedTileView, type TileMesh } from './tiles3d-view.js';
 import { Forge3DError } from "./runtime-failure.js";
 import type { Forge3DScene } from "./index.js";
 import type {
@@ -27,9 +28,8 @@ import {
   TILE_IDENTITY,
   tileMatrix,
 } from "./tiles3d-bounds.js";
-import { meshBytes, recomputeMeshNormals } from "./mesh.js";
+import { meshBytes } from "./mesh.js";
 import type { MeshBuffers } from "./mesh.js";
-import { transformMesh } from "./mesh-processing.js";
 import { TerrainScatterBatch } from "./terrain-scatter.js";
 import { PointCloudLayer } from "./pointcloud-layer.js";
 export type TilePayload = PntsContent | B3dmContent;
@@ -48,46 +48,6 @@ function contentBytes(c: TilePayload): number {
     ? pointDataBytes(c.points) + c.batchBinary.length
     : c.gltf.primitives.reduce((n, p) => n + meshBytes(p.mesh), 0) +
         c.batchBinary.length;
-}
-function rowMatrix(m: readonly number[]): number[] {
-  return Array.from(
-    { length: 16 },
-    (_, i) => m[(i % 4) * 4 + Math.floor(i / 4)]!,
-  );
-}
-function nodeMatrix(n: Readonly<Record<string, unknown>>): number[] {
-  if (n.matrix !== undefined) return tileMatrix(n.matrix);
-  const t = (n.translation ?? [0, 0, 0]) as number[],
-    s = (n.scale ?? [1, 1, 1]) as number[],
-    q = (n.rotation ?? [0, 0, 0, 1]) as number[];
-  if (
-    !Array.isArray(t) ||
-    !Array.isArray(s) ||
-    !Array.isArray(q) ||
-    t.length !== 3 ||
-    s.length !== 3 ||
-    q.length !== 4 ||
-    [...t, ...s, ...q].some((x) => !Number.isFinite(x)) ||
-    Math.abs(Math.hypot(...q) - 1) > 1e-5
-  )
-    pointError("Invalid glTF node TRS");
-  const [x, y, z, w] = q as [number, number, number, number];
-  return [
-    (1 - 2 * y * y - 2 * z * z) * s[0]!,
-    (2 * x * y + 2 * z * w) * s[0]!,
-    (2 * x * z - 2 * y * w) * s[0]!,
-    0,
-    (2 * x * y - 2 * z * w) * s[1]!,
-    (1 - 2 * x * x - 2 * z * z) * s[1]!,
-    (2 * y * z + 2 * x * w) * s[1]!,
-    0,
-    (2 * x * z + 2 * y * w) * s[2]!,
-    (2 * y * z - 2 * x * w) * s[2]!,
-    (1 - 2 * x * x - 2 * y * y) * s[2]!,
-    0,
-    ...t,
-    1,
-  ];
 }
 /** Bounded content cache and transactional selection; replacements remain visible until ready. */
 export class Tiles3dLayer {
@@ -110,6 +70,7 @@ export class Tiles3dLayer {
     this.maxBytes = options.maxBytes ?? tileset.io.maxBytes;
     this.ownsTileset = options.ownsTileset ?? false;
     this.cache = new PointCache(options.maxBytes ?? tileset.io.decoded.budget);
+    views.set(this,new CommittedTileView([],this.name,this.origin,this.maxBytes));
   }
   async update(view: PointView, signal?: AbortSignal): Promise<LoadedTile[]> {
     pointLive(this.#disposed);
@@ -160,6 +121,7 @@ export class Tiles3dLayer {
       }
       pointCancelled(s);
       pointLive(this.#disposed);
+      views.set(this,new CommittedTileView(loaded,this.name,this.origin,this.maxBytes));
       this.#loaded = loaded;
       return this.loadedTiles();
     } finally {
@@ -170,39 +132,11 @@ export class Tiles3dLayer {
     pointLive(this.#disposed);
     return [...this.#loaded];
   }
-  pointData(): PointData {
-    pointLive(this.#disposed);
-    const points = this.#loaded.filter(
-        (t): t is LoadedTile & { content: PntsContent } =>
-          t.content.kind === "pnts",
-      ),
-      count = points.reduce((n, t) => n + t.content.pointCount, 0);
-    pointLimit(count * 28, this.maxBytes);
-    const positions = new Float64Array(count * 3),
-      colors = new Uint8Array(count * 4);
-    let cursor = 0;
-    for (const t of points) {
-      const d = t.content.points,
-        c = d.colorComponents ?? 3;
-      for (let i = 0; i < t.content.pointCount; i++) {
-        positions.set(
-          transformTilePoint(t.selection.worldTransform, [
-            d.positions[i * 3]!,
-            d.positions[i * 3 + 1]!,
-            d.positions[i * 3 + 2]!,
-          ]),
-          cursor * 3,
-        );
-        for (let a = 0; a < 4; a++)
-          colors[cursor * 4 + a] = a < c ? (d.colors?.[i * c + a] ?? 255) : 255;
-        cursor++;
-      }
-    }
-    return { positions, colors, colorComponents: 4 };
-  }
+  pointData(): PointData { pointLive(this.#disposed); return clonePointData(views.get(this)!.points()); }
   /** Point tiles use the compact point renderer. Mesh tiles use W15 scene batches. */
   asPointCloudLayer(): PointCloudLayer {
-    let points: PointData | undefined = this.pointData();
+    pointLive(this.#disposed);
+    let points: PointData | undefined = views.get(this)!.points();
     const min = [Infinity, Infinity, Infinity],
       max = [-Infinity, -Infinity, -Infinity];
     for (let i = 0; i < points.positions.length; i++) {
@@ -251,87 +185,10 @@ export class Tiles3dLayer {
       maxBytes: this.maxBytes,
     });
   }
-  meshes(): {
-    name: string;
-    mesh: MeshBuffers;
-    material: Readonly<Record<string, unknown>> | undefined;
-  }[] {
-    pointLive(this.#disposed);
-    const result: {
-      name: string;
-      mesh: MeshBuffers;
-      material: Readonly<Record<string, unknown>> | undefined;
-    }[] = [];
-    let used = 0;
-    for (const item of this.#loaded) {
-      if (item.content.kind !== "b3dm") continue;
-      const { gltf, rtcCenter } = item.content,
-        base = [...item.selection.worldTransform],
-        rtc = [...TILE_IDENTITY];
-      rtc[12] = rtcCenter[0];
-      rtc[13] = rtcCenter[1];
-      rtc[14] = rtcCenter[2];
-      // OGC b3dm glTF is Y-up; tile Cartesian coordinates are Z-up.
-      const yToZ = [1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1],
-        world = multiplyTileMatrices(multiplyTileMatrices(base, rtc), yToZ);
-      world[12] = world[12]! - this.origin[0];
-      world[13] = world[13]! - this.origin[1];
-      world[14] = world[14]! - this.origin[2];
-      const emit = (meshIndex: number, matrix: number[], suffix: string) => {
-        for (const p of gltf.primitives.filter(
-          (p) => p.meshIndex === meshIndex,
-        )) {
-          const mesh = transformMesh(
-            p.mesh.normals.length ? p.mesh : recomputeMeshNormals(p.mesh),
-            rowMatrix(matrix),
-          );
-          used += meshBytes(mesh);
-          pointLimit(used, this.maxBytes);
-          result.push({
-            name: `${this.name}:${item.selection.tile.id}:${suffix}:${p.primitiveIndex}`,
-            mesh,
-            material:
-              p.material === null ? undefined : gltf.materials[p.material],
-          });
-        }
-      };
-      if (!gltf.nodes.length) {
-        for (const mi of new Set(gltf.primitives.map((p) => p.meshIndex)))
-          emit(mi, world, `mesh-${mi}`);
-        continue;
-      }
-      const scene = gltf.scenes[gltf.defaultScene ?? 0],
-        children = new Set(
-          gltf.nodes.flatMap((n) => (n.children ?? []) as number[]),
-        );
-      const roots = scene
-        ? ((scene.nodes ?? []) as number[])
-        : gltf.nodes.map((_, i) => i).filter((i) => !children.has(i));
-      const seen = new Set<number>();
-      const visit = (id: number, parent: number[], depth: number) => {
-        pointInteger(id, "glTF node", 0, gltf.nodes.length - 1);
-        if (depth > 128 || seen.has(id))
-          pointError("Cyclic/shared glTF scene node");
-        seen.add(id);
-        const n = gltf.nodes[id]!,
-          matrix = multiplyTileMatrices(parent, nodeMatrix(n));
-        if (n.mesh !== undefined)
-          emit(
-            pointInteger(n.mesh as number, "glTF mesh"),
-            matrix,
-            `node-${id}`,
-          );
-        if (n.children !== undefined && !Array.isArray(n.children))
-          pointError("Invalid glTF children");
-        for (const child of (n.children as number[] | undefined) ?? [])
-          visit(child, matrix, depth + 1);
-      };
-      for (const root of roots) visit(root, world, 0);
-    }
-    return result;
-  }
+  meshes(): TileMesh[] { pointLive(this.#disposed); return structuredClone(views.get(this)!.meshes()); }
   addMeshesToScene(scene: Forge3DScene): void {
-    const meshes = this.meshes();
+    pointLive(this.#disposed);
+    const meshes = views.get(this)!.meshes();
     for (const m of meshes) {
       const material = m.material;
       if (
@@ -372,8 +229,7 @@ export class Tiles3dLayer {
       }
       const materials = staged.getMaterials(),
         batches = meshes.map((m) => {
-          const zToY = [1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1],
-            mesh = transformMesh(m.mesh, zToY);
+          const mesh = views.get(this)!.sceneMesh(m);
           return new TerrainScatterBatch({
             name: m.name,
             levels: [{ mesh }],
@@ -420,7 +276,12 @@ export class Tiles3dLayer {
     this.#disposed = true;
     this.#update?.abort();
     this.#loaded = [];
+    views.delete(this);
     this.cache.clear();
     if (this.ownsTileset) this.tileset.dispose();
   }
 }
+
+const views=new WeakMap<Tiles3dLayer,CommittedTileView>();
+/** Internal count without cloning public mesh views. */
+export function preparedTileMeshCount(layer:Tiles3dLayer):number { const view=views.get(layer); pointLive(!view); return view!.meshes().length; }

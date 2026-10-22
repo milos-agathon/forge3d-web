@@ -230,9 +230,7 @@ export class CopcDataset implements PointCloudDataset {
     return this.#node(key).children.map((k) => this.#node(k));
   }
   async readPoints(key: string, signal?: AbortSignal): Promise<PointData> {
-    this.io.signal(signal);
-    const cached = this.io.cached(key);
-    if (cached) return cached;
+    return this.io.produceNode(key,async signal=>{
     await this.#resolve(key, signal);
     const e = this.hierarchy.get(key);
     if (!e || e.pointCount < 0) pointError("COPC data node missing");
@@ -258,8 +256,10 @@ export class CopcDataset implements PointCloudDataset {
         }),
       signal,
     );
-    return this.io.admit(key, result);
+    return result;
+    },signal);
   }
+
   stats() {
     return {
       ...this.io.stats(),

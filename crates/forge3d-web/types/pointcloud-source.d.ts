@@ -20,6 +20,7 @@ export declare class PointSource {
     signal(signal?: AbortSignal): AbortSignal;
     range(source: string | URL | Blob, offset: number, length: number, signal?: AbortSignal): Promise<Uint8Array>;
     read(url: string, signal?: AbortSignal): Promise<Uint8Array>;
+    produceNode(key: string, produce: (signal: AbortSignal) => Promise<PointData>, signal?: AbortSignal): Promise<PointData>;
     decode(request: unknown, main: (signal: AbortSignal) => Promise<PointData>, signal?: AbortSignal): Promise<PointData>;
     cached(key: string): PointData | undefined;
     admit(key: string, data: PointData): PointData;
