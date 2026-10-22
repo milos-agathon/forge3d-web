@@ -18,23 +18,12 @@ pub(super) fn visible_node_ids(
         .iter()
         .map(|(parsed, native)| (*native, *parsed))
         .collect();
-    let mut visible = BTreeSet::new();
-    let mut stack: Vec<(NodeId, bool)> = graph.roots().iter().map(|id| (*id, true)).collect();
-    while let Some((id, parent_visible)) = stack.pop() {
-        let Some(node) = graph.node(id) else {
-            continue;
-        };
-        let visible_here = parent_visible && node.visible;
-        if visible_here {
-            if let Some(parsed_id) = native_to_parsed.get(&id) {
-                visible.insert(*parsed_id);
-            }
-        }
-        for &child in &node.children {
-            stack.push((child, visible_here));
-        }
-    }
-    visible
+    graph
+        .traversal()
+        .into_iter()
+        .filter(|node| node.visible)
+        .filter_map(|node| native_to_parsed.get(&node.id).copied())
+        .collect()
 }
 
 pub(super) fn build_geometry(
@@ -56,21 +45,22 @@ pub(super) fn build_geometry(
             .copied()
             .unwrap_or(0)
     };
-    let visible = visible_node_ids(graph, node_map);
+    let traversal: BTreeMap<_, _> = graph
+        .traversal()
+        .into_iter()
+        .filter(|node| node.visible)
+        .map(|node| (node.id, node.world_transform))
+        .collect();
     let mut geometry = BuiltGeometry::default();
     let mut overlay_nodes = Vec::new();
     let mut first_unassigned = 0usize;
     for node in nodes {
-        if !visible.contains(&node.id) {
-            continue;
-        }
         let Some(native_id) = node_map.get(&node.id) else {
             continue;
         };
-        let world = graph
-            .node(*native_id)
-            .map(|stored| stored.world_transform)
-            .unwrap_or(glam::Mat4::IDENTITY);
+        let Some(&world) = traversal.get(native_id) else {
+            continue;
+        };
         match &node.kind {
             ParsedNodeKind::GroundPlane {
                 size,

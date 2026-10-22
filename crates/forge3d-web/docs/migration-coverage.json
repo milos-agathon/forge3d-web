@@ -5179,13 +5179,14 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w07_materials.spec.ts",
-      "sha256": "b5253ee04f744865af3b33b5790c650a096ec705e6823d7fb812722a86a4dadf",
+      "sha256": "18fa58233c524271435b08ed8a4129b8bd20d4286c0100bafae83e9edd9c4f8e",
       "declarations": [
         "T05-T07: every native toggle matches its terrain-material-v1 golden",
         "validation, fallback diagnostics and the material report",
         "textured layers, masks, detail maps, SSS, spec-AA tiers and debug views",
         "budget downscale, 30-cycle memory return and device-loss replay",
-        "1080p frame time with the full material stack stays within the budget"
+        "1080p frame time with the full material stack stays within the budget",
+        "material snapshot envelope agrees with native JSON contract"
       ]
     },
     {

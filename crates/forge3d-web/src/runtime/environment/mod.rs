@@ -23,11 +23,11 @@ pub(super) fn parse(value: wasm_bindgen::JsValue) -> Result<Option<Environment>,
     s.validate().map_err(invalid)?;
     Ok(Some(s))
 }
-pub(super) fn prepare(
+pub(super) fn plan(
     runtime: &Forge3DRuntime,
     s: Option<&Environment>,
     planned: &mut super::memory::MemoryLedger,
-) -> Result<Option<EnvironmentResources>, WebError> {
+) -> Result<Option<Environment>, WebError> {
     let Some(s) = s else {
         planned.release(KEY);
         return Ok(None);
@@ -72,12 +72,6 @@ pub(super) fn prepare(
         selected.steps = (selected.steps / 2).max(8);
     }
     planned.replace(KEY, MemoryCategory::Textures, bytes(&selected))?;
-    let format = runtime
-        .surface_state
-        .as_ref()
-        .ok_or_else(|| invalid("surface unavailable"))?
-        .config
-        .format;
     let limits = context.device.limits();
     if selected.volumetric_mode == "froxel"
         && (runtime.width.div_ceil(8) > limits.max_texture_dimension_3d
@@ -96,6 +90,25 @@ pub(super) fn prepare(
             "environment payload exceeds storage binding limit",
         ));
     }
+    Ok(Some(selected))
+}
+pub(super) fn materialize(
+    runtime: &Forge3DRuntime,
+    selected: Option<Environment>,
+) -> Result<Option<EnvironmentResources>, WebError> {
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let context = runtime
+        .context
+        .as_ref()
+        .ok_or_else(|| invalid("GPU context unavailable"))?;
+    let format = runtime
+        .surface_state
+        .as_ref()
+        .ok_or_else(|| invalid("surface unavailable"))?
+        .config
+        .format;
     Ok(Some(EnvironmentResources::new(
         context,
         selected,
@@ -103,6 +116,13 @@ pub(super) fn prepare(
         runtime.height,
         format,
     )))
+}
+pub(super) fn prepare(
+    runtime: &Forge3DRuntime,
+    s: Option<&Environment>,
+    planned: &mut super::memory::MemoryLedger,
+) -> Result<Option<EnvironmentResources>, WebError> {
+    materialize(runtime, plan(runtime, s, planned)?)
 }
 pub(super) fn set(
     runtime: &mut Forge3DRuntime,

@@ -85,7 +85,7 @@ pub(super) struct ParsedScene {
     pub environment_lighting: Option<forge3d_core::lighting::LightingState>,
     pub scatter: Vec<forge3d_core::terrain_scatter::ScatterBatch>,
     pub time_seconds: f32,
-    pub probes: Option<crate::runtime::probes::Snapshot>,
+    pub probes: Option<crate::runtime::probes::Compiled>,
     pub nodes: Vec<ParsedNode>,
     pub passes: Vec<ParsedPass>,
     pub lighting: forge3d_core::lighting::LightingState,
