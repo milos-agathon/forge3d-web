@@ -1,3 +1,4 @@
+import {TiffSampleLayout,type DecodeParameters} from "./tiff-sample-layout.js";
 // W08 / DESIGN F3 — `CogDataset`, a range-scheduled, LRU-cached,
 // worker-capable COG reader on top of `geotiff` (vendored, exact
 // 3.0.5; `dist/vendor/geotiff.js` after `prepare-dist`).
@@ -120,15 +121,7 @@ class SchedulerResponse {
   }
 }
 
-interface DecodeParameters {
-  tileWidth: number;
-  tileHeight: number;
-  planarConfiguration: number;
-  bitsPerSample: number[];
-  predictor: number;
-  samplesPerPixel: number;
-  jpegTables?: ArrayBuffer | Uint8Array;
-}
+function normalizeSampleValues(value:unknown):number[]{return typeof value==="number"?[value]:Array.from(value as ArrayLike<number>);}
 
 /** Mirrors geotiff's `decoderParameterFns`: the shared parameters plus
  * the per-codec extras needed by jpeg and lerc. */
@@ -141,9 +134,7 @@ async function decoderParameters(fileDirectory: ImageFileDirectory): Promise<Dec
       fileDirectory.getValue("ImageLength") ??
       0,
     planarConfiguration: fileDirectory.getValue("PlanarConfiguration") ?? 1,
-    bitsPerSample: Array.from(
-      (await fileDirectory.loadValue("BitsPerSample")) as number[],
-    ),
+    bitsPerSample: normalizeSampleValues(await fileDirectory.loadValue("BitsPerSample")),
     predictor: fileDirectory.hasTag("Predictor")
       ? ((await fileDirectory.loadValue("Predictor")) as number)
       : 1,
@@ -155,84 +146,6 @@ async function decoderParameters(fileDirectory: ImageFileDirectory): Promise<Dec
     )) as Uint8Array;
   }
   return parameters;
-}
-
-function bitsFor(parameters: DecodeParameters, sample: number): number {
-  const bits = parameters.bitsPerSample;
-  return bits.length === 1 ? bits[0]! : bits[sample]!;
-}
-
-/** Convert one decoded tile buffer to `tileWidth*tileHeight` float32
- * samples of `band` (0-based), handling sample formats 1-3, bit
- * depths 8-64 and the file's endianness. */
-function tileToFloat32(
-  decoded: ArrayBuffer,
-  parameters: DecodeParameters,
-  sampleFormat: number[],
-  band: number,
-  littleEndian: boolean,
-  validHeight = parameters.tileHeight,
-): Float32Array {
-  const { tileWidth, tileHeight, planarConfiguration, samplesPerPixel } = parameters;
-  const out = new Float32Array(tileWidth * tileHeight);
-  const bytesPerSample = bitsFor(parameters, band) >> 3;
-  const stride =
-    planarConfiguration === 1 ? bytesPerSample * samplesPerPixel : bytesPerSample;
-  const base = planarConfiguration === 1 ? bytesPerSample * band : 0;
-  const view = new DataView(decoded);
-  const format = sampleFormat.length === 1 ? sampleFormat[0]! : sampleFormat[band]!;
-  const bits = bitsFor(parameters, band);
-  let read: (offset: number) => number;
-  if (format === 3) {
-    if (bits === 16) {
-      read = (offset) => float16BitsToNumber(view.getUint16(offset, littleEndian));
-    } else {
-      read =
-        bits === 64
-          ? (offset) => view.getFloat64(offset, littleEndian)
-          : (offset) => view.getFloat32(offset, littleEndian);
-    }
-  } else {
-    switch (bits) {
-      case 8:
-        read =
-          format === 2
-            ? (offset) => view.getInt8(offset)
-            : (offset) => view.getUint8(offset);
-        break;
-      case 16:
-        read =
-          format === 2
-            ? (offset) => view.getInt16(offset, littleEndian)
-            : (offset) => view.getUint16(offset, littleEndian);
-        break;
-      default:
-        read =
-          format === 2
-            ? (offset) => view.getInt32(offset, littleEndian)
-            : (offset) => view.getUint32(offset, littleEndian);
-    }
-  }
-  const validPixels = tileWidth * validHeight;
-  if (decoded.byteLength < validPixels * stride) {
-    throw new Forge3DError("IO_ERROR", "TIFF sample data is truncated", { reason: "cog-truncated-samples" });
-  }
-  for (let index = 0; index < validPixels; index += 1) {
-    out[index] = read(base + index * stride);
-  }
-  return out;
-}
-
-/** IEEE-754 half → f32 decode (sampleFormat 3 + 16-bit). */
-function float16BitsToNumber(bits: number): number {
-  const sign = (bits & 0x8000) !== 0 ? -1 : 1;
-  const exponent = (bits >> 10) & 0x1f;
-  const fraction = bits & 0x3ff;
-  if (exponent === 0) return sign * fraction * 2 ** -24;
-  if (exponent === 0x1f) {
-    return fraction === 0 ? sign * Infinity : NaN;
-  }
-  return sign * (1 + fraction / 1024) * 2 ** (exponent - 15);
 }
 
 interface LevelInfo {
@@ -250,6 +163,7 @@ interface LevelInfo {
   compression: number;
   planar: number;
   parametersPromise: Promise<DecodeParameters>;
+  layout():Promise<TiffSampleLayout>;
 }
 
 function levelInfo(image: GeoTIFFImage): LevelInfo {
@@ -273,6 +187,7 @@ function levelInfo(image: GeoTIFFImage): LevelInfo {
     typeof sampleFormatValue === "number"
       ? [sampleFormatValue]
       : Array.from(sampleFormatValue);
+  const parametersPromise=decoderParameters(directory);
   return {
     image,
     directory,
@@ -287,7 +202,8 @@ function levelInfo(image: GeoTIFFImage): LevelInfo {
     sampleFormat,
     compression: directory.getValue("Compression") ?? 1,
     planar: directory.getValue("PlanarConfiguration") ?? 1,
-    parametersPromise: decoderParameters(directory),
+    parametersPromise,
+    layout:async()=>new TiffSampleLayout(await parametersPromise,sampleFormat),
   };
 }
 
@@ -539,10 +455,8 @@ export class CogDataset {
       return fill.slice();
     }
     const decoded = await this.decodeBytes(level.compression, parameters, bytes);
-    const float32 = tileToFloat32(
+    const float32 = (await level.layout()).numeric(
       decoded,
-      parameters,
-      level.sampleFormat,
       0,
       this.geotiff.littleEndian,
       level.image.isTiled ? level.tileHeight : Math.min(level.tileHeight, level.height - y * level.tileHeight),
@@ -562,23 +476,8 @@ export class CogDataset {
     const levelIndex = this.selectOverview(lod);
     const level = this.level(levelIndex);
     this.assertTileInRange(level, x, y);
-    const bits = level.bitsPerSample[0]!;
-    const format = level.sampleFormat[0]!;
-    if (bits !== 8 || format !== 1) {
-      throw new Forge3DError(
-        "UNSUPPORTED_FEATURE",
-        `COG RGBA read requires uint8 samples (bits ${bits}, sampleFormat ${format})`,
-        { reason: "cog-rgba-format" },
-      );
-    }
-    const samples = level.samplesPerPixel;
-    if (samples !== 1 && samples !== 3 && samples !== 4) {
-      throw new Forge3DError(
-        "UNSUPPORTED_FEATURE",
-        `COG RGBA read supports 1/3/4 samples, got ${samples}`,
-        { reason: "cog-rgba-samples" },
-      );
-    }
+    (await level.layout()).requireRgba();
+    const samples=level.samplesPerPixel;
     const pixels = level.tileWidth * level.tileHeight;
     const rgba = new Uint8ClampedArray(pixels * 4);
     const decoded = await this.decodePlanarSamples(level, x, y, options);
@@ -691,11 +590,7 @@ export class CogDataset {
     sample: number,
     options: { signal?: AbortSignal; priority?: number },
   ): Promise<Uint8Array | undefined> {
-    const planarIndex = x + y * level.tilesAcross;
-    const tileIndex =
-      level.planar === 1
-        ? planarIndex
-        : sample * level.tilesAcross * level.tilesDown + planarIndex;
+    const tileIndex=(await level.layout()).tileIndex(x,y,sample,level.tilesAcross,level.tilesDown);
     const directory = level.directory;
     const [offset, byteCount] = await Promise.all([
       directory.loadValueIndexed(level.image.isTiled ? "TileOffsets" : "StripOffsets", tileIndex),
@@ -756,10 +651,8 @@ export class CogDataset {
             bytes,
           );
           out.push(
-            tileToFloat32(
+            (await level.layout()).numeric(
               decoded,
-              parameters,
-              level.sampleFormat,
               sample,
               this.geotiff.littleEndian,
               level.image.isTiled ? level.tileHeight : Math.min(level.tileHeight, level.height - y * level.tileHeight),
@@ -777,10 +670,8 @@ export class CogDataset {
     const out: Float32Array[] = [];
     for (let sample = 0; sample < level.samplesPerPixel; sample += 1) {
       out.push(
-        tileToFloat32(
+        (await level.layout()).numeric(
           decoded,
-          parameters,
-          level.sampleFormat,
           sample,
           this.geotiff.littleEndian,
           level.image.isTiled ? level.tileHeight : Math.min(level.tileHeight, level.height - y * level.tileHeight),

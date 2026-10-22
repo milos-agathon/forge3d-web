@@ -139,7 +139,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/terrain-streaming.test.ts",
-      "sha256": "a752fc266036c6d668be3cc91b7a0d713d51bed7930614c962cadc7622bfb5e8",
+      "sha256": "93e675268a96ba9a48ad47a8f6a4d2405df10ac58bd78f5bf94b0c96fced9373",
       "snapshot": "evidence-sources/tests/unit/terrain-streaming.test.ts.txt"
     },
     {
