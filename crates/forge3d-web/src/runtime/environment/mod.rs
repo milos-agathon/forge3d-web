@@ -28,6 +28,23 @@ pub(super) fn plan(
     s: Option<&Environment>,
     planned: &mut super::memory::MemoryLedger,
 ) -> Result<Option<Environment>, WebError> {
+    let textured = if s.is_some_and(|s| {
+        s.water
+            .iter()
+            .any(|w| w.terrain_mask && w.mode != "disabled" && w.reflection == "planar")
+    }) {
+        super::shader_variants::runtime_terrain_lighting_features(runtime)?.samples_scene_textures()
+    } else {
+        false
+    };
+    plan_for_profile(runtime, s, planned, textured)
+}
+pub(super) fn plan_for_profile(
+    runtime: &Forge3DRuntime,
+    s: Option<&Environment>,
+    planned: &mut super::memory::MemoryLedger,
+    textured: bool,
+) -> Result<Option<Environment>, WebError> {
     let Some(s) = s else {
         planned.release(KEY);
         return Ok(None);
@@ -41,23 +58,7 @@ pub(super) fn plan(
         .iter()
         .any(|w| w.terrain_mask && w.mode != "disabled" && w.reflection == "planar")
     {
-        let features = super::shader_variants::runtime_terrain_lighting_features(runtime)?;
-        let required = if features.samples_scene_textures() {
-            20
-        } else {
-            15
-        };
-        if context
-            .device
-            .limits()
-            .max_sampled_textures_per_shader_stage
-            < required
-        {
-            return Err(WebError::new(
-                Forge3DErrorCode::UnsupportedFeature,
-                format!("masked-terrain reflection profile requires {required} sampled textures"),
-            ));
-        }
+        super::terrain_profile::check_reflection(&context.device.limits(), textured)?;
     }
     let mut selected = s.clone();
     let bytes = |s: &Environment| s.gpu_bytes(runtime.width, runtime.height);

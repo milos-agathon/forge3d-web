@@ -2,16 +2,21 @@ use crate::runtime::scene::pipelines::WORLD_SHADER;
 use crate::runtime::shader_variants::{specialize, ShaderFeatures};
 pub(super) fn shader(features: ShaderFeatures) -> String {
     let input = "@location(7) instance_row0: vec4<f32>,\n@location(8) instance_row1: vec4<f32>,\n@location(9) instance_row2: vec4<f32>,\n@location(10) instance_row3: vec4<f32>,\n@location(11) instance_meta: vec4<f32>,\n";
-    let source = WORLD_SHADER.replacen("struct VertexInput {", &format!("struct VertexInput {{\n{input}"), 1)
-        .replace("output.position = camera.view_projection * vec4<f32>(input.position, 1.0);", VERTEX)
-        .replace("output.normal = input.normal;", "output.normal = scatter_normal;")
-        .replace("output.tangent = input.tangent;", "output.tangent = scatter_tangent;")
-        .replace("output.world_position = input.position;", "output.world_position = scatter_position;")
-        .replace("output.previous_position = input.previous_position;", "output.previous_position = scatter_previous_position;")
-        .replace("output.object_id = input.object_id;", "output.object_id = u32(input.instance_meta.x);")
-        .replace("return vec4<f32>(lit, alpha);", "return scatter_shade(lit, alpha, input.world_position, forge3d_safe_direction(input.normal));")
-        .replace("var output: CaptureSurfaceOutput;", "let visibility = scatter_shade(vec3<f32>(1.0), 1.0, input.world_position, forge3d_safe_direction(input.normal));\nvar output: CaptureSurfaceOutput;");
+    let source = compose_world(WORLD_SHADER, input).expect("valid scatter composition points");
     specialize(&format!("{source}\n{HELPERS}"), features)
+}
+fn compose_world(template: &str, input: &str) -> Result<String, String> {
+    crate::runtime::shader_composition::compose(template, &[
+        ("instance-input", input),
+        ("vertex-position", VERTEX),
+        ("vertex-normal", "output.normal = scatter_normal;"),
+        ("vertex-tangent", "output.tangent = scatter_tangent;"),
+        ("vertex-world", "output.world_position = scatter_position;"),
+        ("vertex-previous", "output.previous_position = scatter_previous_position;"),
+        ("vertex-id", "output.object_id = u32(input.instance_meta.x);"),
+        ("shade", "return scatter_shade(lit, alpha, input.world_position, forge3d_safe_direction(input.normal));"),
+        ("surface-coverage", "let visibility = scatter_shade(vec3<f32>(1.0), 1.0, input.world_position, forge3d_safe_direction(input.normal));\nvar output: CaptureSurfaceOutput;"),
+    ])
 }
 const VERTEX: &str = r#"
     let matrix = transpose(mat4x4<f32>(input.instance_row0, input.instance_row1, input.instance_row2, input.instance_row3));
@@ -97,6 +102,21 @@ fn scatter_shade(lit: vec3<f32>, initial_alpha: f32, position: vec3<f32>, normal
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn damaged_world_composition_is_rejected() {
+        assert!(compose_world(
+            &WORLD_SHADER.replace("@compose-begin vertex-normal", "removed"),
+            ""
+        )
+        .is_err());
+        assert!(compose_world(
+            &format!(
+                "{WORLD_SHADER}\n// @compose-begin vertex-normal\n// @compose-end vertex-normal"
+            ),
+            ""
+        )
+        .is_err());
+    }
     #[test]
     fn scatter_display_and_capture_variants_validate() {
         for flags in [ShaderFeatures::from_bits(0), ShaderFeatures::ALL] {

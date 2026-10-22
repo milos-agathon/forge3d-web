@@ -6,7 +6,6 @@ use crate::{
     runtime::Forge3DRuntime,
 };
 pub(crate) use bindings::masked_layout;
-#[cfg(test)]
 pub(crate) use bindings::masked_layout_entries;
 use forge3d_core::{environment::Environment, gpu::GpuContext};
 // Camera markers consumed by terrain WGSL: the masked pass retains the

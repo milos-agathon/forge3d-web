@@ -77,17 +77,8 @@ pub enum TerrainGeometry {
     Clipmap(TerrainClipmapGeometry),
 }
 
-/// Resolved clipmap configuration (A1 defaults applied).
-#[derive(Debug, Clone, PartialEq)]
-pub struct TerrainClipmapGeometry {
-    pub ring_count: u32,
-    pub ring_resolution: u32,
-    pub center_resolution: u32,
-    pub skirt_depth: f32,
-    pub morph_range: f32,
-    /// World size of one level-0 grid unit per axis.
-    pub base_cell_size: [f32; 2],
-}
+pub mod clipmap_config;
+pub use clipmap_config::TerrainClipmapGeometry;
 
 /// Queue LOD-coalescing policy for streamed height tiles.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -1051,7 +1042,7 @@ fn resolve_geometry_options(
         // Streaming implies clipmap geometry (A1 defaults) when no geometry
         // block was committed.
         return Ok(if streaming {
-            TerrainGeometry::Clipmap(TerrainClipmapGeometry::with_spacing(spacing))
+            TerrainGeometry::Clipmap(TerrainClipmapGeometry::resolve(None, spacing)?)
         } else {
             TerrainGeometry::Grid
         });
@@ -1209,111 +1200,6 @@ impl TerrainStreaming {
             });
         }
         Ok(())
-    }
-}
-
-impl TerrainClipmapGeometry {
-    /// A1 defaults with `base_cell_size` equal to the terrain spacing.
-    fn with_spacing(spacing: [f32; 2]) -> Self {
-        Self {
-            ring_count: 4,
-            ring_resolution: 64,
-            center_resolution: 64,
-            skirt_depth: 10.0,
-            morph_range: 0.3,
-            base_cell_size: spacing,
-        }
-    }
-
-    fn resolve(clipmap: Option<&TerrainClipmapOptions>, spacing: [f32; 2]) -> Result<Self> {
-        let default = Self::with_spacing(spacing);
-        let mut resolved = match clipmap {
-            Some(clipmap) => Self {
-                ring_count: clipmap.ring_count.unwrap_or(default.ring_count),
-                ring_resolution: clipmap.ring_resolution.unwrap_or(default.ring_resolution),
-                center_resolution: clipmap
-                    .center_resolution
-                    .unwrap_or(default.center_resolution),
-                skirt_depth: clipmap.skirt_depth.unwrap_or(default.skirt_depth),
-                morph_range: clipmap.morph_range.unwrap_or(default.morph_range),
-                base_cell_size: clipmap.base_cell_size.unwrap_or(spacing),
-            },
-            None => default,
-        };
-        resolved.validate()?;
-        // Native `with_morph_range` clamps to [0, 1].
-        resolved.morph_range = resolved.morph_range.clamp(0.0, 1.0);
-        Ok(resolved)
-    }
-
-    /// Mirrors `ClipmapConfig` validation (feature-gated module) so the
-    /// wording is identical for non-webgpu builds.
-    fn validate(&self) -> Result<()> {
-        if !(1..=16).contains(&self.ring_count) {
-            return Err(Forge3dError::InvalidInput {
-                field: "clipmap.ring_count".to_string(),
-                message: format!("ring_count must be in [1, 16], got {}", self.ring_count),
-            });
-        }
-        if self.ring_resolution < 4 || !self.ring_resolution.is_multiple_of(2) {
-            return Err(Forge3dError::InvalidInput {
-                field: "clipmap.ring_resolution".to_string(),
-                message: format!(
-                    "ring_resolution must be even and >= 4, got {}",
-                    self.ring_resolution
-                ),
-            });
-        }
-        if self.center_resolution < 4 || !self.center_resolution.is_multiple_of(2) {
-            return Err(Forge3dError::InvalidInput {
-                field: "clipmap.center_resolution".to_string(),
-                message: format!(
-                    "center_resolution must be even and >= 4, got {}",
-                    self.center_resolution
-                ),
-            });
-        }
-        if !self.skirt_depth.is_finite() || self.skirt_depth < 0.0 {
-            return Err(Forge3dError::InvalidInput {
-                field: "clipmap.skirt_depth".to_string(),
-                message: format!(
-                    "skirt_depth must be finite and >= 0, got {}",
-                    self.skirt_depth
-                ),
-            });
-        }
-        if self.morph_range.is_nan() {
-            return Err(Forge3dError::InvalidInput {
-                field: "clipmap.morph_range".to_string(),
-                message: "morph_range must not be NaN".to_string(),
-            });
-        }
-        if !self.base_cell_size[0].is_finite()
-            || self.base_cell_size[0] <= 0.0
-            || !self.base_cell_size[1].is_finite()
-            || self.base_cell_size[1] <= 0.0
-        {
-            return Err(Forge3dError::InvalidInput {
-                field: "clipmap.base_cell_size".to_string(),
-                message: "base_cell_size must be finite and greater than zero".to_string(),
-            });
-        }
-        Ok(())
-    }
-}
-
-#[cfg(feature = "webgpu")]
-impl TerrainClipmapGeometry {
-    /// Equivalent `terrain_clipmap` configuration for the clipmap mesh/layout
-    /// APIs (values already validated by `resolve`).
-    pub fn clipmap_config(&self) -> Result<crate::terrain_clipmap::ClipmapConfig> {
-        crate::terrain_clipmap::ClipmapConfig::new(
-            self.ring_count,
-            self.ring_resolution,
-            self.center_resolution,
-            self.skirt_depth,
-            self.morph_range,
-        )
     }
 }
 

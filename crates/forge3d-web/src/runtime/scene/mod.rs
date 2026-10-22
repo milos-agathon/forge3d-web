@@ -127,18 +127,7 @@ fn prepare_scene(
             .any(|w| w.terrain_mask && w.mode != "disabled" && w.reflection == "planar")
     }) {
         let textured = super::shader_variants::terrain_texture_flags(&parsed.materials) != 0;
-        let required = if textured { 20 } else { 15 };
-        if context
-            .device
-            .limits()
-            .max_sampled_textures_per_shader_stage
-            < required
-        {
-            return Err(WebError::new(
-                Forge3DErrorCode::UnsupportedFeature,
-                format!("masked-terrain reflections require {required} sampled textures"),
-            ));
-        }
+        super::terrain_profile::check_reflection(&context.device.limits(), textured)?;
     }
     let built = if parsed.nodes.is_empty() && parsed.passes.is_empty() {
         None
@@ -247,7 +236,12 @@ fn prepare_scene(
     let ibl_selection = admission.ibl;
     let mut environment = super::environment::materialize(
         runtime,
-        super::environment::plan(runtime, admission.environment.as_ref(), &mut planned)?,
+        super::environment::plan_for_profile(
+            runtime,
+            admission.environment.as_ref(),
+            &mut planned,
+            super::shader_variants::terrain_texture_flags(&parsed.materials) != 0,
+        )?,
     )?;
     if let Some(e) = &mut environment {
         e.original_lighting = Some((

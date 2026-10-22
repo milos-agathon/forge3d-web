@@ -178,17 +178,10 @@ pub fn generate_clipmap_mesh_js(
         )));
     }
     let core = options.to_core();
-    // A1 defaults, matching `TerrainClipmapGeometry::with_spacing` /
-    // `resolve` (base_cell_size does not affect mesh generation).
-    let config = forge3d_core::terrain_clipmap::ClipmapConfig::new(
-        core.ring_count.unwrap_or(4),
-        core.ring_resolution.unwrap_or(64),
-        core.center_resolution.unwrap_or(64),
-        core.skirt_depth.unwrap_or(10.0),
-        core.morph_range.unwrap_or(0.3).clamp(0.0, 1.0),
-    )
-    .map_err(crate::error::map_core_error)
-    .map_err(crate::error::to_js_error)?;
+    let config = forge3d_core::terrain::TerrainClipmapGeometry::resolve(Some(&core), [1.0, 1.0])
+        .and_then(|resolved| resolved.clipmap_config())
+        .map_err(crate::error::map_core_error)
+        .map_err(crate::error::to_js_error)?;
     let mesh = forge3d_core::terrain_clipmap::clipmap_generate(
         &config,
         [center[0], center[1]],

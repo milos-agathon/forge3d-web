@@ -96,11 +96,10 @@ pub(super) fn vt_gpu_bytes(
     material_count: u32,
     max_mip_levels: u32,
 ) -> u64 {
-    let atlas = u64::from(settings.atlas_size) * u64::from(settings.atlas_size) * 4;
-    let base_pages = u64::from(layer.pages_x0()) * u64::from(layer.pages_y0());
-    let page_table = base_pages * u64::from(material_count) * u64::from(max_mip_levels) * 16;
-    let feedback = base_pages * u64::from(material_count) * u64::from(max_mip_levels) * 16;
-    atlas + page_table + std::mem::size_of::<TerrainVTUniformsGpu>() as u64 + feedback * 2
+    let mut resolved = settings.clone();
+    resolved.max_mip_levels = max_mip_levels;
+    forge3d_core::terrain_vt::address::VtAddressPlan::new(layer, &resolved, material_count)
+        .gpu_bytes(std::mem::size_of::<TerrainVTUniformsGpu>() as u64)
 }
 
 pub(super) struct TerrainVtState {
@@ -197,7 +196,7 @@ impl TerrainVtState {
             ..Default::default()
         });
 
-        let layers = (state.material_count() * state.max_mip_levels()).max(1);
+        let layers = state.address_plan().layers();
         let page_table = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("forge3d-web-terrain-vt-page-table"),
             size: wgpu::Extent3d {
@@ -240,11 +239,7 @@ impl TerrainVtState {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let feedback_entries = u64::from(state.material_count())
-            * u64::from(state.max_mip_levels())
-            * u64::from(state.pages_x0())
-            * u64::from(state.pages_y0());
-        let feedback_bytes = feedback_entries.max(1) * 16;
+        let feedback_bytes = state.address_plan().feedback_bytes();
         // 0xFF init: untouched slots decode to material index 0xFFFFFFFE
         // which `apply_feedback` drops (not a registered source).
         let feedback_init = vec![0xFFu8; feedback_bytes as usize];

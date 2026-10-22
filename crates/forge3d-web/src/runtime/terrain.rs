@@ -1,3 +1,8 @@
+#[cfg(test)]
+use super::terrain_profile::{
+    TERRAIN_BASE_SAMPLED_TEXTURES, TERRAIN_SCENE_TEXTURE_SLOTS, W08_STORAGE_BUFFERS_VT,
+    W09_STORAGE_BUFFERS_VT_PROBES,
+};
 use forge3d_core::gpu::GpuContext;
 use forge3d_core::memory::{MemoryCategory, OverflowPolicy, QualityLevel};
 use forge3d_core::terrain::{HeightfieldAoConfig, SunVisibilityConfig, TerrainDebugView};
@@ -23,126 +28,8 @@ pub(super) const TERRAIN_SUN_KEY: &str = "terrain:sun-visibility";
 pub(super) const TERRAIN_ANALYSIS_FALLBACK_KEY: &str = "terrain:analysis-fallback";
 pub(super) const TERRAIN_ANALYSIS_FALLBACK_BYTES: u64 = 4;
 pub(super) const DEPTH_TEXTURE_KEY: &str = "depth";
-// W08 (E0): fragment-visible sampled-texture budget. Outside W08 the terrain
-// pipeline samples 11 textures (group 0 heightmap/AO/sun/material albedo+aux,
-// the LTC LUT, the IBL and shadow maps); only a textured material 0 adds the
-// five scene `TextureSet` textures of group 2. The W08 slots stack on top:
-// the height page table (binding 13), then the overlay array (14), then the
-// VT page table (17). Untextured terrain therefore fits every W08 slot in
-// the WebGPU default of 16; textured terrain needs 17 / 18 / 19.
-pub(super) const TERRAIN_BASE_SAMPLED_TEXTURES: u32 = 11;
-pub(super) const TERRAIN_SCENE_TEXTURE_SLOTS: u32 = 5;
-pub(super) const W08_SAMPLED_TEXTURES_CLIPMAP: u32 =
-    TERRAIN_BASE_SAMPLED_TEXTURES + TERRAIN_SCENE_TEXTURE_SLOTS;
-pub(super) const W08_STORAGE_BUFFERS_VT: u32 = 3;
-pub(super) const W09_STORAGE_BUFFERS_VT_PROBES: u32 = 4;
-
-/// Which stacked W08 group-0 slots a terrain pipeline profile can declare.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) struct W08Slots {
-    /// Binding 13 (streamed height page table).
-    pub(super) page_table: bool,
-    /// Bindings 14-16 (overlay composite, sampler, uniform).
-    pub(super) overlays: bool,
-    /// Bindings 17-19 (VT page table, uniform, feedback ring).
-    pub(super) vt: bool,
-}
-
-impl W08Slots {
-    /// Slots that fit the negotiated limits for the untextured
-    /// (`scene_textures == false`) or textured pipeline profile.
-    pub(super) fn for_limits(sampled: u32, storage_buffers: u32, scene_textures: bool) -> Self {
-        Self::for_limits_with_probes(sampled, storage_buffers, scene_textures, false)
-    }
-
-    pub(super) fn for_limits_with_probes(
-        sampled: u32,
-        storage_buffers: u32,
-        scene_textures: bool,
-        probes: bool,
-    ) -> Self {
-        let headroom = sampled.saturating_sub(Self::base(scene_textures));
-        let vt_storage = if probes {
-            W09_STORAGE_BUFFERS_VT_PROBES
-        } else {
-            W08_STORAGE_BUFFERS_VT
-        };
-        Self {
-            page_table: headroom >= 1,
-            overlays: headroom >= 2,
-            vt: headroom >= 3 && storage_buffers >= vt_storage,
-        }
-    }
-
-    pub(super) fn of_device(device: &wgpu::Device, scene_textures: bool, probes: bool) -> Self {
-        let limits = device.limits();
-        Self::for_limits_with_probes(
-            limits.max_sampled_textures_per_shader_stage,
-            limits.max_storage_buffers_per_shader_stage,
-            scene_textures,
-            probes,
-        )
-    }
-
-    fn base(scene_textures: bool) -> u32 {
-        TERRAIN_BASE_SAMPLED_TEXTURES
-            + if scene_textures {
-                TERRAIN_SCENE_TEXTURE_SLOTS
-            } else {
-                0
-            }
-    }
-
-    /// Sampled-texture limit the `stack`-th W08 slot (1 = page table,
-    /// 2 = overlays, 3 = VT) needs in the given profile.
-    pub(super) fn required(scene_textures: bool, stack: u32) -> u32 {
-        Self::base(scene_textures) + stack
-    }
-
-    /// Whether a group-0 binding belongs to this profile's layout.
-    pub(super) fn keeps(self, binding: u32) -> bool {
-        match binding {
-            13 => self.page_table,
-            14..=16 => self.overlays,
-            17..=19 => self.vt,
-            _ => true,
-        }
-    }
-}
-
-/// Typed `UNSUPPORTED_FEATURE` for a W08 feature the profile cannot bind.
-pub(super) fn w08_limit_error(
-    feature: &str,
-    stack: u32,
-    scene_textures: bool,
-    sampled: u32,
-    probes: bool,
-) -> WebError {
-    let storage = if stack == 3 {
-        let required = if probes {
-            W09_STORAGE_BUFFERS_VT_PROBES
-        } else {
-            W08_STORAGE_BUFFERS_VT
-        };
-        format!(" and maxStorageBuffersPerShaderStage >= {required}")
-    } else {
-        String::new()
-    };
-    let textured = if scene_textures {
-        format!(
-            " (terrain material 0 is textured, which binds {TERRAIN_SCENE_TEXTURE_SLOTS} more sampled textures)"
-        )
-    } else {
-        String::new()
-    };
-    WebError::new(
-        Forge3DErrorCode::UnsupportedFeature,
-        format!(
-            "{feature} requires maxSampledTexturesPerShaderStage >= {}{storage}, device has {sampled}{textured}",
-            W08Slots::required(scene_textures, stack)
-        ),
-    )
-}
+use super::terrain_profile::{terrain_layout_entries, ProfileKey};
+pub(super) use super::terrain_profile::{w08_limit_error, W08Slots, W08_SAMPLED_TEXTURES_CLIPMAP};
 pub(super) const TERRAIN_CLIPMAP_KEY: &str = "terrain:clipmap";
 pub(super) const TERRAIN_HEIGHT_STREAM_KEY: &str = "terrain:height-stream";
 pub(super) const TERRAIN_LOD_SELECT_KEY: &str = "terrain:lod-select";
@@ -462,7 +349,9 @@ pub(super) fn set_terrain_options_runtime(
     let sampled = runtime.max_sampled_textures_per_shader_stage;
     let scene_textures = features.samples_scene_textures();
     let probes = features.probes();
-    let slots = W08Slots::of_device(&context.device, scene_textures, probes);
+    let profile = ProfileKey::from_features(features).resolve(&context.device.limits());
+    profile.check(&context.device.limits())?;
+    let slots = profile.slots;
     if validated.input.clipmap_geometry().is_some() && sampled < W08_SAMPLED_TEXTURES_CLIPMAP {
         return Err(WebError::new(
             Forge3DErrorCode::UnsupportedFeature,
@@ -1132,187 +1021,6 @@ pub(super) fn terrain_bind_group_layout(
     })
 }
 
-/// Group-0 layout entries for the W08 `slots` of a pipeline profile.
-///
-/// W08 (E0): binding 12 (`TerrainGeometryUniform`) is always present —
-/// grid-mode bind groups fill it with a zeroed uniform so shaders never
-/// read it — and the stacked W08 slots (13, 14-16, 17-19) are appended when
-/// the profile's sampled-texture budget covers them.
-pub(super) fn terrain_layout_entries(slots: W08Slots) -> Vec<wgpu::BindGroupLayoutEntry> {
-    let material = super::terrain_material::material_layout_entries();
-    let mut entries = vec![
-        wgpu::BindGroupLayoutEntry {
-            binding: 0,
-            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Texture {
-                sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                view_dimension: wgpu::TextureViewDimension::D2,
-                multisampled: false,
-            },
-            count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-            binding: 1,
-            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
-            count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-            binding: 2,
-            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-            binding: 3,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-            binding: 4,
-            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-            binding: 5,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Texture {
-                sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                view_dimension: wgpu::TextureViewDimension::D2,
-                multisampled: false,
-            },
-            count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-            binding: 6,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Texture {
-                sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                view_dimension: wgpu::TextureViewDimension::D2,
-                multisampled: false,
-            },
-            count: None,
-        },
-        material[0],
-        material[1],
-        material[2],
-        material[3],
-        material[4],
-        // W08 (E2/E3): clipmap + streaming parameters. Always bound — a
-        // zeroed uniform for plain grid inputs — so one layout serves every
-        // terrain variant.
-        wgpu::BindGroupLayoutEntry {
-            binding: 12,
-            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        },
-    ];
-    if slots.page_table {
-        // W08 (E3): `height_page_table` — u32 array, one layer per lod. The
-        // streaming-aware height helpers run in both vertex and fragment
-        // code, so both stages need visibility.
-        entries.push(wgpu::BindGroupLayoutEntry {
-            binding: 13,
-            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Texture {
-                sample_type: wgpu::TextureSampleType::Uint,
-                view_dimension: wgpu::TextureViewDimension::D2Array,
-                multisampled: false,
-            },
-            count: None,
-        });
-    }
-    // W08 (E5): overlay composite texture + sampler + control/modes uniform
-    // (bindings 14-16). Entries exist whenever the negotiated limit covers
-    // them — off-by-default states bind 1x1 transparent fallbacks.
-    if slots.overlays {
-        entries.extend([
-            wgpu::BindGroupLayoutEntry {
-                binding: 14,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    view_dimension: wgpu::TextureViewDimension::D2Array,
-                    multisampled: false,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 15,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 16,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-        ]);
-    }
-    // W08 (E6): VT page table (unfilterable RGBA32Float), VT uniforms and
-    // the fragment-written feedback ring (bindings 17-19).
-    if slots.vt {
-        entries.extend([
-            wgpu::BindGroupLayoutEntry {
-                binding: 17,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                    view_dimension: wgpu::TextureViewDimension::D2Array,
-                    multisampled: false,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 18,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 19,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: false },
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-        ]);
-    }
-    entries
-}
-
 /// Feature-specialized terrain pipelines for one runtime, keyed by shader
 /// features and surface format. Init-time validation compiles the variant for
 /// the default state; terrain commits and renders reuse or add variants.
@@ -1438,8 +1146,8 @@ impl TerrainPipelineCache {
             for reflection in [false, true] {
                 for aerial in [false, true] {
                     if reflection
-                        && textured
-                        && device.limits().max_sampled_textures_per_shader_stage < 20
+                        && super::terrain_profile::check_reflection(&device.limits(), textured)
+                            .is_err()
                     {
                         masked_layouts.push(textured_pipeline_layout.clone());
                         continue;
@@ -1512,10 +1220,7 @@ impl TerrainPipelineCache {
     ) -> wgpu::RenderPipeline {
         let features = features.with_capture();
         let pipeline_layout = if features.masked_reflection() || features.aerial() {
-            &self.masked_layouts[usize::from(features.probes()) * 8
-                + usize::from(features.samples_scene_textures()) * 4
-                + usize::from(features.masked_reflection()) * 2
-                + usize::from(features.aerial())]
+            &self.masked_layouts[ProfileKey::from_features(features).index()]
         } else {
             match (features.probes(), features.samples_scene_textures()) {
                 (false, false) => &self.pipeline_layout,
@@ -1588,10 +1293,7 @@ impl TerrainPipelineCache {
         surface_format: wgpu::TextureFormat,
     ) -> TerrainPipelineVariant {
         let pipeline_layout = if features.masked_reflection() || features.aerial() {
-            &self.masked_layouts[usize::from(features.probes()) * 8
-                + usize::from(features.samples_scene_textures()) * 4
-                + usize::from(features.masked_reflection()) * 2
-                + usize::from(features.aerial())]
+            &self.masked_layouts[ProfileKey::from_features(features).index()]
         } else {
             match (features.probes(), features.samples_scene_textures()) {
                 (false, false) => &self.pipeline_layout,
@@ -3784,6 +3486,7 @@ pub(super) const TERRAIN_SHADER: &str = concat!(
     include_str!("terrain_water.wgsl"),
     include_str!("terrain_material.wgsl"),
     include_str!("terrain_w08.wgsl"),
+    include_str!("../../../forge3d-core/src/terrain_vt/address.wgsl"),
     r#"
 struct VertexInput {
     @builtin(vertex_index) vertex_index: u32,

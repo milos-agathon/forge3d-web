@@ -443,6 +443,11 @@ pub(super) fn sync_pipelines(runtime: &mut super::Forge3DRuntime) -> Result<(), 
             features.with_texture_flags(terrain_texture_flags(&lighting.material_state))
         }),
     );
+    if runtime.terrain.is_some() {
+        super::terrain_profile::ProfileKey::from_features(terrain_features)
+            .resolve(&context.device.limits())
+            .check(&context.device.limits())?;
+    }
     if let (Some(terrain), Some(cache)) = (
         runtime.terrain.as_mut(),
         runtime.terrain_pipeline_cache.as_mut(),
