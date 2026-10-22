@@ -1,3 +1,4 @@
+import {SourceEntities,entityIfMatch} from "./source-entity.js";
 import { Forge3DError } from "./runtime-failure.js";
 import type { PointDatasetOptions, PointData } from "./pointcloud-types.js";
 import { RangeScheduler } from "./range-scheduler.js";
@@ -20,6 +21,7 @@ import { getWorkerJobTimeoutMs } from "./browser-resources.js";
 /** Dataset lifecycle, split compressed/decoded budgets and cancellable W02 worker dispatch. */
 export class PointSource {
   readonly scheduler: RangeScheduler;
+  readonly entities:SourceEntities;
   readonly decoded: PointCache<PointData>;
   readonly compressed: MemoryByteCache;
   readonly maxBytes: number;
@@ -38,7 +40,9 @@ export class PointSource {
     pointInteger(cache, "cacheBytes", 2);
     this.compressed = new MemoryByteCache(Math.floor(cache / 2));
     this.decoded = new PointCache(cache - Math.floor(cache / 2));
+    this.entities=new SourceEntities(this.compressed,options.persistentCache,true);
     this.scheduler = new RangeScheduler({
+      entities:this.entities,
       memoryCache: this.compressed,
       ...(options.fetch ? { fetch: options.fetch } : {}),
       ...(options.persistentCache
@@ -71,27 +75,35 @@ export class PointSource {
   }
   async read(url: string, signal?: AbortSignal): Promise<Uint8Array> {
     const s = this.signal(signal),
-      key = `point-file:${url}`,
+      sourceKey=`url:${url}`,
+      validator=await this.entities.validator(sourceKey),
+      key = `point-file:${url}|${validator??"none"}`,
       cached =
         this.compressed.get(key) ??
         (await this.options.persistentCache?.get(key));
     pointCancelled(s);
+    this.entities.check(sourceKey);
     if (cached) {
       pointLimit(cached.length, this.maxBytes);
       return cached;
     }
     try {
+      const match=entityIfMatch(validator),headers:Record<string,string>=match?{"If-Match":match}:{};
       const response = await (this.options.fetch
-        ? this.options.fetch(url, { headers: {}, signal: s })
-        : fetch(url, { signal: s }));
+        ? this.options.fetch(url, { headers, signal: s })
+        : fetch(url, { headers, signal: s }));
+      if(response.status===412){await response.body?.cancel();await this.entities.invalidate(sourceKey);}
       const bytes = await readByteSource(response, {
         maxBytes: this.maxBytes,
         signal: s,
       });
       pointCancelled(s);
       pointLive(this.disposed);
-      this.compressed.put(key, bytes);
-      await this.options.persistentCache?.put(key, bytes);
+      await this.entities.observe(sourceKey,response.headers,bytes.length,"whole");
+      const storedKey=`point-file:${url}|${this.entities.current(sourceKey)??"none"}`;
+      this.entities.track(sourceKey,storedKey);
+      this.compressed.put(storedKey, bytes);
+      await this.options.persistentCache?.put(storedKey, bytes);
       return bytes;
     } catch (e) {
       pointCancelled(s);

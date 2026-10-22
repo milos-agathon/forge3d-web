@@ -1,3 +1,4 @@
+import {SourceEntities,entityIfMatch} from "./source-entity.js";
 // W08/T09 priority HTTP range scheduler (F1).
 //
 // `RangeScheduler.request(source, offset, length, { priority, signal })`
@@ -27,6 +28,7 @@ export type RangeFetchLike = (
 
 export interface RangeSchedulerOptions {
   fetch?: RangeFetchLike;
+  entities?: SourceEntities;
   maxConcurrent?: number;
   coalesceGapBytes?: number;
   maxCoalescedBytes?: number;
@@ -97,18 +99,6 @@ function rangeCacheKey(
   return `${RANGE_KEY_PREFIX}${sourceKey}|${validator ?? "none"}|${offset}:${length}`;
 }
 
-function validatorFromHeaders(headers: Headers): string | undefined {
-  const etag = headers.get("etag");
-  if (etag !== null && etag.length > 0) {
-    return `etag:${etag}`;
-  }
-  const lastModified = headers.get("last-modified");
-  if (lastModified !== null && lastModified.length > 0) {
-    return `last-modified:${lastModified}`;
-  }
-  return undefined;
-}
-
 interface ContentRange {
   first: number;
   last: number;
@@ -137,15 +127,6 @@ function parseContentRange(raw: string | null): ContentRange | undefined {
   return { first, last, total };
 }
 
-/** Strong ETag usable in `If-Match` (weak ETags never match there). */
-function strongEtag(validator: string | undefined): string | undefined {
-  if (validator === undefined || !validator.startsWith("etag:")) {
-    return undefined;
-  }
-  const etag = validator.slice("etag:".length);
-  return etag.startsWith("W/") ? undefined : etag;
-}
-
 function contentRangeMismatch(
   unit: { offset: number; length: number },
   raw: string | null,
@@ -169,11 +150,7 @@ export class RangeScheduler {
   readonly #queue: RangeUnit[] = [];
   readonly #inFlight = new Set<RangeUnit>();
   readonly #byKey = new Map<string, RangeUnit>();
-  readonly #validators = new Map<string, string>();
-  readonly #fileSizes = new Map<string, number>();
-  /** Cache keys written per source, so a stale validator's entries can be
-   * dropped. */
-  readonly #writtenKeys = new Map<string, Set<string>>();
+  readonly #entities:SourceEntities;
   #sequence = 0;
   #disposed = false;
   #requested = 0;
@@ -191,6 +168,7 @@ export class RangeScheduler {
   #offlineServed = 0;
 
   constructor(options: RangeSchedulerOptions = {}) {
+    this.#entities=options.entities??new SourceEntities(options.memoryCache,options.persistentCache);
     this.#fetch = options.fetch;
     this.#maxConcurrent = options.maxConcurrent ?? DEFAULT_MAX_CONCURRENT;
     this.#coalesceGapBytes =
@@ -322,7 +300,7 @@ export class RangeScheduler {
 
   /** File size learned from `Content-Range` totals, when known. */
   fileSize(source: string | URL | Blob): number | undefined {
-    return this.#fileSizes.get(sourceKeyFor(source));
+    return this.#entities.size(sourceKeyFor(source));
   }
 
   dispose(): void {
@@ -377,52 +355,8 @@ export class RangeScheduler {
     this.#byKey.delete(unit.key);
   }
 
-  async #validatorFor(sourceKey: string): Promise<string | undefined> {
-    const known = this.#validators.get(sourceKey);
-    if (known !== undefined) {
-      return known;
-    }
-    const stored = await this.#persistentGet(
-      `${VALIDATOR_META_PREFIX}${sourceKey}`,
-    );
-    if (stored !== undefined) {
-      const validator = new TextDecoder().decode(stored);
-      this.#validators.set(sourceKey, validator);
-      return validator;
-    }
-    return undefined;
-  }
-
-  async #rememberValidator(
-    sourceKey: string,
-    headers: Headers,
-    total: number | undefined,
-  ): Promise<void> {
-    if (total !== undefined) {
-      this.#fileSizes.set(sourceKey, total);
-    }
-    const fromHeaders = validatorFromHeaders(headers);
-    const validator =
-      fromHeaders ??
-      (total !== undefined ? `size:${total}` : undefined);
-    if (validator === undefined) {
-      return;
-    }
-    const previous = this.#validators.get(sourceKey);
-    if (previous === validator) {
-      return;
-    }
-    this.#validators.set(sourceKey, validator);
-    try {
-      await this.#persistentCache?.put(
-        `${VALIDATOR_META_PREFIX}${sourceKey}`,
-        new TextEncoder().encode(validator),
-      );
-    } catch {
-      // Validator persistence is best-effort.
-    }
-  }
-
+  async #validatorFor(sourceKey:string):Promise<string|undefined>{return this.#entities.validator(sourceKey);}
+  async #rememberValidator(sourceKey:string,headers:Headers,total:number|undefined):Promise<void>{await this.#entities.observe(sourceKey,headers,total);}
   /** Persistent reads are best-effort: a failing store is a miss. */
   async #persistentGet(key: string): Promise<Uint8Array | undefined> {
     try {
@@ -436,23 +370,7 @@ export class RangeScheduler {
    * Forget a validator the server no longer honours (412, or a 200 to an
    * `If-Match` request) together with every cache entry written under it.
    */
-  async #dropValidator(sourceKey: string): Promise<void> {
-    this.#validators.delete(sourceKey);
-    this.#fileSizes.delete(sourceKey);
-    const keys = [
-      `${VALIDATOR_META_PREFIX}${sourceKey}`,
-      ...(this.#writtenKeys.get(sourceKey) ?? []),
-    ];
-    this.#writtenKeys.delete(sourceKey);
-    for (const key of keys) {
-      this.#memoryCache?.delete?.(key);
-      try {
-        await this.#persistentCache?.delete(key);
-      } catch {
-        // Deletion is best-effort; the validator is part of the key.
-      }
-    }
-  }
+  async #dropValidator(sourceKey:string):Promise<void>{await this.#entities.invalidate(sourceKey);}
 
   #pump(): void {
     if (this.#disposed) {
@@ -586,7 +504,7 @@ export class RangeScheduler {
       let retried = false;
       let response: Response;
       for (;;) {
-        const ifMatch = strongEtag(this.#validators.get(unit.sourceKey));
+        const ifMatch = entityIfMatch(this.#entities.current(unit.sourceKey));
         const headers: Record<string, string> = {
           Range: `bytes=${unit.offset}-${requestedLast}`,
         };
@@ -750,7 +668,7 @@ export class RangeScheduler {
     if (this.#persistentCache === undefined) {
       return false;
     }
-    const validator = this.#validators.get(unit.sourceKey);
+    const validator = this.#entities.current(unit.sourceKey);
     const found = new Map<Subscriber, Uint8Array>();
     for (const subscriber of [...unit.subscribers]) {
       const cached = await this.#persistentGet(
@@ -792,7 +710,7 @@ export class RangeScheduler {
     data: Uint8Array,
     options: { skipCacheWrites?: boolean } = {},
   ): Promise<void> {
-    const validator = this.#validators.get(unit.sourceKey);
+    const validator = this.#entities.current(unit.sourceKey);
     for (const subscriber of unit.subscribers.splice(0)) {
       const subStart = subscriber.offset - unit.offset;
       const end = Math.min(subStart + subscriber.length, data.byteLength);
@@ -805,12 +723,7 @@ export class RangeScheduler {
           subscriber.length,
         );
         this.#memoryCache?.put(key, slice);
-        let written = this.#writtenKeys.get(unit.sourceKey);
-        if (written === undefined) {
-          written = new Set();
-          this.#writtenKeys.set(unit.sourceKey, written);
-        }
-        written.add(key);
+        this.#entities.track(unit.sourceKey,key);
         try {
           await this.#persistentCache?.put(key, slice);
         } catch {

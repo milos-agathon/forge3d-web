@@ -1,3 +1,4 @@
+import { SourceEntities } from "./source-entity.js";
 import type { PointDatasetOptions, PointData } from "./pointcloud-types.js";
 import { RangeScheduler } from "./index.js";
 import { MemoryByteCache } from "./index.js";
@@ -7,6 +8,7 @@ export declare class PointSource {
     #private;
     readonly options: PointDatasetOptions;
     readonly scheduler: RangeScheduler;
+    readonly entities: SourceEntities;
     readonly decoded: PointCache<PointData>;
     readonly compressed: MemoryByteCache;
     readonly maxBytes: number;

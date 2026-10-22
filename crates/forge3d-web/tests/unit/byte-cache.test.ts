@@ -254,7 +254,7 @@ describe("persistent adapters", () => {
     const db = {
       objectStoreNames: { contains: () => false },
       createObjectStore: () => objectStore,
-      transaction: () => ({ objectStore: () => objectStore }),
+      transaction: () => {const tx={objectStore:()=>objectStore,oncomplete:null as null|(()=>void)};setTimeout(()=>tx.oncomplete?.(),0);return tx;},
       close: () => {},
     };
     const originalIdb = (globalThis as { indexedDB?: unknown }).indexedDB;

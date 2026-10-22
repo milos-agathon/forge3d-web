@@ -1,6 +1,6 @@
 import { CodecOperations } from './codec-operations.js';
 import { Forge3DError } from './runtime-failure.js';
-import { readByteSource } from './browser-io.js';
+import { ByteReadPlan } from './byte-materialization.js';
 import { MemoryByteCache } from './byte-cache.js';
 import { CodecPersistentCache } from './codec-persistent-cache.js';
 import { CODEC_CATALOG } from './codec-catalog.js';
@@ -49,11 +49,15 @@ export class CodecRegistry {
     return this.#operations.run(options.signal,async (signal,reserve)=>{
       const codec=this.#require(format),parameters=normalizeCodecParameters(format,options.parameters);
       const maxBytes=Math.min(this.#inputLimit,positive(options.maxBytes??this.#inputLimit,'maxBytes'));
-      const known=source instanceof ArrayBuffer||ArrayBuffer.isView(source)?source.byteLength:typeof Blob!=='undefined'&&source instanceof Blob?source.size:undefined;
-      if(known!==undefined&&known>maxBytes)throw codecFailure('RESOURCE_LIMIT_EXCEEDED','input-byte-limit','Codec input exceeds the encoded byte limit',format);
-      reserve((known??maxBytes)*4+16400+this.#outputLimit);
+      let read:ByteReadPlan;
+      try {read=new ByteReadPlan(source,{maxBytes,signal,...(options.onProgress?{onProgress:options.onProgress}:{})});}
+      catch(error) {
+        if(error instanceof Forge3DError&&error.code==='RESOURCE_LIMIT_EXCEEDED')throw codecFailure('RESOURCE_LIMIT_EXCEEDED','input-byte-limit','Codec input exceeds the encoded byte limit',format);
+        throw error;
+      }
+      reserve((read.knownBytes??maxBytes)*4+16400+this.#outputLimit);
       {
-        const bytes=await readByteSource(source,{maxBytes,signal,...(options.onProgress?{onProgress:options.onProgress}:{})});
+        const bytes=await read.read();
         this.#check(signal);
         const artifact=packCodecArtifact(codec,parameters,bytes),cacheKey=CODEC_CACHE_PREFIX+await codecDigest(artifact);
         const value=await this.#dispatch(format,bytes,parameters,signal);this.#check(signal);

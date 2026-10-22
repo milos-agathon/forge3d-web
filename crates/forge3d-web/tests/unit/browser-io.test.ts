@@ -382,3 +382,36 @@ describe("writeByteSink", () => {
     );
   });
 });
+
+describe("owned bounded materialization",()=>{
+  it("rejects direct inputs before copying and Blobs before streaming",async()=>{
+    const slice=vi.spyOn(Uint8Array.prototype,"slice"),buffer=new Uint8Array(8);
+    await expectReject(readByteSource(buffer,{maxBytes:4}),"RESOURCE_LIMIT_EXCEEDED");
+    await expectReject(readByteSource(buffer.buffer,{maxBytes:4}),"RESOURCE_LIMIT_EXCEEDED");
+    expect(slice).not.toHaveBeenCalled();
+    const blob=new Blob([buffer]),stream=vi.spyOn(blob,"stream");
+    await expectReject(readByteSource(blob,{maxBytes:4}),"RESOURCE_LIMIT_EXCEEDED");expect(stream).not.toHaveBeenCalled();
+  });
+  it("cancels and unlocks when progress throws",async()=>{
+    const cancel=vi.fn(),stream=new ReadableStream<Uint8Array>({start(c){c.enqueue(new Uint8Array([1]));},cancel});
+    const failure=new Error("progress failed");
+    await expect(readByteSource(stream,{onProgress(){throw failure;}})).rejects.toBe(failure);
+    expect(cancel).toHaveBeenCalledTimes(1);expect(stream.locked).toBe(false);
+  });
+  it("owns each chunk before the producer or progress callback can reuse it",async()=>{
+    const chunk=new Uint8Array([1,2]);
+    const output=await readByteSource(streamOf([chunk]),{onProgress(p){if(!p.done)chunk.fill(9);}});
+    expect([...output]).toEqual([1,2]);expect(output.buffer).not.toBe(chunk.buffer);
+  });
+  it("bounds unknown streams and releases their reader on overflow",async()=>{
+    const cancel=vi.fn(),stream=new ReadableStream<Uint8Array>({pull(c){c.enqueue(new Uint8Array(3));},cancel});
+    await expectReject(readByteSource(stream,{maxBytes:7}),"RESOURCE_LIMIT_EXCEEDED");
+    expect(cancel).toHaveBeenCalledTimes(1);expect(stream.locked).toBe(false);
+  });
+  it("rejects advertised oversized responses and cancels their body",async()=>{
+    const cancel=vi.fn(),stream=new ReadableStream<Uint8Array>({cancel});
+    const response=new Response(stream,{headers:{"content-length":"20"}});
+    await expectReject(readByteSource(response,{maxBytes:10}),"RESOURCE_LIMIT_EXCEEDED");
+    expect(cancel).toHaveBeenCalledTimes(1);expect(stream.locked).toBe(false);
+  });
+});
