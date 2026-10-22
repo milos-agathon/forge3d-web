@@ -229,7 +229,7 @@ assertNotIncludes(
   "from \"ktx-parse\"",
   "dist must not leave a bare ktx-parse specifier for no-bundler consumers",
 );
-const distVideo = readText(join(root, "dist", "video.js"));
+const distVideo = readText(join(root, "dist", "video-muxer.js"));
 assertIncludes(
   distVideo,
   "import(\"./vendor/mediabunny.js\")",

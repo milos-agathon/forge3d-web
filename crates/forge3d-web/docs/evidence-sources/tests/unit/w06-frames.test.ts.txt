@@ -218,3 +218,36 @@ describe("W06 video export diagnostics", () => {
     ).rejects.toThrow(/key frame/);
   });
 });
+
+describe("owned frame recording",()=>{
+  it("orders concurrent captures and drains them before stop closes the sink",async()=>{
+    let release!:()=>void;
+    const blocked=new Promise<void>(resolve=>{release=resolve;});
+    const names:string[]=[],close=vi.fn();
+    const dumper=new FrameDumper({async write(_frame,name){names.push(name!);if(names.length===1)await blocked;return name!;},close});
+    dumper.startRecording();const a=dumper.captureFrame(frame()),b=dumper.captureFrame(frame());
+    const stopped=dumper.stopRecording();
+    expect(dumper.getFrameCount()).toBe(2);expect(dumper.isRecording()).toBe(false);
+    expect(()=>dumper.startRecording()).toThrow(/draining/);
+    await Promise.resolve();expect(names).toEqual(["frame_0000.png"]);expect(close).not.toHaveBeenCalled();
+    release();expect(await Promise.all([a,b])).toEqual(["frame_0000.png","frame_0001.png"]);
+    expect(await stopped).toBe(2);expect(close).toHaveBeenCalledTimes(1);
+  });
+  it("retains attempted numbering but aborts once when a write fails",async()=>{
+    const failure=new Error("sink rejected"),abort=vi.fn(),close=vi.fn(),write=vi.fn(async()=>{throw failure;});
+    const dumper=new FrameDumper({write,abort,close});dumper.startRecording();
+    const outcomes=Promise.allSettled([dumper.captureFrame(frame()),dumper.captureFrame(frame())]);
+    const stopped=dumper.stopRecording();const rejected=expect(stopped).rejects.toBe(failure);
+    expect((await outcomes).every(r=>r.status==="rejected")).toBe(true);await rejected;
+    expect(dumper.getFrameCount()).toBe(2);expect(write).toHaveBeenCalledTimes(1);expect(abort).toHaveBeenCalledTimes(1);expect(close).not.toHaveBeenCalled();
+  });
+  it("aborts sequence producer failures and failed sink finalization",async()=>{
+    const abort=vi.fn(),close=vi.fn();
+    async function* frames(){yield frame();throw new Error("producer failed");}
+    await expect(dumpFrameSequence(frames(),{write:async()=>"one",close,abort})).rejects.toThrow(/producer failed/);
+    expect(abort).toHaveBeenCalledTimes(1);expect(close).not.toHaveBeenCalled();
+    const failedClose=vi.fn(async()=>{throw new Error("close failed");}),abortClose=vi.fn();
+    await expect(dumpFrameSequence([frame()],{write:async()=>"one",close:failedClose,abort:abortClose})).rejects.toThrow(/close failed/);
+    expect(failedClose).toHaveBeenCalledTimes(1);expect(abortClose).toHaveBeenCalledTimes(1);
+  });
+});

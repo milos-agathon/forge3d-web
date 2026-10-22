@@ -272,6 +272,8 @@ test.describe("W06 readback, AOV/HDR/EXR, offline quality, frames and video", ()
       }
     }
     expect(r.muxDeterministic).toEqual({ webm: true, mp4: true });
+    expect(r.producerClosed).toBe(true);
+    if(r.webm.ok){expect(r.long.frameCount).toBe(120);expect(r.long.peakPacketBytes).toBeGreaterThan(0);expect(r.long.peakPacketBytes).toBeLessThanOrEqual(1<<20);expect(r.long.size).toBeLessThanOrEqual(8<<20);}
     expect(r.unavailable.code).toBe("UNSUPPORTED_FEATURE");
     expect(r.unavailable.details.kind).toBe("video-codec-unavailable");
     expect(r.unavailable.details.webCodecs).toBe(false);

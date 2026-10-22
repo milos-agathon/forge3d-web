@@ -19,12 +19,12 @@
     },
     {
       "path": "crates/forge3d-web/examples/test-w06-capture.html",
-      "sha256": "104dd3188857d7e0750c77e895db1b7baa367c848bdcac8ce1786586342b2fa6",
+      "sha256": "316a5153afb0dbc92b10b87e171310a3a98667aa963317d22050976b023f27ae",
       "snapshot": "evidence-sources/examples/test-w06-capture.html.txt"
     },
     {
       "path": "crates/forge3d-web/tests/unit/w06-frames.test.ts",
-      "sha256": "a463f97ec17bcf4605e5540f4b0d87e15884fb31e7908c0f5761ff9fe56b10a9",
+      "sha256": "39753eeb347195b06b150f2553ed93164f9a0592903f9a2912ad7f852ee6764a",
       "snapshot": "evidence-sources/tests/unit/w06-frames.test.ts.txt"
     },
     {
@@ -34,7 +34,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w06_capture.spec.ts",
-      "sha256": "d9c39a3b6d1944b172ec7865ec58709ff5f7ec7f45bd38b4768b5fb6f6325200",
+      "sha256": "01c6a2bc703dcd1e6f93a3b4b262397e8d2928ccbb82bc0d13ae871dc215ac2b",
       "snapshot": "evidence-sources/tests/playwright/w06_capture.spec.ts.txt"
     },
     {
