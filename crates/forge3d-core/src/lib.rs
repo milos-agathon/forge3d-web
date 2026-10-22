@@ -134,16 +134,12 @@ mod tests {
     fn default_core_root_does_not_expose_staged_native_or_offline_modules() {
         let lib_rs = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"))
             .expect("failed to read core lib.rs");
-        let production_root = lib_rs
-            .split("#[cfg(test)]")
-            .next()
-            .expect("lib.rs must have production module declarations");
+        let production_root =
+            crate::feature_gates::exposure::module_names(&lib_rs, &["gpu", "webgpu"]);
 
         for module_root in DEFAULT_WASM_INACTIVE_MODULE_ROOTS {
-            let pub_mod = format!("pub mod {module_root};");
-            let private_mod = format!("mod {module_root};");
             assert!(
-                !production_root.contains(&pub_mod) && !production_root.contains(&private_mod),
+                !production_root.iter().any(|name| name == module_root),
                 "{module_root} must remain behind an explicit non-default gate before it is compiled from forge3d-core"
             );
         }
@@ -173,14 +169,12 @@ mod tests {
     fn phase5_gpu_runtime_api_is_public_without_legacy_singleton() {
         let lib_rs = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"))
             .expect("failed to read core lib.rs");
-        let production_root = lib_rs
-            .split("#[cfg(test)]")
-            .next()
-            .expect("lib.rs must have production module declarations");
+        let production_root =
+            crate::feature_gates::exposure::module_names(&lib_rs, &["gpu", "webgpu"]);
 
-        assert!(production_root.contains("pub mod gpu;"));
+        assert!(production_root.iter().any(|name| name == "gpu"));
         assert!(
-            !production_root.contains("pub mod core;"),
+            !production_root.iter().any(|name| name == "core"),
             "legacy core::gpu singleton tree must not be re-exposed from forge3d-core"
         );
 
@@ -236,13 +230,11 @@ mod tests {
     fn phase8_core_terrain_heightmap_contract_is_exposed() {
         let lib_rs = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"))
             .expect("failed to read core lib.rs");
-        let production_root = lib_rs
-            .split("#[cfg(test)]")
-            .next()
-            .expect("lib.rs must have production module declarations");
+        let production_root =
+            crate::feature_gates::exposure::module_names(&lib_rs, &["gpu", "webgpu"]);
 
         assert!(
-            production_root.contains("pub mod terrain;"),
+            production_root.iter().any(|name| name == "terrain"),
             "Phase 8 must expose a narrow wasm-safe forge3d_core::terrain module"
         );
 
@@ -258,13 +250,11 @@ mod tests {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let lib_rs =
             fs::read_to_string(root.join("src/lib.rs")).expect("failed to read core lib.rs");
-        let production_root = lib_rs
-            .split("#[cfg(test)]")
-            .next()
-            .expect("lib.rs must have production module declarations");
+        let production_root =
+            crate::feature_gates::exposure::module_names(&lib_rs, &["gpu", "webgpu"]);
 
         assert!(
-            production_root.contains("pub mod camera;"),
+            production_root.iter().any(|name| name == "camera"),
             "Phase 9 must expose a narrow wasm-safe forge3d_core::camera module"
         );
         assert!(
@@ -278,13 +268,11 @@ mod tests {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let lib_rs =
             fs::read_to_string(root.join("src/lib.rs")).expect("failed to read core lib.rs");
-        let production_root = lib_rs
-            .split("#[cfg(test)]")
-            .next()
-            .expect("lib.rs must have production module declarations");
+        let production_root =
+            crate::feature_gates::exposure::module_names(&lib_rs, &["gpu", "webgpu"]);
 
         assert!(
-            production_root.contains("pub mod readback;"),
+            production_root.iter().any(|name| name == "readback"),
             "Phase 10 must expose a narrow wasm-safe forge3d_core::readback module"
         );
         assert!(

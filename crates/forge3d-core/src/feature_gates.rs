@@ -29,7 +29,6 @@ pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
     "geo",
     "geometry",
     "import",
-    "labels",
     "license",
     "loaders",
     "mesh",
@@ -56,3 +55,7 @@ pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
 pub fn phase4_core_wasm_boundary() -> &'static str {
     "forge3d-core exposes only browser-safe contracts for the browser/npm/WASM workspace"
 }
+
+#[cfg(test)]
+#[path = "feature_exposure.rs"]
+pub(crate) mod exposure;
