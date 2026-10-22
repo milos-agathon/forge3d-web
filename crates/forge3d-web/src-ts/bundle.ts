@@ -1,8 +1,9 @@
+import { BundleAssetInventory, embedGltf } from './bundle-asset-inventory.js';
 import { requirePro, PRO_FEATURES } from './license.js';
 import { type BrowserByteSource, type BrowserByteSink } from "./index.js";
 import { Forge3DError } from "./runtime-failure.js";
 import { readByteSource } from './browser-io.js';
-import { styleAssetUrls, assessBundleStyle } from './bundle-style-assets.js';
+import { assessBundleStyle } from './bundle-style-assets.js';
 import { writeBundleOutput } from './bundle-output.js';
 import { SceneState, type SceneStateInput } from './scene-review.js';
 import { SceneRecipe, encodeMapData, decodeMapData } from './map-recipe.js';
@@ -18,30 +19,6 @@ export interface BundleOptions extends BundleLimits { signal?: AbortSignal; /** 
 export interface SaveBundleOptions extends BundleOptions { name?: string; description?: string; createdAt?: string; sink?: BrowserByteSink; assets?: Record<string, Blob | Uint8Array>; /** Preserve missing URLs with blocking diagnostics; no success or offline render claim. */ allowMissingAssets?: boolean; }
 const encoder = new TextEncoder(), marker = 'forge3d-asset:';
 function parseJson(bytes: Uint8Array): unknown { try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { return bundleFailure('Invalid bundle JSON'); } }
-async function visitAssets(value: unknown, transform: (value: string, key: string, parent: Record<string, unknown>) => Promise<string>, key = '', parent: Record<string, unknown> = {}): Promise<unknown> {
-    if (key === 'nativeSceneState') return value;
-    if (key === 'sources' && value && typeof value === 'object') {
-        const output: Record<string, unknown> = {};
-        for (const [id, source] of Object.entries(value)) output[id] = source?.type === 'geojson' ? await visitAssets(source, transform) : structuredClone(source);
-        return output;
-    }
-    if (typeof value === 'string') return transform(value, key, parent);
-    if (ArrayBuffer.isView(value)) return value;
-    if (Array.isArray(value)) { const out = []; for (const item of value) out.push(await visitAssets(item, transform)); return out; }
-    if (value && typeof value === 'object') { const output: Record<string, unknown> = {}; for (const k of Object.keys(value)) Object.defineProperty(output, k, { value: await visitAssets((value as Record<string, unknown>)[k], transform, k, value as Record<string, unknown>), enumerable: true, writable: true }); if (Object.hasOwn(value, 'sha256')) output.sha256 = (value as Record<string, unknown>).sha256; return output; }
-    return value;
-}
-/** Self-contained glTF: rewrite subordinate buffers/images to data URIs before bundling. */
-async function embedGltf(bytes: Uint8Array, base: string, options: BundleOptions, remaining: () => number): Promise<Uint8Array> {
-    const data = parseJson(bytes) as { buffers?: { uri?: string }[]; images?: { uri?: string }[] };
-    let used = 0;
-    for (const resource of [...data.buffers ?? [], ...data.images ?? []]) if (resource.uri && !resource.uri.startsWith('data:')) {
-        const payload = await readByteSource(new URL(resource.uri, base), { maxBytes: remaining() - used, ...(options.signal ? { signal: options.signal } : {}) }); used += payload.length;
-        bundleCancelled(options.signal); let text = ''; for (let i = 0; i < payload.length; i += 8192) text += String.fromCharCode(...payload.subarray(i, i + 8192));
-        resource.uri = `data:application/octet-stream;base64,${btoa(text)}`;
-    }
-    return encoder.encode(JSON.stringify(data));
-}
 /** Every payload, including canonical review state and diagnostics, is SHA-256 verified on load. */
 export async function saveBundle(state: SceneState | SceneStateInput, options: SaveBundleOptions = {}): Promise<Blob> {
     requirePro(PRO_FEATURES.bundleSave);
@@ -71,8 +48,7 @@ export async function saveBundle(state: SceneState | SceneStateInput, options: S
     }
     const missing = new Set(portable.missingAssets ?? []);
     const assetTransform = async (value: string, key: string, parent: Record<string, unknown>) => {
-        const explicit = Object.hasOwn(options.assets ?? {}, value), external = (['url', 'hdr', 'hdrPath', 'hdr_path'].includes(key) || key === 'data' && parent.type === 'geojson') && !value.startsWith(marker);
-        if (!explicit && !external) return value;
+        if(value.startsWith(marker) && !Object.hasOwn(options.assets ?? {},value))return value;
         if (cache.has(value)) { const cached = cache.get(value)!; if (typeof parent.sha256 === 'string' && cached.originalHash !== parent.sha256.toLowerCase()) bundleFailure(`Asset checksum mismatch: ${value}`, 'checksum-mismatch'); if (parent.sha256 !== undefined) parent.sha256 = cached.hash; return cached.reference; }
         options.onProgress?.({ phase: 'assets', completed: cache.size, total: cache.size + 1, path: value });
         const source = options.assets?.[value] ?? value;
@@ -88,11 +64,12 @@ export async function saveBundle(state: SceneState | SceneStateInput, options: S
         }
         const result = await add(data, source instanceof Blob ? source.type || 'application/octet-stream' : 'application/octet-stream'), hash = await bundleHash(data); cache.set(value, { reference: result, originalHash, hash }); aliases[value] = result.slice(marker.length); missing.delete(value); return result;
     };
-    for (const url of styleAssetUrls(portable, Object.keys(options.assets ?? {}))) {
+    const inventory=new BundleAssetInventory(portable,Object.keys(options.assets??{}));
+    for (const url of inventory.dependencies) {
         if (url.includes('{range}') || url.includes('{fontstack}')) { if (!options.allowMissingAssets) bundleFailure('Glyph template needs a finite text/font request or supplied glyph inventory'); missing.add(url); continue; }
         await assetTransform(url, 'url', {});
     }
-    const rewritten = await visitAssets(portable, assetTransform) as SceneStateInput;
+    const rewritten = await inventory.rewrite(({value,key,parent})=>assetTransform(value,key,parent));
     if (missing.size) {
         rewritten.missingAssets = [...missing].sort();
         const report = new ValidationReport({ ...(rewritten.validationReport ?? {}), diagnostics: [...rewritten.validationReport?.diagnostics ?? [], ...[...missing].sort().filter(path => !rewritten.validationReport?.diagnostics.some(d => d.code === 'missing_external_asset' && d.details.path === path && ['error', 'fatal'].includes(d.severity))).map(path => missingExternalAssetDiagnostic('bundle asset', path))] });
@@ -139,7 +116,7 @@ export class LoadedBundle {
     /** URL leases belong to this bundle and are revoked by dispose. MapScene.loadBundle adopts that lifetime. */
     async runtimeSceneState(): Promise<SceneState> {
         this.#live();
-        const input = await visitAssets(this.#state.value, async value => {
+        const input = await new BundleAssetInventory(this.#state.value).rewrite(async ({value}) => {
             this.#live();
             if (!value.startsWith(marker)) return value;
             const path = bundlePath(value.slice(marker.length));
@@ -196,19 +173,7 @@ async function loadVerifiedBundle(source: BrowserByteSource | FileSystemFileHand
     } else { const path = bundlePath(manifest.scene); if (!files[path]) bundleFailure('Canonical scene state missing'); state = SceneState.fromJSON(parseJson(files[path]!), limits.maxExpandedBytes); }
     const assessed = state.value; assessBundleStyle(assessed); state = new SceneState(assessed);
     if (state.value.validationReport) ValidationReport.fromJSON(state.value.validationReport);
-    // Reject dangling asset references and raw external URLs: a loaded bundle is offline by construction.
-    await visitAssets(state.value, async (value, key, parent) => {
-        if (value.startsWith(marker) && !Object.hasOwn(files, bundlePath(value.slice(marker.length)))) bundleFailure('Dangling bundle asset reference');
-        if ((['url', 'hdr', 'hdrPath', 'hdr_path'].includes(key) || key === 'data' && parent.type === 'geojson') && !value.startsWith(marker)) {
-            const s = state.value;
-            if (!s.missingAssets?.includes(value) || !s.validationReport?.diagnostics.some(d => d.code === 'missing_external_asset' && d.details.path === value && ['error', 'fatal'].includes(d.severity))) bundleFailure('External asset reference without blocking missing-asset diagnostics');
-        }
-        return value;
-    });
-    for (const url of styleAssetUrls(state.value, Object.keys(manifest.asset_aliases ?? {}))) {
-        if (manifest.asset_aliases?.[url]) continue;
-        if (!state.value.missingAssets?.includes(url) || !state.value.validationReport?.diagnostics.some(d => d.code === 'missing_external_asset' && d.details.path === url && ['error', 'fatal'].includes(d.severity))) bundleFailure('Style asset without offline payload or blocking diagnostics');
-    }
+    new BundleAssetInventory(state.value,Object.keys(manifest.asset_aliases??{})).verify(files,manifest.asset_aliases);
     bundleCancelled(options.signal);
     return new LoadedBundle(manifest, state, files, manifest.version === 1 || state.value.nativeSceneState ? manifest.version : null);
 }

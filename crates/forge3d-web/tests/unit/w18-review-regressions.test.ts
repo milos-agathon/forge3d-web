@@ -1,3 +1,5 @@
+import { Forge3DScene } from '../../src-ts/scene.js';
+import { VectorLayers } from '../../src-ts/vector-layers.js';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { MapScene } from '../../src-ts/map-scene.js';
@@ -17,6 +19,19 @@ function tiles(metadata: Record<string, any> = {}): MapSceneLayerInput { return 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('W18 review regression contracts', () => {
+    it('retains immutable large-resource facts across validation and review without recopying payloads',async()=>{
+        const r=recipe(); r.terrain!.source.data={width:256,height:256,heights:new Float32Array(256*256),spacing:[1,1]};
+        r.layers=[{kind:'vector',layerId:'roads',source:{id:'roads',format:'vector',crs:'LOCAL',data:{name:'roads',features:Array.from({length:1000},(_,id)=>({id,kind:'line',positions:[[0,1,id],[20,1,id]]}))}}}];
+        const scene=new MapScene(r); await scene.prepare();
+        const first=await scene.reviewRecord(), terrain=vi.spyOn(Forge3DScene.prototype,'addTerrain'), vectors=vi.spyOn(VectorLayers.prototype,'add');
+        const clone=globalThis.structuredClone; let copied=0;
+        const bytes=(value:any):number=>ArrayBuffer.isView(value)?value.byteLength:value&&typeof value==='object'?Object.values(value).reduce<number>((n,v)=>n+bytes(v),0):0;
+        vi.stubGlobal('structuredClone',(value:any,options:any)=>{copied+=bytes(value);return clone(value,options);});
+        try {
+            for(let i=0;i<4;i++){expect(scene.validate().toJSON()).toEqual(first.validation_report);expect(await scene.reviewRecord()).toEqual(first);}
+            expect(terrain).not.toHaveBeenCalled(); expect(vectors).not.toHaveBeenCalled(); expect(copied).toBe(0);
+        } finally {terrain.mockRestore();vectors.mockRestore();vi.unstubAllGlobals();scene.dispose();}
+    });
     it('constructs every public MapScene recipe component without raw IPC', () => {
         const source = { id: 'asset', format: 'json', crs: 'LOCAL', data: [] };
         const layers = [new models.RasterOverlay({ layerId: 'r', source }), new models.VectorOverlay({ layerId: 'v', source }), new models.MapSceneLabelLayer({ layerId: 'l', source }), new models.MapSceneBuildingLayer({ layerId: 'b', source }), new models.MapScenePointCloudLayer({ layerId: 'p', source }), new models.MapSceneTiles3DLayer({ layerId: 't', source })];

@@ -1,26 +1,18 @@
+import { PreparedMapFacts } from './map-prepared-facts.js';
 import { getLicenseInfo } from './license.js';
 import { proGatedPathDiagnostic } from './diagnostic-paths.js';
 import { Camera } from './camera.js';
-import { validateTerrainDatasetInput } from './terrain-dataset.js';
-import { VectorLayers } from './vector-layers.js';
-import { BuildingLayer } from './buildings.js';
-import { checkMesh, meshBytes } from './mesh.js';
-import { SdfScene } from './sdf.js';
-import { PointBuffer } from './pointcloud-buffer.js';
-import { TerrainScatterBatch } from './terrain-scatter.js';
 import { Forge3DScene } from './scene.js';
-import { normalizeTerrainOverlays } from './terrain-overlay.js';
 import { iblFromSnapshot } from './ibl.js';
 import { Diagnostic, LayerSummary, ValidationReport, type SupportLevel } from './diagnostics.js';
-import { diagnosticFor, supportDiagnostic, validateLabelSupport, crsMismatchDiagnostic, estimatedGpuMemoryDiagnostic, placeholderFallbackDiagnostic, vtUnsupportedFamilyDiagnostic } from './diagnostic-paths.js';
+import { diagnosticFor, supportDiagnostic, crsMismatchDiagnostic, estimatedGpuMemoryDiagnostic, placeholderFallbackDiagnostic, vtUnsupportedFamilyDiagnostic } from './diagnostic-paths.js';
 import type { BuildingDiagnostic } from './building-diagnostics.js';
-import type { PointData } from './pointcloud-types.js';
-import { mapCamera, encodeMapData, mapRecipeByteLimit } from './map-recipe.js';
+import { mapCamera } from './map-recipe.js';
 import { applyMapLighting, mapTerrainOverlays, validateMapSettings } from './map-settings.js';
 import { mapAvailability, nativeMapLayerType, mapLargeSceneSummary, mapBuildingOptions } from './map-support-details.js';
 import { pythonPublic3dtilesIncompleteDiagnostic, unsupportedTileFormatDiagnostic, unsupportedTileFeatureDiagnostic } from './diagnostic-paths.js';
 import { diagnoseBuildingTextures } from './building-diagnostics.js';
-import { MAP_SCENE_LAYER_KINDS } from './map-support.js';
+import {mapKindPolicy,mapIntegrationDiagnostic} from './map-kind-policy.js';
 import type { MapResource, MapSceneResourceSummary, SceneRecipeInput, PreparedMapResource, MapSceneLayerInput, MapLayerBase } from './map-scene-types.js';
 import type { TerrainHeightmapInput } from './index.js';
 import type { LabelPlanData } from './label-types.js';
@@ -61,11 +53,10 @@ export function mapResources(input: SceneRecipeInput): {
             result.push({ resource: layer.source, layerId: layer.layerId });
     return result;
 }
-const formats: Record<string, readonly string[]> = { terrain: ['heightmap', 'heightmap-json', 'f32', 'geotiff'], raster: ['rgba', 'png', 'jpg', 'jpeg', 'webp'], vector: ['vector', 'json'], labels: ['labels', 'json'], buildings: ['buildings', 'geojson', 'cityjson'], mesh: ['mesh', 'obj', 'stl', 'gltf', 'glb'], 'point-cloud': ['points', 'las', 'laz', 'copc', 'ept'], tiles3d: ['tileset.json', 'json'] };
 export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap<string, PreparedMapResource> = new Map(), extra: readonly Diagnostic[] = [], failed: ReadonlySet<string> = new Set(), execution?: {
     layerObjects: Record<string, number>;
     plans: Record<string, LabelPlanData>;
-}): {
+}, facts = new PreparedMapFacts()): {
     report: ValidationReport;
     resources: MapSceneResourceSummary[];
 } {
@@ -176,7 +167,7 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
     const terrain = (terrainResource ? prepared.get(terrainResource.id)?.value ?? terrainResource.data : undefined) as TerrainHeightmapInput | undefined;
     const sceneCrs = input.crs ?? terrainResource?.crs ?? terrain?.crs;
     const inspect = (layerId: string, kind: string, source: MapResource | undefined, value: unknown, layer?: MapSceneLayerInput | (MapLayerBase & { kind: 'terrain' })) => {
-        let level: SupportLevel = layer?.supportLevel ?? 'supported', bytes = source ? prepared.get(source.id)?.bytes ?? resourceBytes(value) : resourceBytes(value), objects: number | null = null;
+        let level: SupportLevel = layer?.supportLevel ?? 'supported', bytes = source ? prepared.get(source.id)?.bytes ?? facts.bytes(value) : facts.bytes(value), objects: number | null = null;
         if (!layerId || ids.has(layerId))
             diagnostics.push(mapProblem('duplicate_layer_id', 'Layer IDs must be unique and nonempty.', layerId));
         ids.add(layerId);
@@ -186,17 +177,17 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
         if (availability.diagnostics.some(d => d.code === 'unavailable_cache_lod_stats')) featureDiagnostics[`${nativeMapLayerType(kind)}.cache_lod_stats`] = 'underdeveloped';
         if (availability.diagnostics.some(d => d.code === 'unsupported_instancing_path')) featureDiagnostics[`${nativeMapLayerType(kind)}.instancing`] = 'unsupported';
         if (kind === 'point-cloud') {
-            diagnostics.push(placeholderFallbackDiagnostic('point cloud MapScene render path', { layer_id: layerId }));
+            diagnostics.push(mapIntegrationDiagnostic(kind,layerId)!);
             featureDiagnostics['point_cloud.mapscene_render'] = 'placeholder/fallback';
         }
         if (kind === 'tiles3d') {
             details.source_kind = source?.format ?? null;
             for (const key of ['cache_budget', 'cache_stats', 'lod']) if (layer?.metadata?.[key] !== undefined) details[key] = layer.metadata[key];
-            if (source && !formats.tiles3d!.includes(source.format)) {
+            if (source && !mapKindPolicy('tiles3d').formats!.includes(source.format)) {
                 diagnostics.push(unsupportedTileFormatDiagnostic(source.format, { layer_id: layerId }));
                 featureDiagnostics['tiles3d.format'] = 'unsupported';
             } else {
-                diagnostics.push(pythonPublic3dtilesIncompleteDiagnostic({ layer_id: layerId }));
+                diagnostics.push(mapIntegrationDiagnostic(kind,layerId)!);
                 featureDiagnostics['tiles3d.public_python_render'] = 'underdeveloped';
             }
             const features = layer?.metadata?.unsupported_features;
@@ -232,11 +223,11 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
             diagnostics.push(mapProblem('experimental_render_path', 'Experimental intent requires a verified supported adapter before rendering.', layerId, {}, 'error', 'experimental'));
         if (kind === 'diagnostic' && level === 'supported')
             diagnostics.push(placeholderFallbackDiagnostic('diagnostic-only layer', { layer_id: layerId }));
-        if (!(['terrain', ...MAP_SCENE_LAYER_KINDS] as readonly string[]).includes(kind)) {
+        if (!mapKindPolicy(kind).known) {
             level = 'unsupported';
             diagnostics.push(mapProblem('unsupported_layer_type', 'Unknown recipe layer cannot be rendered.', layerId, { kind }));
         }
-        if (formats[kind]) {
+        if (mapKindPolicy(kind).formats) {
             if (!source || typeof source.id !== 'string' || !source.id)
                 diagnostics.push(mapProblem('missing_source_identity', 'A resource identity is required.', layerId));
             else {
@@ -245,8 +236,8 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
                     diagnostics.push(mapProblem('duplicate_resource_id', 'The scene: resource namespace is reserved.', layerId, { resource_id: source.id }));
                 if ((source.data === undefined) === (source.url === undefined))
                     diagnostics.push(mapProblem('missing_renderable_data', 'Provide exactly one inline resource or URL.', layerId));
-                if (!formats[kind]!.includes(source.format))
-                    diagnostics.push(mapProblem('unsupported_asset_format', 'Resource format has no adapter for this layer.', layerId, { format: source.format, supported_formats: formats[kind] }));
+                if (!mapKindPolicy(kind).formats!.includes(source.format))
+                    diagnostics.push(mapProblem('unsupported_asset_format', 'Resource format has no adapter for this layer.', layerId, { format: source.format, supported_formats: mapKindPolicy(kind).formats }));
                 if (source.sha256 !== undefined && !/^[a-f0-9]{64}$/i.test(source.sha256))
                     diagnostics.push(mapProblem('invalid_asset_hash', 'Asset SHA-256 must contain 64 hex characters.', layerId));
                 if (source.url !== undefined && (typeof source.url !== 'string' || !source.url.trim()))
@@ -258,7 +249,7 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
                     diagnostics.push(mapProblem('missing_crs', 'Explicit scene and layer CRS metadata are required.', layerId, { scene_crs: sceneCrs ?? null, layer_crs: crs ?? null }));
                 else if (sceneCrs.trim().toUpperCase() !== crs.trim().toUpperCase())
                     diagnostics.push(crsMismatchDiagnostic(sceneCrs, crs, { layer_id: layerId }));
-                const signature = JSON.stringify(encodeMapData(kind === 'buildings' && layer?.kind === 'buildings' ? { source, options: mapBuildingOptions(layer) } : source, mapRecipeByteLimit(input)));
+                const signature = facts.signature(source,layer,input);
                 if (resourceIds.has(source.id) && resourceIds.get(source.id) !== signature)
                     diagnostics.push(mapProblem('duplicate_resource_id', 'Conflicting resources share an identity.', layerId, { resource_id: source.id }));
                 if (!resourceIds.has(source.id)) {
@@ -272,140 +263,11 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
                 if (bytes > (source.maxBytes ?? maxResource))
                     diagnostics.push(mapProblem('resource_limit_exceeded', 'Resource exceeds its byte limit.', layerId, { bytes, limit: source.maxBytes ?? maxResource }));
             }
-            if (value !== undefined && !failed.has(source?.id ?? ''))
-                try {
-                    switch (kind) {
-                        case 'terrain': {
-                            const t = value as TerrainHeightmapInput;
-                            validateTerrainDatasetInput(t);
-                            const s = Forge3DScene.create();
-                            try {
-                                s.addTerrain(t);
-                            }
-                            finally {
-                                s.dispose();
-                            }
-                            objects = t.width * t.height;
-                            break;
-                        }
-                        case 'raster':
-                            normalizeTerrainOverlays({ enabled: true, layers: [{ ...(layer?.kind === 'raster' ? layer.options : {}), image: value as never }] });
-                            if (!input.terrain)
-                                throw Error('Raster overlays require terrain');
-                            break;
-                        case 'vector': {
-                            const v = new VectorLayers();
-                            try {
-                                v.add(value as never);
-                                objects = (value as {
-                                    features: unknown[];
-                                }).features.length;
-                            }
-                            finally {
-                                v.dispose();
-                            }
-                            break;
-                        }
-                        case 'labels': {
-                            if (!Array.isArray(value) || !value.length)
-                                throw Error('Label data must contain records');
-                            objects = value.length;
-                            const l = layer as Extract<MapSceneLayerInput, {
-                                kind: 'labels';
-                            }>;
-                            if (l.coordinateSpace !== undefined && !['screen', 'world'].includes(l.coordinateSpace))
-                                throw Error('Unknown label coordinate space');
-                            if (l.atlasGlyphs)
-                                diagnostics.push(...validateLabelSupport(value, { atlasGlyphs: l.atlasGlyphs, layerId }).diagnostics);
-                            break;
-                        }
-                        case 'buildings':
-                            if (Array.isArray(value) || value instanceof BuildingLayer) {
-                                const b = value instanceof BuildingLayer ? value : new BuildingLayer(value as never, mapBuildingOptions(layer as Extract<MapSceneLayerInput, { kind: 'buildings' }>));
-                                try {
-                                    objects = b.buildingCount;
-                                    bytes = b.cpuBytes;
-                                    if (!details.textured_materials) diagnostics.push(...b.validate().diagnostics.map(d => mapBuildingDiagnostic(d, layerId)));
-                                }
-                                finally {
-                                    if (b !== value)
-                                        b.dispose();
-                                }
-                            }
-                            break;
-                        case 'mesh':
-                            checkMesh(value as never);
-                            objects = (value as {
-                                indices: Uint32Array;
-                            }).indices.length / 3;
-                            bytes = meshBytes(value as never);
-                            break;
-                        case 'point-cloud':
-                            if (!(value as {
-                                dataset?: unknown;
-                            }).dataset) {
-                                const b = new PointBuffer(value as PointData);
-                                try {
-                                    objects = b.pointCount;
-                                }
-                                finally {
-                                    b.dispose();
-                                }
-                            }
-                            break;
-                    }
-                }
-                catch (error) {
-                    diagnostics.push(mapProblem('invalid_layer', String(error), layerId));
-                }
         }
-        else
-            try {
-                if (kind === 'nodes') {
-                    const scene = Forge3DScene.create();
-                    try {
-                        for (const n of (layer as Extract<MapSceneLayerInput, {
-                            kind: 'nodes';
-                        }>).nodes) {
-                            if (n.kind === 'terrain')
-                                diagnostics.push(mapProblem('unsupported_layer_combination', 'Terrain nodes must use the recipe TerrainSource so their resource identity and CRS are validated.', layerId));
-                            if (n.kind === 'custom')
-                                diagnostics.push(placeholderFallbackDiagnostic('custom scene node has no executable recipe adapter', { layer_id: layerId }));
-                            if (n.kind === 'text-mesh' && !n.vertices)
-                                diagnostics.push(placeholderFallbackDiagnostic('text mesh requires real glyph triangles', { layer_id: layerId }));
-                            scene.addNode(n);
-                        }
-                        objects = scene.snapshot().nodes.filter(n => n.node.kind !== 'group' && n.visible).length;
-                        bytes = scene.estimatedGpuBytes();
-                    }
-                    finally {
-                        scene.dispose();
-                    }
-                }
-                if (kind === 'scatter') {
-                    const batches = (layer as Extract<MapSceneLayerInput, {
-                        kind: 'scatter';
-                    }>).batches;
-                    for (const b of batches)
-                        new TerrainScatterBatch(b);
-                    objects = batches.length;
-                }
-                if (kind === 'trace') {
-                    const t = layer as Extract<MapSceneLayerInput, {
-                        kind: 'trace';
-                    }>;
-                    if (!t.triangles?.length && !t.sdf)
-                        throw Error('Trace layer has no geometry');
-                    if (t.sdf) {
-                        const sdf = SdfScene.fromSnapshot(t.sdf);
-                        sdf.dispose();
-                    }
-                    objects = (t.triangles?.length ?? 0) + (t.sdf?.primitives.length ?? 0);
-                }
-            }
-            catch (error) {
-                diagnostics.push(mapProblem('invalid_layer', String(error), layerId));
-            }
+        if (!failed.has(source?.id ?? '')) {
+            const structural = facts.inspect({input,kind,layerId,value,layer,resourceKind:!!mapKindPolicy(kind).formats,textured:!!details.textured_materials,bytes});
+            objects=structural.objects; bytes=structural.bytes; diagnostics.push(...structural.diagnostics);
+        }
         if (execution?.layerObjects[layerId] !== undefined)
             objects = execution.layerObjects[layerId]!;
         if (objects === 0 && kind !== 'diagnostic') {
@@ -435,10 +297,9 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
                 diagnostics.push(vtUnsupportedFamilyDiagnostic(family.family, { layer_id: 'terrain' }));
     if (input.terrain)
         inspect('terrain', 'terrain', terrainResource, terrain, { kind: 'terrain', layerId: 'terrain', ...(input.terrain.requestedStats ? { requestedStats: input.terrain.requestedStats } : {}) });
-    const layerFields: Record<string, string[]> = { raster: ['source', 'options'], vector: ['source'], labels: ['source', 'style', 'plan', 'priorityRules', 'typography', 'atlasGlyphs', 'keepouts', 'coordinateSpace'], buildings: ['source', 'options', 'transforms'], mesh: ['source', 'transforms'], 'point-cloud': ['source', 'style', 'traversal', 'origin'], tiles3d: ['source', 'traversal', 'origin'], nodes: ['nodes'], scatter: ['batches'], trace: ['triangles', 'sdf', 'materials', 'lights', 'environment', 'medium', 'samples', 'maxBounces'], diagnostic: ['feature'] };
     for (const [i, layer] of layers.entries()) {
         if (layer && typeof layer === 'object' && !Array.isArray(layer) && typeof layer.kind === 'string' && typeof layer.layerId === 'string') {
-            fields(layer, ['kind', 'layerId', 'supportLevel', 'metadata', 'instancingPath', 'requestedStats', ...layerFields[layer.kind] ?? []], layer.layerId);
+            fields(layer, mapKindPolicy(layer.kind).fields, layer.layerId);
             const source = 'source' in layer ? layer.source : undefined;
             inspect(layer.layerId, layer.kind, source, source ? prepared.get(source.id)?.value ?? source.data : layer, layer);
         }

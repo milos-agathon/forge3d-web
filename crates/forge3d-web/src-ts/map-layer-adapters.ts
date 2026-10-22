@@ -1,3 +1,4 @@
+import {mapKindPolicy,mapIntegrationDiagnostic} from './map-kind-policy.js';
 import { Forge3DScene } from './scene.js';
 import { Camera } from './camera.js';
 import { applyMapLighting, mapTerrainOverlays } from './map-settings.js';
@@ -40,7 +41,9 @@ export async function prepareMapLayers(input: SceneRecipeInput, resources: Reado
     const camera = new Camera(mapCamera(input.camera)), view = { position: camera.position, viewportHeight: input.output.height, fovY: camera.fovYDegrees * Math.PI / 180, viewProjection: camera.viewProjectionMatrix(input.output.width / input.output.height) };
     const vectors = new VectorLayers();
     releases.push(() => vectors.dispose());
-    let terrain = input.terrain ? structuredClone(resources.get(input.terrain.source.id)?.value) as TerrainHeightmapInput : undefined;
+    const preparedTerrain = input.terrain ? resources.get(input.terrain.source.id)?.value as TerrainHeightmapInput | undefined : undefined;
+    // Overlay composition changes only this descriptor; the prepared pixels stay owned.
+    let terrain = preparedTerrain ? { ...preparedTerrain } : undefined;
     if (terrain) {
         const overlays = mapTerrainOverlays(input, terrain, resources);
         if (overlays) terrain.overlays = overlays;
@@ -77,6 +80,7 @@ export async function prepareMapLayers(input: SceneRecipeInput, resources: Reado
         }
         for (const l of input.layers ?? []) {
             mapCancelled(signal);
+            if(!mapKindPolicy(l.kind).eligible){const diagnostic=mapIntegrationDiagnostic(l.kind,l.layerId);if(diagnostic)diagnostics.push(diagnostic);continue;}
             const value = 'source' in l ? resources.get(l.source.id)?.value : undefined;
             try {
                 switch (l.kind) {
