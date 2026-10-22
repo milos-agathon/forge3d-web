@@ -315,11 +315,22 @@ jobs:
         run: npx playwright test tests/playwright/w23_migration.spec.ts --project=chromium-preflight --grep "W23 source" --max-failures=1
 
       - name: Run bundled Chromium preflight (ENGINE_PASS only)
+        id: chromium-preflight
         working-directory: crates/forge3d-web
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
           FORGE3D_SOURCE_BENCHMARK_MODE: probe
+          FORGE3D_W20_STARTUP_RETRY: "1"
         run: npm run test:browser:chromium
+
+      - name: Upload Chromium preflight diagnostics
+        if: always() && (steps.chromium-preflight.outcome == 'success' || steps.chromium-preflight.outcome == 'failure')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-chromium-preflight-diagnostics
+          path: crates/forge3d-web/test-results
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Upload source-browser evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -350,6 +361,7 @@ jobs:
         run: npx playwright test tests/playwright/w19_style_bundle.spec.ts --project=firefox-preflight --grep native-saver --max-failures=1
 
       - name: Run bundled Firefox preflight with default preferences (ENGINE_PASS only)
+        id: firefox-preflight
         working-directory: crates/forge3d-web
         env:
           FORGE3D_HEADED: "1"
@@ -363,6 +375,15 @@ jobs:
           name: forge3d-web-firefox-preflight-ENGINE_PASS-default-preferences
           path: crates/forge3d-web/test-results/**/browser-evidence.json
           if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Firefox preflight diagnostics
+        if: always() && (steps.firefox-preflight.outcome == 'success' || steps.firefox-preflight.outcome == 'failure')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-firefox-preflight-diagnostics
+          path: crates/forge3d-web/test-results
+          if-no-files-found: ignore
           retention-days: 30
 
   webkit-engine-preflight:
