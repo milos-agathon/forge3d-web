@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "3b21b310a9e1b695191271265af2902675780a35c202d3e1ef5fbd8217547eca",
+      "sha256": "3d59b395cce3c685e4e9dfa50fd8ceb4f6b2b4951d89d8b5f600064105582526",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -1907,7 +1907,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:bed243092b2c9407dec91d36fd2525b20332b32c:crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "git:840fa2689f5da9280ac81fd4a953ad2d1e2e3602:crates/forge3d-web/docs/evidence-sources/provenance.json"
       ]
     },
     {
@@ -2737,8 +2737,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w20_cartography.spec.ts.txt",
-      "sha256": "7cce9127aed87f9726e9aef0797983e2971a11d55ddcbd416456872a307ea56c",
-      "bytes": 25612,
+      "sha256": "49f8b9f8bb44e38874b35f58e09fede898a2adc1fd8b8148d7317330c86a0f25",
+      "bytes": 27166,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2748,7 +2748,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w20_cartography.spec.ts",
-            "sha256": "7cce9127aed87f9726e9aef0797983e2971a11d55ddcbd416456872a307ea56c",
+            "sha256": "49f8b9f8bb44e38874b35f58e09fede898a2adc1fd8b8148d7317330c86a0f25",
             "hashMode": "utf8-lf"
           }
         ],
@@ -2757,7 +2757,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/playwright/w20_cartography.spec.ts",
-        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w20_cartography.spec.ts.txt"
+        "git:05b23e146d9e7bb34ea61d545e072642842364d1:crates/forge3d-web/docs/evidence-sources/tests/playwright/w20_cartography.spec.ts.txt"
       ]
     },
     {
@@ -2812,8 +2812,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w23_migration.spec.ts.txt",
-      "sha256": "4553419c0541b11f47524be3982045bb420016ee6605dd640d4c1a62f9572924",
-      "bytes": 16399,
+      "sha256": "24ea02a0dcc3e7ca9d2b023c49c7d827a1d38d8a07f11b5787b66eeefbba8978",
+      "bytes": 17620,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2823,7 +2823,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w23_migration.spec.ts",
-            "sha256": "4553419c0541b11f47524be3982045bb420016ee6605dd640d4c1a62f9572924",
+            "sha256": "24ea02a0dcc3e7ca9d2b023c49c7d827a1d38d8a07f11b5787b66eeefbba8978",
             "hashMode": "utf8-lf"
           }
         ],
@@ -2832,7 +2832,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/playwright/w23_migration.spec.ts",
-        "git:c79ce62fb068bc3fd59c0d5316be431de4a3d72c:crates/forge3d-web/docs/evidence-sources/tests/playwright/w23_migration.spec.ts.txt"
+        "git:05b23e146d9e7bb34ea61d545e072642842364d1:crates/forge3d-web/docs/evidence-sources/tests/playwright/w23_migration.spec.ts.txt"
       ]
     },
     {

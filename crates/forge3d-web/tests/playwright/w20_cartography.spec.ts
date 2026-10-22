@@ -5,12 +5,34 @@ const native = JSON.parse(readFileSync(new URL('../fixtures/w20/native-oracle.js
 const layoutOracle = JSON.parse(readFileSync(new URL('../fixtures/w20/layout-oracle.json', import.meta.url), 'utf8'));
 const textOracle = JSON.parse(readFileSync(new URL('../fixtures/w20/text-layout-oracle.json', import.meta.url), 'utf8'));
 declare global { interface Window { __w20: any } }
+test.use({ trace: 'retain-on-failure' });
 for (const dist of [false, true]) {
   const label = dist ? 'dist' : 'source';
   test.describe(`W20 ${label}`, () => {
-    test.beforeEach(async ({ page }) => {
-      await page.goto('/examples/cartography.html?' + (dist ? 'dist' : 'source'));
-      await page.waitForFunction(() => window.__w20?.ready);
+    test.beforeEach(async ({ page }, info) => {
+      const started = Date.now(), errors: string[] = [], failedRequests: string[] = [];
+      const onError = (error: Error) => errors.push(error.message);
+      const onRequestFailed = (request: import('@playwright/test').Request) => failedRequests.push(`${request.url()}: ${request.failure()?.errorText}`);
+      const onResponse = (response: import('@playwright/test').Response) => {
+        if (response.status() >= 400) failedRequests.push(`${response.url()}: HTTP ${response.status()}`);
+      };
+      page.on('pageerror', onError);
+      page.on('requestfailed', onRequestFailed);
+      page.on('response', onResponse);
+      try {
+        await page.goto('/examples/cartography.html?' + (dist ? 'dist' : 'source'));
+        await page.waitForFunction(() => window.__w20?.ready);
+      } catch (error) {
+        await info.attach('w20-startup.json', {
+          body: JSON.stringify({ url: page.url(), elapsedMs: Date.now() - started, errors, failedRequests }, null, 2),
+          contentType: 'application/json',
+        });
+        throw new Error(`W20 ${label} startup failed: ${[...errors, ...failedRequests].join('\n') || 'ready was not reached'}`, { cause: error });
+      } finally {
+        page.off('pageerror', onError);
+        page.off('requestfailed', onRequestFailed);
+        page.off('response', onResponse);
+      }
     });
     test(`W20 ${label}: native title bounds cover the expanded text corpus`, async ({ page }, info) => {
       const r = await page.evaluate(async rows => {
@@ -93,9 +115,14 @@ for (const dist of [false, true]) {
       });
       expect(r).toMatchObject({ aborted: 'REQUEST_CANCELLED', disposed: 'RUNTIME_DISPOSED', budget: 'RESOURCE_LIMIT_EXCEEDED', stored: true, memory: { cpuBytes: 0, workingBytes: 0 } });
     });
-    test(`W20 ${label}: downloadable example exposes four valid Blobs`, async ({ page }) => {
-      await page.locator('#compose').click(); await expect(page.locator('#status')).toHaveText('Plate composed. Four downloads are ready.');
-      for (const id of ['png', 'jpeg', 'svg', 'pdf']) await expect(page.locator('#' + id)).toHaveAttribute('href', /^blob:/);
+    test.describe(() => {
+      // Hosted Chromium can intermittently fail before the example module is ready.
+      // Retry only this case in that workflow; keep its deadlines and assertions.
+      test.describe.configure({ retries: process.env.FORGE3D_W20_STARTUP_RETRY === '1' ? 1 : 0 });
+      test(`W20 ${label}: downloadable example exposes four valid Blobs`, async ({ page }) => {
+        await page.locator('#compose').click(); await expect(page.locator('#status')).toHaveText('Plate composed. Four downloads are ready.');
+        for (const id of ['png', 'jpeg', 'svg', 'pdf']) await expect(page.locator('#' + id)).toHaveAttribute('href', /^blob:/);
+      });
     });
     test(`W20 ${label}: colormap File/URL/CPT/JSON imports and label/vector adapters`, async ({ page }) => {
       const r = await page.evaluate(async () => {

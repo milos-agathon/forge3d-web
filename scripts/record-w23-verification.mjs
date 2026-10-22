@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { collectW23BrowserLanes } from './w23-browser-evidence.mjs';
 const root=resolve(import.meta.dirname,'..'),prefix='crates/forge3d-web/';
 const read=path=>readFileSync(resolve(root,path)),json=path=>JSON.parse(read(path));
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -35,7 +36,6 @@ const verifyLog=read(prefix+'test-results/w23-review3-verify.log').toString();
 assert(verifyLog.includes('an existing unrelated generator cannot substitute for the writer'));
 const pnoa=json(prefix+'tests/fixtures/w23/regional-dem-inputs.json').examples['pnoa_river_showcase.py'].source;
 assert.equal(pnoa.path,'assets/tif/Bryce_Canyon.tif');
-const results=report=>report.suites.flatMap(function visit(s){return [...(s.specs??[]).flatMap(x=>x.tests.flatMap(t=>t.results.map(r=>({...r,title:x.title})))),...(s.suites??[]).flatMap(visit)];});
 function lane(result){
   assert.equal(result.status,'passed',result.title);
   const attachment=name=>{const a=result.attachments.find(a=>a.name===name);assert(a,name);return a.body?JSON.parse(Buffer.from(a.body,'base64')):json(a.path);};
@@ -69,10 +69,9 @@ function lane(result){
     evidenceDigests:Object.fromEntries(result.attachments.filter(a=>a.name.endsWith('.json')).map(a=>[a.name,sha(a.body?Buffer.from(a.body,'base64'):read(a.path))]))};
 }
 const browser=json(prefix+'test-results/w23-review3-browser.json');
-assert.equal(browser.stats.expected,2);assert.equal(browser.stats.unexpected,0);
-const lanes=results(browser).map(lane);
+const lanes=collectW23BrowserLanes(browser,['source','dist']).map(lane);
 const installedBrowser=json(prefix+'test-results/w23-installed/playwright.json');
-assert.equal(installedBrowser.stats.expected,1);assert.equal(installedBrowser.stats.unexpected,0);
+const installedLanes=collectW23BrowserLanes(installedBrowser,['dist']).map(lane);
 const logDigests=Object.fromEntries(commands.commands.map(c=>[c.name,c.sha256]));
 const routing=json('docs/parity/w23-routing-review.json');
 const record={schemaVersion:4,recordedAt:new Date().toISOString(),testedImplementationRevision:revision,
@@ -99,7 +98,7 @@ const record={schemaVersion:4,recordedAt:new Date().toISOString(),testedImplemen
       directoryManifestRequiresMatchingGeneratorAndListedFile:true},
     pnoaDem:{captureCommand:'python scripts/capture-w23-dem-inputs.py',archive:'D:/forge3d',...pnoa},
     nativeOracle:{examples:24,operations:29,capturedOriginalDems:7,python:'3.13',numpy:'2.5.1',pillow:'12.2.0',scipy:'1.16.0',rasterio:'1.4.3'},
-    sourceAndDist:{startedAt:browser.stats.startTime,lanes},installed:{...installed,lanes:results(installedBrowser).map(lane)},logDigests},
+    sourceAndDist:{startedAt:browser.stats.startTime,lanes},installed:{...installed,lanes:installedLanes},logDigests},
   integrity:{policy:assets.digestPolicy,migrationPrograms:'Checked asset manifest plus browser startup program/control-JSON verification. Erased-workflow interception must fail before ready.',
     routingLock:'Generated reviewed intent lock, not independent correctness proof; source-context expectations and review are checked separately.',
     nativeSourceAudit:'Independent Git-tree/Python-AST counts and source digest verification; historical test routes are capability evidence, not execution of all Python assertions.'},

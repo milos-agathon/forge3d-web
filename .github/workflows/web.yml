@@ -102,6 +102,23 @@ jobs:
         working-directory: crates/forge3d-web
         run: npm run build
 
+      - name: Upload shared browser package build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-browser-build-${{ github.sha }}
+          path: |
+            crates/forge3d-web/pkg
+            crates/forge3d-web/dist
+            crates/forge3d-web/assets
+            crates/forge3d-web/types
+            crates/forge3d-web/examples/vite/dist
+            crates/forge3d-web/src-ts/codec-catalog.ts
+            crates/forge3d-web/docs/label-case-contract.json
+            crates/forge3d-web/LICENSE
+            crates/forge3d-web/LICENSE-APACHE
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Test browser package and infrastructure contracts
         working-directory: crates/forge3d-web
         run: npm run test:package
@@ -255,22 +272,20 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  browser-preflight:
-    name: Web Runtime / Browser Preflight
+  chromium-preflight:
+    name: Web Runtime / Chromium Preflight (${{ matrix.shard }}/4)
     needs: build-and-contract
     runs-on: macos-15
-    # The pre-W22 two-engine corpus already takes about 123 minutes on hosted macOS.
-    # Allow W22 full-resolution coverage and runner variation; per-test budgets stay fixed.
+    # File-level sharding keeps each spec's ordering and shared GPU state intact.
     timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     steps:
       - name: Check out the protected source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable reviewed 2026-07-28
-        with:
-          targets: wasm32-unknown-unknown
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -283,15 +298,18 @@ jobs:
         working-directory: crates/forge3d-web
         run: npm ci --registry=https://registry.npmjs.org
 
-      - name: Build browser package
-        working-directory: crates/forge3d-web
-        run: npm run build
+      - name: Download shared browser package build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge3d-web-browser-build-${{ github.sha }}
+          path: crates/forge3d-web
 
-      - name: Install bundled Chromium and Firefox for engine preflights
+      - name: Install bundled Chromium for engine preflight
         working-directory: crates/forge3d-web
-        run: npx playwright install chromium firefox
+        run: npx playwright install chromium
 
       - name: Print bundled Chromium preflight diagnostics
+        if: matrix.shard == 1
         working-directory: crates/forge3d-web
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
@@ -303,33 +321,84 @@ jobs:
           npm run test:browser:chromium -- --grep "reports browser WebGPU diagnostics"
 
       - name: Probe W19 native migration in Chromium before the full corpus
+        if: matrix.shard == 1
         working-directory: crates/forge3d-web
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
         run: npx playwright test tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight --grep native-saver --max-failures=1
 
       - name: Probe all W23 source workflows before the full Chromium corpus
+        if: matrix.shard == 1
+        id: w23-source-probe
         working-directory: crates/forge3d-web
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
         run: npx playwright test tests/playwright/w23_migration.spec.ts --project=chromium-preflight --grep "W23 source" --max-failures=1
 
       - name: Run bundled Chromium preflight (ENGINE_PASS only)
+        id: chromium-preflight
         working-directory: crates/forge3d-web
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
           FORGE3D_SOURCE_BENCHMARK_MODE: probe
-        run: npm run test:browser:chromium
+          FORGE3D_W20_STARTUP_RETRY: "1"
+        run: npm run test:browser:chromium -- --shard=${{ matrix.shard }}/4 --workers=1
+
+      - name: Upload Chromium preflight diagnostics
+        if: always() && (steps.chromium-preflight.outcome == 'success' || steps.chromium-preflight.outcome == 'failure' || steps.w23-source-probe.outcome == 'failure')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-chromium-preflight-diagnostics-${{ matrix.shard }}
+          path: crates/forge3d-web/test-results
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Upload source-browser evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: forge3d-web-source-browser-evidence
+          name: forge3d-web-source-browser-evidence-${{ matrix.shard }}
           path: crates/forge3d-web/test-results/**/browser-evidence.json
-          if-no-files-found: error
+          if-no-files-found: ignore
           retention-days: 30
 
+  firefox-preflight:
+    name: Web Runtime / Firefox Preflight (${{ matrix.shard }}/4)
+    needs: build-and-contract
+    runs-on: macos-15
+    # File-level sharding keeps each spec's ordering and shared GPU state intact.
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - name: Check out the protected source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20.19.0"
+          cache: npm
+          cache-dependency-path: crates/forge3d-web/package-lock.json
+
+      - name: Install web package dependencies
+        working-directory: crates/forge3d-web
+        run: npm ci --registry=https://registry.npmjs.org
+
+      - name: Download shared browser package build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge3d-web-browser-build-${{ github.sha }}
+          path: crates/forge3d-web
+
+      - name: Install bundled Firefox for engine preflight
+        working-directory: crates/forge3d-web
+        run: npx playwright install firefox
+
       - name: Print bundled Firefox preflight diagnostics with default preferences
+        if: matrix.shard == 1
         working-directory: crates/forge3d-web
         env:
           FORGE3D_HEADED: "1"
@@ -343,6 +412,7 @@ jobs:
           npm run test:browser:firefox-preflight -- --grep "reports browser WebGPU diagnostics"
 
       - name: Probe W19 native migration in Firefox before the full corpus
+        if: matrix.shard == 1
         working-directory: crates/forge3d-web
         env:
           FORGE3D_HEADED: "1"
@@ -350,18 +420,73 @@ jobs:
         run: npx playwright test tests/playwright/w19_style_bundle.spec.ts --project=firefox-preflight --grep native-saver --max-failures=1
 
       - name: Run bundled Firefox preflight with default preferences (ENGINE_PASS only)
+        id: firefox-preflight
         working-directory: crates/forge3d-web
         env:
           FORGE3D_HEADED: "1"
           FORGE3D_WEBGPU_REQUIRED: "1"
           FORGE3D_SOURCE_BENCHMARK_MODE: probe
-        run: npm run test:browser:firefox-preflight
+        run: npm run test:browser:firefox-preflight -- --shard=${{ matrix.shard }}/4 --workers=1
 
       - name: Upload Firefox preflight ENGINE_PASS default-preferences evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: forge3d-web-firefox-preflight-ENGINE_PASS-default-preferences
+          name: forge3d-web-firefox-preflight-ENGINE_PASS-default-preferences-${{ matrix.shard }}
           path: crates/forge3d-web/test-results/**/browser-evidence.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload Firefox preflight diagnostics
+        if: always() && (steps.firefox-preflight.outcome == 'success' || steps.firefox-preflight.outcome == 'failure')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-firefox-preflight-diagnostics-${{ matrix.shard }}
+          path: crates/forge3d-web/test-results
+          if-no-files-found: ignore
+          retention-days: 30
+
+  browser-preflight:
+    name: Web Runtime / Browser Preflight
+    needs: [build-and-contract, chromium-preflight, firefox-preflight]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the protected source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Require every browser shard and package build to succeed
+        env:
+          FORGE3D_PREFLIGHT_RESULTS: ${{ toJSON(needs) }}
+        run: node crates/forge3d-web/scripts/verify-browser-preflight-results.mjs
+
+      - name: Collect Chromium evidence from the producing shard
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: forge3d-web-source-browser-evidence-*
+          path: ${{ runner.temp }}/chromium-evidence
+          merge-multiple: true
+
+      - name: Publish complete Chromium source-browser evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-source-browser-evidence
+          path: ${{ runner.temp }}/chromium-evidence
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Collect Firefox evidence from the producing shard
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: forge3d-web-firefox-preflight-ENGINE_PASS-default-preferences-*
+          path: ${{ runner.temp }}/firefox-evidence
+          merge-multiple: true
+
+      - name: Publish complete Firefox source-browser evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-firefox-preflight-ENGINE_PASS-default-preferences
+          path: ${{ runner.temp }}/firefox-evidence
           if-no-files-found: error
           retention-days: 30
 
@@ -370,16 +495,13 @@ jobs:
     needs: build-and-contract
     runs-on: macos-latest
     continue-on-error: true
-    timeout-minutes: 25
+    # A slower full preflight can exceed 25m before every case finishes.
+    # Complete the report before classification; per-test deadlines stay fixed.
+    timeout-minutes: 60
 
     steps:
       - name: Check out the protected source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable reviewed 2026-07-28
-        with:
-          targets: wasm32-unknown-unknown
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -392,9 +514,11 @@ jobs:
         working-directory: crates/forge3d-web
         run: npm ci --registry=https://registry.npmjs.org
 
-      - name: Build browser package
-        working-directory: crates/forge3d-web
-        run: npm run build
+      - name: Download shared browser package build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: forge3d-web-browser-build-${{ github.sha }}
+          path: crates/forge3d-web
 
       - name: Install Playwright WebKit engine
         working-directory: crates/forge3d-web
@@ -414,7 +538,7 @@ jobs:
           FORGE3D_WEBGPU_REQUIRED: "1"
           FORGE3D_SOURCE_BENCHMARK_MODE: probe
           PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/webkit-preflight-actual.json
-        run: npm run test:browser:webkit -- --reporter=json
+        run: npm run test:browser:webkit -- --reporter=json,line
 
       - name: Classify Playwright WebKit engine preflight
         id: classify-webkit

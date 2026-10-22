@@ -5457,7 +5457,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w20_cartography.spec.ts",
-      "sha256": "7cce9127aed87f9726e9aef0797983e2971a11d55ddcbd416456872a307ea56c",
+      "sha256": "49f8b9f8bb44e38874b35f58e09fede898a2adc1fd8b8148d7317330c86a0f25",
       "declarations": [
         "W20 ${label}: native title bounds cover the expanded text corpus",
         "W20 ${label}: ${script} SVG/PDF exports",
