@@ -70,6 +70,25 @@ test.describe("W08 material virtual texturing (native tv20 params)", () => {
     expect(r.frames.length, JSON.stringify(r.frames)).toBeLessThan(30);
   });
 
+  test("VT feedback retries after a rejected map without stalling frames", async ({ page }) => {
+    test.slow();
+    await page.addInitScript(() => {
+      const original = GPUBuffer.prototype.mapAsync;
+      let attempts = 0;
+      GPUBuffer.prototype.mapAsync = function (...args: Parameters<GPUBuffer["mapAsync"]>) {
+        if (this.label === "forge3d-web-terrain-vt-feedback-staging") {
+          (window as any).__vtMapAttempts = ++attempts;
+          if (attempts === 1) return Promise.reject(new DOMException("injected VT map failure", "OperationError"));
+        }
+        return original.apply(this, args);
+      };
+    });
+    const r = await probe(page, "feedback");
+    expect(await page.evaluate(() => (window as any).__vtMapAttempts)).toBeGreaterThan(1);
+    expect(r.stats.feedbackRequests, JSON.stringify(r.frames)).toBe(20);
+    expect(r.frames.length, JSON.stringify(r.frames)).toBeLessThan(30);
+  });
+
   test("a normal-family commit is rejected with vt_unsupported_family", async ({ page }) => {
     test.slow();
     const r = await probe(page, "rejectNormalFamily");

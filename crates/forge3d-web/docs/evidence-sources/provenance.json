@@ -169,7 +169,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w08_vt.spec.ts",
-      "sha256": "f459c096bceb4f85a6611b339b336ea00d5e51993003b6d523f538abb7f274c6",
+      "sha256": "24de98dff74128b6b2c170a28a32657f02d246b4adde8bbf4e12e8f1edb4123a",
       "snapshot": "evidence-sources/tests/playwright/w08_vt.spec.ts.txt"
     },
     {
@@ -189,7 +189,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
-      "sha256": "968cae780a802f1fc1806e9428255985ac73abd3efae6964ef9c6f5ba5d921f3",
+      "sha256": "89c3b45b9f95729573a9f18f26f34c759bd745f5d39b4f632720405c06548b9b",
       "snapshot": "evidence-sources/tests/playwright/w12_vector.spec.ts.txt"
     },
     {

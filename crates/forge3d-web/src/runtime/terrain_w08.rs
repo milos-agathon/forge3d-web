@@ -10,8 +10,8 @@
 //! `terrain_height_*` WGSL helpers declared in the terrain template; this
 //! module only owns the Rust-side state and buffer/texture plumbing.
 
+use super::gpu_completion::Completion;
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
 
 use forge3d_core::gpu::GpuContext;
 use forge3d_core::terrain::{TerrainClipmapGeometry, TerrainHeightmapInput, TerrainStreaming};
@@ -19,8 +19,9 @@ use forge3d_core::terrain_clipmap::{
     estimate_triangle_count, ClipmapConfig, ClipmapLayout, ClipmapMesh, FrustumPlanes,
 };
 use forge3d_core::terrain_stream::{
-    plan_clipmap_requests, CoalescePolicy, Completion, HeightMosaic, HeightPyramid,
-    HeightfieldPlacement, PlannedTile, RequestOutcome, StreamPlanConfig, TileId, TileRequestQueue,
+    plan_clipmap_requests, CoalescePolicy, Completion as TileCompletion, HeightMosaic,
+    HeightPyramid, HeightfieldPlacement, PlannedTile, RequestOutcome, StreamPlanConfig, TileId,
+    TileRequestQueue,
 };
 use wgpu::util::DeviceExt;
 
@@ -716,7 +717,7 @@ impl HeightStreamingState {
                 ),
             ));
         }
-        if matches!(self.queue.complete(id), Completion::Discarded) {
+        if matches!(self.queue.complete(id), TileCompletion::Discarded) {
             return Ok(None);
         }
         let outcome = match self.mosaic.insert(id) {
@@ -866,12 +867,6 @@ pub(super) struct LodSelectResult {
     pub visible_ids: HashSet<TileId>,
 }
 
-#[derive(Default)]
-struct LodMapState {
-    ready: bool,
-    failed: bool,
-}
-
 /// GPU LOD-selection pass over the lod-0 tile grid (E4). The output header +
 /// tile array are copied into one MAP_READ staging buffer; `map_async` runs
 /// non-blocking and the latest completed result feeds `planHeightTiles`.
@@ -886,8 +881,7 @@ pub(super) struct GpuLodSelect {
     output_bytes: u64,
     /// `[terrain_world_width, world_tile_size, tiles_x, tiles_y]`.
     terrain_params: [f32; 4],
-    map_state: Arc<Mutex<LodMapState>>,
-    map_pending: bool,
+    completion: Completion,
     pub latest: Option<LodSelectResult>,
     pub frame: u64,
 }
@@ -1041,8 +1035,7 @@ impl GpuLodSelect {
             tile_count,
             output_bytes,
             terrain_params,
-            map_state: Arc::new(Mutex::new(LodMapState::default())),
-            map_pending: false,
+            completion: Completion::default(),
             latest: None,
             frame: 0,
         }
@@ -1099,7 +1092,7 @@ impl GpuLodSelect {
     /// Encodes the header clear + dispatch + staging copy when no readback
     /// is in flight (one frame's worth of selection work).
     pub(super) fn encode_frame(&mut self, encoder: &mut wgpu::CommandEncoder) {
-        if self.map_pending {
+        if !self.completion.submit() {
             return;
         }
         encoder.clear_buffer(&self.header_buffer, 0, Some(LOD_HEADER_BYTES));
@@ -1125,45 +1118,16 @@ impl GpuLodSelect {
 
     /// Starts the non-blocking map after the frame's submission.
     pub(super) fn begin_map(&mut self, context: &GpuContext) {
-        if self.map_pending {
-            return;
-        }
-        self.map_pending = true;
-        let shared = self.map_state.clone();
-        self.staging
-            .slice(..self.output_bytes)
-            .map_async(wgpu::MapMode::Read, move |result| {
-                let mut state = shared
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
-                state.ready = result.is_ok();
-                state.failed = result.is_err();
-            });
+        self.completion.begin_map(&self.staging, self.output_bytes);
         let _ = context.device.poll(wgpu::PollType::Poll);
     }
-
-    /// Harvests a completed map into `latest` (called once per frame).
+    /// Harvests completed data; errors release staging without replacing latest.
     pub(super) fn harvest(&mut self, context: &GpuContext) {
-        if !self.map_pending {
-            return;
-        }
         let _ = context.device.poll(wgpu::PollType::Poll);
-        let (ready, failed) = {
-            let state = self
-                .map_state
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
-            (state.ready, state.failed)
-        };
-        if !ready && !failed {
-            return;
-        }
-        if ready {
-            let data = {
-                let view = self.staging.slice(..self.output_bytes).get_mapped_range();
-                view.to_vec()
-            };
-            self.staging.unmap();
+        if let Some(Ok(data)) = self
+            .completion
+            .harvest(&self.staging, self.output_bytes, |bytes| bytes.to_vec())
+        {
             let mut header = [0u32; 4];
             for (index, chunk) in data[..16].chunks_exact(4).enumerate() {
                 header[index] = u32::from_le_bytes(chunk.try_into().unwrap_or([0; 4]));
@@ -1194,15 +1158,6 @@ impl GpuLodSelect {
                 visible_ids,
             });
         }
-        {
-            let mut state = self
-                .map_state
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
-            state.ready = false;
-            state.failed = false;
-        }
-        self.map_pending = false;
     }
 }
 

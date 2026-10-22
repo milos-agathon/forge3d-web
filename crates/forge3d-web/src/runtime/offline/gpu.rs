@@ -485,45 +485,24 @@ pub(crate) async fn read_texture_mip(
     height: u32,
     mip_level: u32,
 ) -> Result<(Vec<u8>, forge3d_core::readback::ReadbackLayout), WebError> {
-    let layout = format
-        .layout(width, height)
-        .map_err(crate::error::map_core_error)?;
-    let staging = staging_buffer(
-        &context.device,
-        "forge3d-web-offline-texture-readback",
-        layout.buffer_size,
-    );
     let mut encoder = context
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("forge3d-web-offline-texture-readback-encoder"),
+            label: Some("offline:texture-readback"),
         });
-    encoder.copy_texture_to_buffer(
-        wgpu::TexelCopyTextureInfo {
+    let job = crate::runtime::texture_readback::Job::encode(
+        context,
+        &mut encoder,
+        &[crate::runtime::texture_readback::Request {
             texture,
-            mip_level,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
-        },
-        wgpu::TexelCopyBufferInfo {
-            buffer: &staging,
-            layout: wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(layout.padded_bytes_per_row),
-                rows_per_image: Some(height),
-            },
-        },
-        wgpu::Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        },
-    );
-    context.queue.submit(std::iter::once(encoder.finish()));
-    let bytes =
-        crate::runtime::readback::map_readback_buffer(context, &staging, layout.buffer_size)
-            .await?;
-    Ok((bytes, layout))
+            region: crate::runtime::texture_readback::Region::image(
+                width, height, mip_level, format,
+            ),
+        }],
+    )?;
+    context.queue.submit(Some(encoder.finish()));
+    let data = job.read(context).await?.remove(0);
+    Ok((data.bytes, data.layout))
 }
 
 pub(crate) fn copy_texture(
