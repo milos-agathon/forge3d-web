@@ -324,7 +324,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/labels.test.ts",
-      "sha256": "b87beb78110eda484fd1c55cfe1176a4321a461a3882aa7dbbab4b112991ffad",
+      "sha256": "ffbf60e53a46ab66f6467fc8c2ca4db78c9785dbea05fef9962d5db74d28885c",
       "snapshot": "evidence-sources/tests/unit/labels.test.ts.txt"
     },
     {
@@ -454,7 +454,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w20-vector-export.test.ts",
-      "sha256": "0cc415082a60436170c34b5ea4635da7c87b188065ace1b6fc439b38b3bcd7ac",
+      "sha256": "740fa04d16f9dc19318e24e572cf95496f7e9c2373b1983d3b8eb864bee67854",
       "snapshot": "evidence-sources/tests/unit/w20-vector-export.test.ts.txt"
     },
     {

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { PDFDocument, PDFRawStream, PDFName, PDFDict, decodePDFRawStream } from 'pdf-lib';
 import { Bounds, VectorScene, project2dToScreen, project3dTo2d } from '../../src-ts/vector-export-scene.js';
@@ -86,4 +86,18 @@ it('W20 corrupt font data fail structurally, and pending SVG exports retain thei
   await expect(exportSvg(s, { fonts })).rejects.toMatchObject({ code: 'INVALID_INPUT', details: { reason: 'invalid-font' } });
   const original = exportSvg(s, { fonts: [{ family: 'DejaVu Sans', source: readFileSync(new URL('../../assets/fonts/DejaVuSans.ttf', import.meta.url)) }] });
   s.clear(); s.addLabel('Replacement', [10, 10]); const svg = await (await original).text(); expect(svg).toContain('Original'); expect(svg).not.toContain('Replacement'); s.dispose();
+});
+
+it.each([['SVG',exportSvg],['PDF',exportPdf]] as const)('%s captures bounds, styling and resource options before delayed fonts',async(_name,encode)=>{
+  const bytes=readFileSync(new URL('../../assets/fonts/DejaVuSans.ttf',import.meta.url));
+  const scene=new VectorScene().addPolygon(square,{holes:[hole]}).addLabel('Original',[25,75]);
+  const options={width:200,height:100,bounds:new Bounds(0,0,100,100),background:[.2,.3,.4,1] as [number,number,number,number],maxBytes:128*1024*1024,fonts:[{family:'DejaVu Sans',source:'https://fonts.test/font.ttf'}]};
+  const baseline=await encode(scene,{...options,fonts:[{family:'DejaVu Sans',source:bytes}]});
+  let entered!:()=>void,release!:()=>void;const started=new Promise<void>(r=>entered=r),gate=new Promise<void>(r=>release=r);
+  vi.stubGlobal('fetch',async()=>{entered();await gate;return new Response(bytes);});
+  try {
+    const pending=encode(scene,options);await started;
+    options.bounds.maxX=10000;options.background.fill(0);options.width=1;options.maxBytes=1;options.fonts[0]!.source='https://invalid.test/font';scene.clear();scene.addLabel('Replacement',[99,99]);
+    release();expect(new Uint8Array(await (await pending).arrayBuffer())).toEqual(new Uint8Array(await baseline.arrayBuffer()));
+  }finally{vi.unstubAllGlobals();scene.dispose();}
 });

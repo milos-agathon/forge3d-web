@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "137fa5885283d38c131d559c68193c23a6d092e26eee71b97782eac60d0dbf75",
+      "sha256": "84fb7de6f620f006710dc9538f34363ed5be25a849b176c59fb272017eedc415",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -3087,8 +3087,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/labels.test.ts.txt",
-      "sha256": "b87beb78110eda484fd1c55cfe1176a4321a461a3882aa7dbbab4b112991ffad",
-      "bytes": 17537,
+      "sha256": "ffbf60e53a46ab66f6467fc8c2ca4db78c9785dbea05fef9962d5db74d28885c",
+      "bytes": 18494,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -3098,7 +3098,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/unit/labels.test.ts",
-            "sha256": "b87beb78110eda484fd1c55cfe1176a4321a461a3882aa7dbbab4b112991ffad",
+            "sha256": "ffbf60e53a46ab66f6467fc8c2ca4db78c9785dbea05fef9962d5db74d28885c",
             "hashMode": "utf8-lf"
           }
         ],
@@ -4012,8 +4012,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w20-vector-export.test.ts.txt",
-      "sha256": "0cc415082a60436170c34b5ea4635da7c87b188065ace1b6fc439b38b3bcd7ac",
-      "bytes": 13891,
+      "sha256": "740fa04d16f9dc19318e24e572cf95496f7e9c2373b1983d3b8eb864bee67854",
+      "bytes": 15204,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -4023,7 +4023,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/unit/w20-vector-export.test.ts",
-            "sha256": "0cc415082a60436170c34b5ea4635da7c87b188065ace1b6fc439b38b3bcd7ac",
+            "sha256": "740fa04d16f9dc19318e24e572cf95496f7e9c2373b1983d3b8eb864bee67854",
             "hashMode": "utf8-lf"
           }
         ],

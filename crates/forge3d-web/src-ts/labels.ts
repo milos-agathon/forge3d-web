@@ -1,3 +1,4 @@
+import {CommittedLabelViews,type LabelView} from "./label-view.js";
 import type { CameraInput, SceneNodeId, SceneNodeInput } from "./index.js";
 import type { Forge3DScene } from "./scene.js";
 import { LabelFeatureSource } from "./label-features.js";
@@ -188,9 +189,8 @@ export class LabelLayer {
   #algorithm: "greedy" | "annealing" = "greedy";
   #seed = 0;
   #iterations = 100;
-  readonly #attachments = new Map<Forge3DScene, SceneNodeId[]>();
+  readonly #views=new CommittedLabelViews();
   readonly #changeListeners = new Set<() => void>();
-  #pickBounds: { id: number; bounds: LabelRect }[] = [];
   constructor(atlas: FontAtlas, ownsAtlas = false) {
     this.#atlas = atlas;
     this.#ownsAtlas = ownsAtlas;
@@ -305,21 +305,11 @@ export class LabelLayer {
     }
     return { ids, diagnostics };
   }
-  pick(x: number, y: number): number | null {
+  pick(x: number, y: number, scene?: Forge3DScene): number | null {
     this.#assert();
     if (!this.#enabled) return null;
     if (!Number.isFinite(x + y)) throw Error("Pick coordinates must be finite");
-    return (
-      [...this.#pickBounds]
-        .reverse()
-        .find(
-          (p) =>
-            x >= p.bounds[0] &&
-            x <= p.bounds[2] &&
-            y >= p.bounds[1] &&
-            y <= p.bounds[3],
-        )?.id ?? null
-    );
+    return this.#views.pick(x,y,scene);
   }
   addLabels(
     labels: readonly {
@@ -439,7 +429,7 @@ export class LabelLayer {
         { feature: "remove unknown label" },
         String(id),
       );
-    this.#pickBounds = this.#pickBounds.filter((p) => p.id !== id);
+    this.#views.remove(id);
     this.#changed();
     return { ok: true, id, diagnostics: [] };
   }
@@ -447,11 +437,7 @@ export class LabelLayer {
     this.#assert();
     this.#labels.clear();
     this.#changed();
-    for (const [scene, ids] of this.#attachments) {
-      if (!scene.disposed) for (const id of ids) scene.removeNode(id);
-    }
-    this.#attachments.clear();
-    this.#pickBounds = [];
+    this.#views.clear();
   }
   setLabelsEnabled(enabled: boolean): void {
     this.#assert();
@@ -539,7 +525,8 @@ export class LabelLayer {
       });
     return layer;
   }
-  render(options: LabelRenderOptions): LabelPlacementReport {
+  render(options:LabelRenderOptions):LabelPlacementReport{const view=this.#layout(options);this.#views.render(view);return view.report;}
+  #layout(options: LabelRenderOptions): LabelView {
     this.#assert();
     const { width, height } = options.viewport;
     if (![width, height].every((v) => Number.isSafeInteger(v) && v > 0))
@@ -560,8 +547,7 @@ export class LabelLayer {
     };
     const pickBounds: { id: number; bounds: LabelRect }[] = [];
     if (!this.#enabled) {
-      this.#pickBounds = [];
-      return result;
+      return {report:result,hits:[]};
     }
     const budget = options.maxVertexBytes ?? 32 * 1024 * 1024;
     if (!Number.isSafeInteger(budget) || budget < 1)
@@ -905,31 +891,15 @@ export class LabelLayer {
       else if (eligible.has(label.id))
         result.rejected.push({ id: label.id, reason: "collision" });
     }
-    this.#pickBounds = pickBounds;
-    return result;
+    return {report:result,hits:pickBounds};
   }
   attach(
     scene: Forge3DScene,
     options: LabelRenderOptions,
   ): LabelPlacementReport {
-    const report = this.render(options),
-      old = this.#attachments.get(scene) ?? [],
-      ids: SceneNodeId[] = [];
-    try {
-      for (const node of report.nodes) ids.push(scene.addNode(node));
-    } catch (error) {
-      for (const id of ids) scene.removeNode(id);
-      throw error;
-    }
-    for (const id of old) scene.removeNode(id);
-    this.#attachments.set(scene, ids);
-    return report;
+    const view=this.#layout(options);this.#views.attach(scene,view);return view.report;
   }
-  detach(scene: Forge3DScene): void {
-    const ids = this.#attachments.get(scene) ?? [];
-    if (!scene.disposed) for (const id of ids) scene.removeNode(id);
-    this.#attachments.delete(scene);
-  }
+  detach(scene:Forge3DScene):void{this.#views.detach(scene);}
   memoryReport(): {
     labels: number;
     cpuBytes: number;

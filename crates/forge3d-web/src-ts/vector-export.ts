@@ -1,5 +1,6 @@
-import { cartographicError, cancelled, checkBytes, color, css, integer, xml, validateExportFont, type CartographicColor } from './cartography-common.js';
-import { Bounds, VectorScene, project2dToScreen, type ExportPoint } from './vector-export-scene.js';
+import { compileVectorExportPlan, captureExportOptions, type VectorExportPlan } from './vector-export-plan.js';
+import { cartographicError, cancelled, checkBytes, css, xml, validateExportFont, type CartographicColor } from './cartography-common.js';
+import { Bounds, VectorScene, type ExportPoint } from './vector-export-scene.js';
 import { readByteSource } from './browser-io.js';
 import type { BrowserByteSource } from './index.js';
 import { exportFontSource } from './cartography-fonts.js';
@@ -8,35 +9,28 @@ export interface VectorExportOptions {
   width?: number; height?: number; bounds?: Bounds; background?: CartographicColor; precision?: number; includeLabels?: boolean; maxBytes?: number; signal?: AbortSignal;
 }
 export interface VectorSvgOptions extends VectorExportOptions { fonts?: readonly VectorExportFont[] }
-export function exportSnapshot(scene: VectorScene, options: VectorExportOptions = {}) {
-  cancelled(options.signal); const width = integer(options.width ?? 800, 'width'), height = integer(options.height ?? 600, 'height'), precision = integer(options.precision ?? 2, 'precision', 0, 10);
-  const bounds = options.bounds ?? scene.computeBounds(10); bounds.validate();
-  checkBytes(scene.getMemoryReport().cpuBytes * 8, options.maxBytes);
-  return { width, height, precision, bounds, polygons: scene.polygons, polylines: scene.polylines, labels: options.includeLabels === false ? [] : scene.labels, background: options.background ? color(options.background) : null };
-}
 export function generateSvg(scene: VectorScene, options: VectorExportOptions = {}): string {
-  const s = exportSnapshot(scene, options), fmt = (v: number) => (Object.is(v, -0) ? 0 : v).toFixed(s.precision), project = (p: ExportPoint) => project2dToScreen(p, s.bounds, [s.width, s.height]);
-  const coords = (p: ExportPoint) => project(p).map(fmt).join(','), path = (p: ExportPoint[]) => p.map((v, i) => `${i ? 'L' : 'M'} ${coords(v)}`).join(' ') + ' Z';
+  return encodeSvgPlan(compileVectorExportPlan(scene,options),options);
+}
+function encodeSvgPlan(s:VectorExportPlan, options:VectorExportOptions):string {
+  const fmt = (v: number) => (Object.is(v, -0) ? 0 : v).toFixed(s.precision);
+  const coords = (p: ExportPoint) => p.map(fmt).join(','), path = (p: ExportPoint[]) => p.map((v, i) => `${i ? 'L' : 'M'} ${coords(v)}`).join(' ') + ' Z';
   const lines = ['<?xml version="1.0" encoding="UTF-8"?>', `<svg xmlns="http://www.w3.org/2000/svg" width="${s.width}" height="${s.height}" viewBox="0 0 ${s.width} ${s.height}">`];
   if (s.background) lines.push(`  <rect width="${s.width}" height="${s.height}" fill="${css(s.background)}"/>`);
-  for (const p of s.polygons) { const c = p.style, attrs = `fill="${c.fillColor[3] > .001 ? css(c.fillColor) : 'none'}" stroke="${c.strokeColor[3] > .001 ? css(c.strokeColor) : 'none'}" stroke-width="${fmt(c.strokeWidth)}" stroke-linejoin="round"`;
+  for (const p of s.polygons) { const c = p.style, attrs = `fill="${p.fillVisible ? css(c.fillColor) : 'none'}" stroke="${p.strokeVisible ? css(c.strokeColor) : 'none'}" stroke-width="${fmt(c.strokeWidth)}" stroke-linejoin="round"`;
     lines.push(p.holes.length ? `  <path d="${[p.exterior, ...p.holes].map(path).join(' ')}" fill-rule="evenodd" ${attrs}/>` : `  <polygon points="${p.exterior.map(coords).join(' ')}" ${attrs}/>`);
   }
   for (const p of s.polylines) lines.push(`  <polyline points="${p.path.map(coords).join(' ')}" fill="none" stroke="${css(p.style.strokeColor)}" stroke-width="${fmt(p.style.strokeWidth)}" stroke-linecap="round" stroke-linejoin="round"/>`);
-  for (const l of s.labels) { const c = l.style, [x, y] = project(l.position), attrs = `x="${fmt(x)}" y="${fmt(y)}" font-family="${xml(c.fontFamily)}" font-size="${fmt(c.fontSize)}" font-weight="${xml(c.fontWeight)}" text-anchor="middle" dominant-baseline="middle"`, text = xml(l.text);
-    if (c.haloWidth && c.haloColor[3] > .001) lines.push(`  <text ${attrs} fill="none" stroke="${css(c.haloColor)}" stroke-width="${fmt(c.haloWidth * 2)}" stroke-linejoin="round">${text}</text>`);
+  for (const l of s.labels) { const c = l.style, [x, y] = l.position, attrs = `x="${fmt(x)}" y="${fmt(y)}" font-family="${xml(c.fontFamily)}" font-size="${fmt(c.fontSize)}" font-weight="${xml(c.fontWeight)}" text-anchor="middle" dominant-baseline="middle"`, text = xml(l.text);
+    if (l.haloVisible) lines.push(`  <text ${attrs} fill="none" stroke="${css(c.haloColor)}" stroke-width="${fmt(c.haloWidth * 2)}" stroke-linejoin="round">${text}</text>`);
     lines.push(`  <text ${attrs} fill="${css(c.color)}">${text}</text>`);
   }
   lines.push('</svg>'); const svg = lines.join('\n'); checkBytes(svg.length * 2, options.maxBytes); cancelled(options.signal); return svg;
 }
 /** Standalone SVG Blob with embedded fonts; generateSvg remains a synchronous markup API. */
 export async function exportSvg(scene: VectorScene, options: VectorSvgOptions = {}): Promise<Blob> {
-  const snapshot = exportSnapshot(scene, options), markup = generateSvg(scene, options), sceneBytes = scene.getMemoryReport().cpuBytes, families = new Set<string>();
-  for (const label of snapshot.labels) {
-    families.add(label.style.fontFamily);
-    if (/[\u0600-\u06ff]/u.test(label.text)) families.add('NotoSansArabic');
-    if (/[\u0900-\u097f]/u.test(label.text)) families.add('NotoSansDevanagari');
-  }
+  options=captureExportOptions(options);
+  const snapshot = compileVectorExportPlan(scene,options), markup = encodeSvgPlan(snapshot,options), sceneBytes = snapshot.sceneBytes, families = new Set(snapshot.families);
   const cssRules: string[] = [], aliases = new Map([...families].sort().map((family, i) => [family, 'Forge3D-embedded-' + i])); let bytesHeld = 0;
   for (const family of [...families].sort()) {
     const canonical = ['sans-serif', 'Arial', 'DejaVu Sans'].includes(family) ? 'DejaVu Sans' : family;

@@ -1,3 +1,4 @@
+import {VectorIdentity} from "./vector-identity.js";
 import { Diagnostic, ValidationReport, type JsonValue } from './diagnostics.js';
 import { SceneState, type SceneStateInput, type CameraBookmark, type ScenePreset } from './scene-review.js';
 import type { MapSceneLayerInput, SceneRecipeInput, RasterOverlayInput } from './map-scene-types.js';
@@ -26,9 +27,8 @@ export function migrateNativeBundle(manifest: RecordValue, files: Record<string,
         return converted;
     };
     // W12 IDs are global across the active graph, including review overlays.
-    const usedIds = new Set((recipe.layers ?? []).flatMap(l => l.kind === 'vector' ? l.source.data?.features.map(f => f.id) ?? [] : []));
-    let next = 1;
-    const vectorId = () => { while (usedIds.has(next)) next++; if (next > 0xffffffff) bundleFailure('Native vector ID space exhausted'); usedIds.add(next); return next++; };
+    const identities=new VectorIdentity((recipe.layers??[]).flatMap(l=>l.kind==='vector'?l.source.data?.features.map(f=>f.id)??[]:[]));
+    const vectorId=()=>identities.allocate();
     const layers = (raw: RecordValue, prefix: string): MapSceneLayerInput[] => {
         const result: MapSceneLayerInput[] = [];
         for (const [i, overlay] of (raw.raster_overlays ?? []).entries()) {
@@ -58,7 +58,7 @@ export function migrateNativeBundle(manifest: RecordValue, files: Record<string,
                 if (step === 2) features.push({ id: vectorId(), kind: 'line', positions: group.map(g => g.position), style });
                 if (step === 3) features.push({ id: vectorId(), kind: 'polygon', rings: [group.map(g => g.position)], style });
             }
-            result.push({ kind: 'vector', layerId: `${prefix}:vector:${i}`, source: { id: `${prefix}:vector-data:${i}`, format: 'vector', crs: recipe.crs ?? 'LOCAL', data: { name: overlay.name ?? `${prefix}:${i}`, features, zOrder: overlay.z_order ?? i } } });
+            result.push({ kind: 'vector', layerId: `${prefix}:vector:${i}`, source: { id: `${prefix}:vector-data:${i}`, format: 'vector', crs: recipe.crs ?? 'LOCAL', data: { name: overlay.name ?? `${prefix}:${i}`, features: features.map(f=>({...f,properties:{...f.properties,forge3d_identity:{source:`${prefix}:vector:${i}`,sourceId:f.id}}})), zOrder: overlay.z_order ?? i } } });
         }
         if (raw.labels?.length) result.push({ kind: 'labels', layerId: `${prefix}:labels`, source: { id: `${prefix}:labels-data`, format: 'labels', crs: recipe.crs ?? 'LOCAL', data: raw.labels.map((l: RecordValue, i: number) => ({ ...l, id: l.id ?? `${prefix}:${i}`, geometry_type: l.kind === 'line' || l.kind === 'curved' ? 'LineString' : 'Point', ...(l.polyline ? { geometry: { type: 'LineString', coordinates: l.polyline } } : {}), ...(l.kind === 'callout' && l.anchor ? { world_pos: l.anchor, leader_line: true } : {}), ...(l.kind === 'curved' ? { curved_text: true } : {}) })) }, coordinateSpace: 'world' });
         if (raw.scatter_batches?.length) unsupported(`${prefix}.scatter_batches`, raw.scatter_batches);
