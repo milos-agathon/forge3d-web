@@ -1,14 +1,14 @@
 #[test]
 fn shaders_validate() {
-    let source = concat!(include_str!("sky.wgsl"), include_str!("effects.wgsl"));
-    let m = naga::front::wgsl::parse_str(source)
-        .unwrap_or_else(|e| panic!("{}", e.emit_to_string(source)));
+    let source = super::gpu::shader_source();
+    let m = naga::front::wgsl::parse_str(&source)
+        .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&source)));
     naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
         naga::valid::Capabilities::all(),
     )
     .validate(&m)
-    .unwrap_or_else(|e| panic!("{}", e.emit_to_string(source)));
+    .unwrap_or_else(|e| panic!("{}", e.emit_to_string(&source)));
 }
 #[test]
 fn uniform_layout() {

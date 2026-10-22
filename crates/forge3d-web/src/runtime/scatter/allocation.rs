@@ -3,6 +3,7 @@ use super::*;
 pub(crate) fn build(
     runtime: &Forge3DRuntime,
     inputs: Vec<ScatterBatch>,
+    scene_ids: &[u32],
     memory: &mut crate::runtime::memory::MemoryLedger,
 ) -> Result<Option<ScatterResources>, WebError> {
     if inputs.is_empty() {
@@ -10,6 +11,10 @@ pub(crate) fn build(
         memory.release(TEXTURES_KEY);
         return Ok(None);
     }
+    let capture_starts = crate::runtime::capture_identity::scatter_starts(
+        inputs.iter().map(|b| b.transforms.len() / 16),
+        scene_ids,
+    )?;
     let context = runtime
         .context
         .as_ref()
@@ -114,10 +119,10 @@ pub(crate) fn build(
         &ibl.bind_group_layout,
     ];
     let (display, capture_shader) = pipelines(device, layouts, features, format);
-    let mut id_start = 0x100000;
     let batches = inputs
         .into_iter()
-        .map(|input| {
+        .zip(capture_starts)
+        .map(|(input, start)| {
             let levels = input
                 .levels
                 .iter()
@@ -152,8 +157,6 @@ pub(crate) fn build(
                     )
                 })
                 .collect();
-            let start = id_start;
-            id_start += input.transforms.len() as u32 / 16;
             Batch {
                 input,
                 levels,

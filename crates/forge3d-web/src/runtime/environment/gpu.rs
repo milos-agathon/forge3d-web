@@ -5,7 +5,17 @@ use crate::{
 };
 use forge3d_core::{environment::Environment, gpu::GpuContext};
 use std::cell::{Cell, OnceCell, RefCell};
-const SHADER: &str = concat!(include_str!("sky.wgsl"), include_str!("effects.wgsl"));
+pub(super) fn shader_source() -> String {
+    crate::runtime::capture_identity::specialize(
+        [
+            forge3d_core::environment::payload::WGSL_LAYOUT,
+            forge3d_core::environment::payload::WGSL_ACCESSORS,
+            include_str!("sky.wgsl"),
+            include_str!("effects.wgsl"),
+        ]
+        .concat(),
+    )
+}
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct Uniform {
@@ -73,7 +83,5 @@ pub(crate) struct EnvironmentResources {
 pub(super) mod bindings;
 mod init;
 mod passes;
-mod payload;
 mod uniforms;
 mod water;
-use payload::pack;

@@ -72,7 +72,7 @@ async function probe(device, source, expression, uniform) {
   return values;
 }
 export async function nativeProbes(api) {
-  const [sky, water, cloud, portedSky, portedEffects] = await Promise.all([
+  const [sky, water, cloud, portedSky, portedEffectsRaw, payloadSchema, captureSchema] = await Promise.all([
     ...["sky", "water_surface", "clouds"].map((name) =>
       fetch(`/tests/golden/w10/${name}.json`).then((r) => r.json()),
     ),
@@ -88,7 +88,19 @@ export async function nativeProbes(api) {
             r.text(),
           ),
     ),
+    fetch("/w10-runtime-payload.rs").then((r) =>
+      r.ok ? r.text() : Promise.reject(new Error("Environment payload schema unavailable")),
+    ),
+    fetch("/w10-capture-identity.rs").then(r=>{if(!r.ok)throw new Error("Capture schema unavailable");return r.text();}),
   ]);
+  const captureWater=captureSchema.match(/WATER_BASE\s*:\s*u32\s*=\s*(0x[0-9a-f]+|[0-9]+)/)?.[1];
+  if(!captureWater)throw new Error("Capture water identity missing");
+  const portedEffects=portedEffectsRaw.replace("__CAPTURE_WATER_BASE__",`${Number(captureWater)}u`);
+  const fields = payloadSchema.match(/schema!\s*\{([^}]+)\}/)?.[1];
+  const accessors = payloadSchema.match(/WGSL_ACCESSORS:&str\s*=\s*("(?:[^"\\]|\\.)*")/)?.[1];
+  if (!fields || !accessors) throw new Error("Environment payload schema missing");
+  const layout = [...fields.matchAll(/(\w+)\s*=\s*(\d+)\s*;/g)]
+    .map(([, name, value]) => `const ${name}:u32=${value}u;`).join("\n") + JSON.parse(accessors);
   const adapter = await navigator.gpu.requestAdapter();
   const device = await adapter.requestDevice();
   try {
@@ -117,7 +129,7 @@ export async function nativeProbes(api) {
         );
         const actual = await probe(
           device,
-          portedSky + portedEffects,
+          layout + portedSky + portedEffects,
           "vec4<f32>(sky_color(dir),1.)",
           p,
         );
@@ -169,7 +181,7 @@ export async function nativeProbes(api) {
     );
     const cloudActual = await probe(
       device,
-      portedSky + portedEffects,
+      layout + portedSky + portedEffects,
       "vec4<f32>(cloud_scattering(density,dir,vec3<f32>(.6,.7,.8),vec3<f32>(.8,.82,.86),1.),1.)",
       env,
     );
@@ -201,7 +213,7 @@ export async function nativeProbes(api) {
     env.set(wp, 48);
     const webWater = await probe(
       device,
-      portedSky + portedEffects,
+      layout + portedSky + portedEffects,
       "vec4<f32>(wave_normal(uv*8.,env.p[0].w,env.p[0].x,env.p[0].y,env.p[0].z)*.5+.5,.5+simple_wave(uv*8.,env.p[0].w,env.p[0].x,env.p[0].y,env.p[0].z)*2.)",
       env,
     );

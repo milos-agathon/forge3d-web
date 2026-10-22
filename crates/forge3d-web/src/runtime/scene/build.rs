@@ -156,7 +156,7 @@ pub(super) fn build_geometry(
 
 /// AOV object ID of a scene node: `0` is background, `1` the terrain.
 pub(crate) fn scene_object_id(node_id: u32) -> u32 {
-    node_id.saturating_add(crate::runtime::offline::AOV_ID_SCENE_NODE_BASE)
+    crate::runtime::capture_identity::scene(node_id).expect("validated scene capture ID")
 }
 
 pub(super) fn checked_scene_bytes(geometry: &BuiltGeometry) -> Result<u64, WebError> {

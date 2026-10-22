@@ -1,5 +1,6 @@
 mod analysis;
 mod canvas;
+mod capture_identity;
 mod device_health;
 mod diagnostics;
 mod environment;

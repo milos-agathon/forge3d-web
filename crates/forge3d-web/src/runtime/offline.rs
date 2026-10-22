@@ -38,11 +38,12 @@ use gpu::{
 
 /// AOV object IDs: `0` background, `1` terrain, then `node.id + 2` per scene
 /// node.
-pub(crate) const AOV_ID_TERRAIN: u32 = 1;
-pub(crate) const AOV_ID_SCENE_NODE_BASE: u32 = 2;
+pub(crate) use super::capture_identity::{
+    SCENE_BASE as AOV_ID_SCENE_NODE_BASE, TERRAIN as AOV_ID_TERRAIN, VECTOR as AOV_ID_VECTOR,
+};
+
 /// Reserved vector surface ID. Full uint32 feature IDs remain in the pick map.
 /// Scene object IDs stay below this value; water IDs start at 0xfffffff0.
-pub(crate) const AOV_ID_VECTOR: u32 = 0xffffffef;
 
 pub(crate) const CAPTURE_COLOR_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba32Float;
 pub(crate) const CAPTURE_DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::R32Float;

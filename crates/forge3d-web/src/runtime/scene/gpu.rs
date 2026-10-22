@@ -76,6 +76,14 @@ pub(crate) struct NativeScene {
 }
 
 impl NativeScene {
+    pub(crate) fn capture_ids(&self) -> Vec<u32> {
+        self.motion_vertices
+            .iter()
+            .map(|v| v.object_id)
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect()
+    }
     pub(super) fn new(
         context: &GpuContext,
         format: wgpu::TextureFormat,

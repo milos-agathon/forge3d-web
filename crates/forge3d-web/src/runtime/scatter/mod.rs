@@ -160,7 +160,15 @@ pub(super) fn set(
             ),
         )?;
     }
-    let resources = build(runtime, inputs, &mut memory)?;
+    let resources = build(
+        runtime,
+        inputs,
+        &runtime
+            .scene
+            .as_ref()
+            .map_or_else(Vec::new, |s| s.capture_ids()),
+        &mut memory,
+    )?;
     runtime.scatter = resources;
     runtime.memory = memory;
     Ok(())

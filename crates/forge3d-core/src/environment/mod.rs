@@ -1,4 +1,5 @@
 //! Shared W10 environment contracts. Units are metres, seconds and linear RGB.
+pub mod payload;
 pub mod sun;
 mod tests;
 mod types;
@@ -35,8 +36,8 @@ impl Environment {
                 "reflection",
             ]
             .contains(&self.debug.as_str())
-            || self.volumes.len() > 8
-            || self.water.len() > 4
+            || self.volumes.len() > payload::VOLUME_CAPACITY
+            || self.water.len() > payload::WATER_CAPACITY
         {
             return bad();
         }
@@ -169,6 +170,7 @@ impl Environment {
         if self.water.iter().filter(|w| w.terrain_mask).count() > 1 {
             return Err("at most one masked-terrain reflection layer".into());
         }
+        payload::Layout::new(self)?;
         Ok(())
     }
     pub fn sun_at(&self, time: f32) -> [f32; 3] {
@@ -183,10 +185,7 @@ impl Environment {
     }
     /// Payload buffer stores volume descriptors, voxel samples and explicit masks.
     pub fn payload_floats(&self) -> usize {
-        8 * 16
-            + 4 * 48
-            + self.volumes.iter().map(|v| v.data.len()).sum::<usize>()
-            + self.water.iter().map(|w| w.mask.len()).sum::<usize>()
+        payload::float_count(self)
     }
     pub fn gpu_bytes(&self, width: u32, height: u32) -> u64 {
         let (w, h) = self.effect_size(width, height);
