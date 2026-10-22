@@ -1,5 +1,6 @@
 import { requirePro, PRO_FEATURES } from './license.js';
-import { Forge3DError, type BrowserByteSource, type BrowserByteSink } from './index.js';
+import { type BrowserByteSource, type BrowserByteSink } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { readByteSource } from './browser-io.js';
 import { styleAssetUrls, assessBundleStyle } from './bundle-style-assets.js';
 import { writeBundleOutput } from './bundle-output.js';

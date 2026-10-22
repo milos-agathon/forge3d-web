@@ -244,7 +244,8 @@ for (const file of ["label-features", "label-declutter", "label-types", "label-d
   writeFileSync(join(root, "types", file + ".d.ts"), declaration);
 }
 for (const file of ['crs','crs-types','crs-layers','dataset-types','datasets','vector-types','vector-layers']) {
-  copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
+  const declaration = readRequired(join(dist,file+'.d.ts')).replaceAll('./runtime-failure.js', './index.js');
+  writeFileSync(join(root,'types',file+'.d.ts'), declaration);
 }
 copyRequired(join(repoRoot, "docs", "parity", "label-case-contract.json"), join(root, "docs", "label-case-contract.json"));
 for (const file of ['mesh','geometry','mesh-processing','mesh-obj','mesh-stl','mesh-gltf','mesh-io','image-io','mesh-worker','buildings','building-materials','building-diagnostics','scatter-types']) {

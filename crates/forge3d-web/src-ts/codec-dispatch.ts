@@ -1,5 +1,5 @@
 // Feature owners retain the decoders. This module only validates and dispatches.
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import type { CodecFormat, CodecParameters, CodecValues, CodecRaster } from './codec-types.js';
 
 export function codecFailure(code: ConstructorParameters<typeof Forge3DError>[0], reason: string, message: string, format?: string): Forge3DError {

@@ -7,45 +7,8 @@ import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
 import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
 import { PostFxChain, resolvePostFx } from "./postfx.js";
 import type { PostFxChainInput, PostFxInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx-types.js";
-import {
-  type SceneSnapshot,
-  type CameraControllerMode,
-  type CameraInput,
-  type CameraInputEvent,
-  type CameraProjectionKind,
-  Forge3DError,
-  Forge3DRuntime,
-  normalizeTerrainMaterial,
-  type FlyView,
-  type Forge3DRuntimeCapabilities,
-  type Forge3DRuntimeOptions,
-  type Forge3DViewerOptions,
-  type HeightAoOptions,
-  type HeightStreamingStats,
-  type HeightTileCompletion,
-  type HeightTilePlan,
-  type LodSelectionReport,
-  type MaterialVtSourceImage,
-  type OrbitView,
-  type ResizeInput,
-  type SunVisibilityOptions,
-  type TerrainColorRampInput,
-  type TerrainColormapInput,
-  type TerrainDebugView,
-  type TerrainGeometryInput,
-  type TerrainGeometryReport,
-  type TerrainHeightmapInput,
-  type TerrainHeightmapSourceInput,
-  type TerrainMaterialInput,
-  type TerrainMaterialVtStats,
-  type TerrainOverlayReport,
-  type TerrainOverlaysInput,
-  type TerrainStreamingInput,
-  type ViewerCapabilities,
-  type ViewerDiagnostics,
-  type ViewerResourceBudget,
-  type ViewerStatus,
-} from "./index.js";
+import { type SceneSnapshot, type CameraControllerMode, type CameraInput, type CameraInputEvent, type CameraProjectionKind, Forge3DRuntime, normalizeTerrainMaterial, type FlyView, type Forge3DRuntimeCapabilities, type Forge3DRuntimeOptions, type Forge3DViewerOptions, type HeightAoOptions, type HeightStreamingStats, type HeightTileCompletion, type HeightTilePlan, type LodSelectionReport, type MaterialVtSourceImage, type OrbitView, type ResizeInput, type SunVisibilityOptions, type TerrainColorRampInput, type TerrainColormapInput, type TerrainDebugView, type TerrainGeometryInput, type TerrainGeometryReport, type TerrainHeightmapInput, type TerrainHeightmapSourceInput, type TerrainMaterialInput, type TerrainMaterialVtStats, type TerrainOverlayReport, type TerrainOverlaysInput, type TerrainStreamingInput, type ViewerCapabilities, type ViewerDiagnostics, type ViewerResourceBudget, type ViewerStatus } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { OrbitController } from "./orbit-controller.js";
 import { TerrainScatterBatch, normalizeScatterBatches, type ScatterBatchInput, type ScatterBatchSnapshot, type ScatterFrameStats, type ScatterMemoryReport } from "./terrain-scatter.js";
 import { TerrainLightingProbes, validateProbeSnapshot, type TerrainProbeSnapshot, type TerrainProbeMemoryReport } from "./terrain-probes.js";

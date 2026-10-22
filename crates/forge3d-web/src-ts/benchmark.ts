@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import type { Forge3DSessionCapabilities, RendererConfigSource, RendererConfigData, MemoryReport, RenderStats } from './index.js';
 import { RendererConfig } from './renderer-config.js';
 import { normalizeMemoryReport } from './native-reports.js';

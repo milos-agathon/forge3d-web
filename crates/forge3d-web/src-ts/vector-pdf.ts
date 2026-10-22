@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import { readByteSource } from './browser-io.js';
 import { cancelled, checkBytes, finite, cartographicError, validateExportFont, type CartographicColor } from './cartography-common.js';
 import { project2dToScreen, type ExportPoint, type VectorScene } from './vector-export-scene.js';

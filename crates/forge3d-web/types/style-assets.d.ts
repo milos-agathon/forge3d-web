@@ -1,4 +1,4 @@
-import { type BrowserByteSource } from './index.js';
+import { type BrowserByteSource } from "./index.js";
 export interface SpriteEntry {
     x: number;
     y: number;

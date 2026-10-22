@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type {
   Forge3DNotebookAdapter,
   Forge3DScene as Forge3DSceneShape,

@@ -1,4 +1,4 @@
-import { type BrowserByteSource } from './index.js';
+import { type BrowserByteSource } from "./index.js";
 import { ValidationReport } from './diagnostics.js';
 import { type StyleEvalContext } from './style-expressions.js';
 import type { VectorFeature, VectorColor, VectorStyle } from './vector-types.js';

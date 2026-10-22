@@ -10,7 +10,7 @@
 // as `If-Match`, and a 412 (or a 200 to that conditional request) drops the
 // stale validator and its cache entries before one retry.
 
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type {
   MemoryByteCacheLike,
   PersistentByteCache,

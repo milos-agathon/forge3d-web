@@ -1,7 +1,7 @@
 import { BvhHandle } from "./bvh.js";
 import type { TraceTriangle, BvhBuildOptions, BvhNode } from "./trace-types.js";
 import { requestTraceDevice } from "./trace-gpu.js";
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { integer, traceLimit, cancelled, traceInvalid } from "./trace-math.js";
 const SHADER = `
 struct Params {count:u32,shift:u32,blocks:u32,leaves:u32,lo:vec4f,hi:vec4f,level:u32,first:u32,nodes:u32,pad:u32};

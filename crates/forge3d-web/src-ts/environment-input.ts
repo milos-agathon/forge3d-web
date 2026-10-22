@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 export const fail = (s: string): never => {
   throw new Forge3DError("INVALID_INPUT", s);
 };

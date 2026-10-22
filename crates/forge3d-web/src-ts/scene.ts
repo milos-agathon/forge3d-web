@@ -11,7 +11,7 @@ import { TerrainScatterBatch, scatterMemoryReport, normalizeScatterBatches } fro
 import type { ScatterBatchInput, ScatterBatchSnapshot } from "./scatter-types.js";
 import { TerrainLightingProbes } from "./terrain-probes.js";
 import type { TerrainProbeSnapshot } from "./terrain-probes.js";
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import {
   buildShadowReport,
   CascadedShadowConfig,

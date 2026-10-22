@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { PostFxInput, PostFxChainInput, PostFxSnapshot, PostFxEffectSnapshot, ColorLutInput } from "./postfx-types.js";
 export type * from "./postfx-types.js";
 

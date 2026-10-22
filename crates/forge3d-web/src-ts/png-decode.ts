@@ -1,5 +1,5 @@
 import { Unzlib } from 'fflate';
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import type { RasterImage } from './image-io.js';
 
 const SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];

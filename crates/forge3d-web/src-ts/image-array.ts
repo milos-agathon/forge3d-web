@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import { encodePng } from './frames.js';
 import { decodePng } from './png-decode.js';
 import { readByteSource } from './browser-io.js';

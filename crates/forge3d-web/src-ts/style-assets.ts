@@ -1,4 +1,5 @@
-import { Forge3DError, type BrowserByteSource } from './index.js';
+import { type BrowserByteSource } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { readByteSource } from './browser-io.js';
 import { decodeOverlayImage } from './terrain-overlay.js';
 export interface SpriteEntry { x: number; y: number; width: number; height: number; pixelRatio?: number; pixel_ratio?: number; sdf?: boolean; content?: number[]; stretchX?: number[][]; stretchY?: number[][]; }

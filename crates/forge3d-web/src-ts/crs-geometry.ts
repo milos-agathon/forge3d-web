@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { CrsTransformer } from "./crs.js";
 import type {
   CrsCoordinate,

@@ -1,8 +1,5 @@
-import {
-  Forge3DError,
-  type PersistentByteCache,
-  type ByteReadProgress,
-} from "./index.js";
+import { type PersistentByteCache, type ByteReadProgress } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { readByteSource } from "./browser-io.js";
 import { MemoryByteCache } from "./byte-cache.js";
 

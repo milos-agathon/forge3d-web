@@ -114,6 +114,26 @@ describe("Forge3DMessageClient", () => {
     disposeServer();
   });
 
+  it.each([
+    ["RUNTIME_DISPOSED", "RUNTIME_DISPOSED"],
+    ["RESOURCE_LIMIT_EXCEEDED", "RESOURCE_LIMIT_EXCEEDED"],
+    ["future-error-code", "INTERNAL_ERROR"],
+  ])("preserves the shared error vocabulary for %s over a message port", async (code, expected) => {
+    const { client, disposeServer } = linked({
+      fail: () => { throw { code, message: "remote failure", details: { source: "worker" } }; },
+    });
+    try {
+      await expect(client.call("fail")).rejects.toMatchObject({
+        code: expected,
+        message: "remote failure",
+        details: { source: "worker" },
+      });
+    } finally {
+      client.dispose();
+      disposeServer();
+    }
+  });
+
   it("cancels an active call exactly once", async () => {
     let aborted = false;
     const { client, disposeServer } = linked({

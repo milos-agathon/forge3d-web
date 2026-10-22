@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { generateMeshTangents } from "./textures.js";
 import { TerrainScatterBatch } from "./terrain-scatter.js";
 import type { ScatterBatchInput, ScatterLevel } from "./scatter-types.js";

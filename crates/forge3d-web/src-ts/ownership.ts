@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type {
   Forge3DDType,
   Forge3DTypedArray,

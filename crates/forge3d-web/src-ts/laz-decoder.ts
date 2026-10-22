@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { Forge3DWorkerPool } from "./browser-resources.js";
 import { parseLasHeader, parseLasRecords } from "./pointcloud-las.js";
 import { pointCancelled, pointError } from "./pointcloud-common.js";

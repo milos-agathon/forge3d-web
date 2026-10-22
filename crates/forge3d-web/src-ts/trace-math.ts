@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { TraceVec3, TraceRay, TraceBounds } from "./trace-types.js";
 export const f = Math.fround;
 export const add = (a: TraceVec3, b: TraceVec3): TraceVec3 => [

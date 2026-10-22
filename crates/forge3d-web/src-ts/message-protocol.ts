@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError, normalizeErrorCode, transportFailure } from "./runtime-failure.js";
 import type {
   Forge3DMessageCallOptions,
   Forge3DMessageContext,
@@ -85,20 +85,8 @@ function isEnvelope(value: unknown): value is Envelope {
   );
 }
 
-function errorEnvelope(id: number, error: Forge3DError): ErrorEnvelope {
-  const envelope: ErrorEnvelope = {
-    forge3d: PROTOCOL,
-    type: "error",
-    id,
-    error: { code: error.code, message: error.message },
-  };
-  if (error.details !== undefined) {
-    try {
-      structuredClone(error.details);
-      envelope.error.details = error.details;
-    } catch {}
-  }
-  return envelope;
+function errorEnvelope(id: number,error: Forge3DError): ErrorEnvelope {
+  return {forge3d:PROTOCOL,type:'error',id,error:transportFailure(error)};
 }
 
 function collectTransfer(value: unknown): Transferable[] {
@@ -249,7 +237,7 @@ export class Forge3DMessageClient {
     if (data.type === "error") {
       const remote = (data as ErrorEnvelope).error;
       const error = new Forge3DError(
-        normalizeCode(remote?.code),
+        normalizeErrorCode(remote?.code),
         typeof remote?.message === "string"
           ? remote.message
           : "Remote call failed",
@@ -473,30 +461,4 @@ export class Forge3DWebSocketAdapter {
       this.#channel.port2.close();
     } catch {}
   }
-}
-
-function normalizeCode(code: unknown): Forge3DError["code"] {
-  const codes = new Set<string>([
-    "WEBGPU_UNAVAILABLE",
-    "WEBGPU_ADAPTER_UNAVAILABLE",
-    "INSECURE_CONTEXT",
-    "WASM_LOAD_FAILED",
-    "DEVICE_REQUEST_FAILED",
-    "DEVICE_LOST",
-    "SURFACE_CREATE_FAILED",
-    "SURFACE_LOST",
-    "SURFACE_OUTDATED",
-    "OUT_OF_MEMORY",
-    "UNSUPPORTED_FEATURE",
-    "INVALID_INPUT",
-    "IO_ERROR",
-    "REQUEST_CANCELLED",
-    "SHADER_COMPILATION_FAILED",
-    "INTERNAL_ERROR",
-    "RESOURCE_LIMIT_EXCEEDED",
-    "RUNTIME_DISPOSED",
-  ]);
-  return codes.has(String(code))
-    ? (String(code) as Forge3DError["code"])
-    : "INTERNAL_ERROR";
 }

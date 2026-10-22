@@ -8,7 +8,7 @@
 // caller (`RangeScheduler` folds the captured resource validator into the
 // key so stale bytes never hit).
 
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type {
   MemoryByteCacheStats,
   PersistentByteCache,

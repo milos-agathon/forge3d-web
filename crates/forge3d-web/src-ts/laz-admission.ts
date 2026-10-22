@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { pointCancelled, pointInteger } from "./pointcloud-common.js";
 
 // One native heap can grow to the codec's 2 GiB ceiling. Bound native work

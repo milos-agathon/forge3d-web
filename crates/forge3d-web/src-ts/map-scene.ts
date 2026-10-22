@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import { Frame, encodePng } from './frames.js';
 import { Diagnostic, ValidationReport, type ValidationReportData, stableDiagnosticJson, type JsonValue } from './diagnostics.js';
 import { SceneRecipe } from './map-recipe.js';

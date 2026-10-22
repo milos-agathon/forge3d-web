@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from "./runtime-failure.js";
 import { Frame } from './frames.js';
 import { cancelled, checkBytes, integer } from './cartography-common.js';
 import { basicLatinLayout } from './cartography-text-layout.js';

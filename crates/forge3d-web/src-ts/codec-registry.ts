@@ -1,4 +1,4 @@
-import { Forge3DError } from './index.js';
+import { Forge3DError } from './runtime-failure.js';
 import { readByteSource } from './browser-io.js';
 import { MemoryByteCache } from './byte-cache.js';
 import { CodecPersistentCache } from './codec-persistent-cache.js';

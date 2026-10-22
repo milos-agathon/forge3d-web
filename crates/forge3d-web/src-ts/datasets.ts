@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { createPersistentByteCache } from "./byte-cache.js";
 import { VerifiedAssetStore, assetAbort } from "./verified-assets.js";
 import { DATASET_CATALOG } from "./dataset-catalog.js";

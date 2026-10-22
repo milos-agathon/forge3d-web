@@ -2,7 +2,7 @@ import { encodePng } from './frames.js';
 import { decodePng, isPng } from './png-decode.js';
 import { decodeRgbe } from "./ibl.js";
 import { readByteSource } from "./browser-io.js";
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import type { BrowserByteSource, ByteReadOptions, RgbeImage } from "./index.js";
 import { meshLimit, meshError, meshInteger, meshNumber } from "./mesh.js";
 export interface RasterImage {

@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { Camera } from "./camera.js";
 import { TerrainDataset } from "./terrain-dataset.js";
 import { VectorLayers, vectorInvalid } from "./vector-layers.js";

@@ -1,4 +1,4 @@
-import { Forge3DError } from "./index.js";
+import { Forge3DError } from "./runtime-failure.js";
 import { finite, scatterInvalid } from "./scatter-mesh.js";
 import type { TerrainScatterSource } from "./scatter-source.js";
 import {
