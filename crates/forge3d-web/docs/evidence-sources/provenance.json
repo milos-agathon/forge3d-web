@@ -239,7 +239,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
-      "sha256": "b4c8fa94fa3236589f232202f95883deaaba9ed63daa5dd95cc1ad3f031a3e22",
+      "sha256": "8affdbc667892d01b97939533140edc4d184fbf5c6582c90495b89e1e325516f",
       "snapshot": "evidence-sources/tests/unit/w19-style-bundle.test.ts.txt"
     },
     {

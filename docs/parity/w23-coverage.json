@@ -6499,7 +6499,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
-      "sha256": "b4c8fa94fa3236589f232202f95883deaaba9ed63daa5dd95cc1ad3f031a3e22",
+      "sha256": "8affdbc667892d01b97939533140edc4d184fbf5c6582c90495b89e1e325516f",
       "declarations": [
         "short circuits unselected branches and bounds pathological inputs",
         "loads Blob and preserves layers, filters and metadata with defensive copies",
@@ -6518,6 +6518,7 @@
         "cancels before reads and aborts a blocked output stream promptly",
         "waits for the original filesystem rollback before reporting cancellation",
         "rejects duplicate local/central names and admits declared compressed data within explicit limits",
+        "inventories shared supported references while preserving asset-looking unknown metadata",
         "leaves active recipe and variant unchanged after candidate validation or cancellation failure",
         "prepares and round-trips fill/line styles with an unused glyph header without acquiring fonts",
         "archives style sprite/glyph URLs and retains all supplied payloads through both save paths",
