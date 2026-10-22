@@ -1,166 +1,18 @@
+import { TraceGpuWork } from './trace-gpu-work.js';
 import { Forge3DError } from "./runtime-failure.js";
 import { TRACE_PATH_WGSL } from "./trace-wgsl.js";
 import { TraceScene } from "./trace-scene.js";
 import type { CpuTraceSettings } from "./trace-cpu.js";
 import { packGuidingWeights } from "./trace-sampling.js";
 import {
-  unit,
-  sub,
-  cross,
   integer,
   traceLimit,
   cancelled,
   live,
 } from "./trace-math.js";
 const U = { MAP_READ: 1, COPY_SRC: 4, COPY_DST: 8, UNIFORM: 64, STORAGE: 128 };
-export function packTraceScene(
-  scene: TraceScene,
-  guiding?: Float32Array,
-  guidingBins = 8,
-): {
-  bytes: ArrayBuffer;
-  offsets0: number[];
-  offsets1: number[];
-  counts: number[];
-} {
-  const chunks: ArrayBuffer[] = [];
-  let words = 0;
-  const push = (b: ArrayBuffer): number => {
-    const offset = words;
-    chunks.push(b);
-    words += b.byteLength / 4;
-    return offset;
-  };
-  const triangles = push(scene.bvh?.packTriangles() ?? new ArrayBuffer(64)),
-    nodes = push(scene.bvh?.packNodes() ?? new ArrayBuffer(48)),
-    indices = push(scene.bvh?.indices.slice().buffer ?? new ArrayBuffer(4));
-  const sdf = scene.sdf?.pack(),
-    primitives = push(sdf?.primitives ?? new ArrayBuffer(80)),
-    csg = push(sdf?.nodes ?? new ArrayBuffer(32));
-  const materials = new Float32Array(scene.materials.length * 12);
-  scene.materials.forEach((m, i) => {
-    materials.set(
-      [
-        ...m.albedo,
-        m.metallic,
-        ...m.emission,
-        m.roughness,
-        m.ior,
-        m.ax,
-        m.ay,
-        0,
-      ],
-      i * 12,
-    );
-  });
-  const matOffset = push(materials.buffer);
-  const lights = new Float32Array(Math.max(1, scene.lights.length) * 16);
-  scene.lights.forEach((l, i) =>
-    lights.set(
-      [
-        ...l.position,
-        l.intensity,
-        ...l.color,
-        l.weight,
-        ...l.direction,
-        l.type === "point" ? 0 : l.type === "directional" ? 1 : 2,
-        ...l.normal,
-        l.radius,
-      ],
-      i * 16,
-    ),
-  );
-  const lightOffset = push(lights.buffer),
-    guidingOffset = push(
-      guiding
-        ? packGuidingWeights(guiding, guidingBins).buffer
-        : new ArrayBuffer(4),
-    );
-  const bytes = new ArrayBuffer(words * 4),
-    target = new Uint8Array(bytes);
-  let at = 0;
-  for (const chunk of chunks) {
-    target.set(new Uint8Array(chunk), at);
-    at += chunk.byteLength;
-  }
-  return {
-    bytes,
-    offsets0: [triangles, nodes, indices, primitives],
-    offsets1: [csg, matOffset, lightOffset, guidingOffset],
-    counts: [
-      scene.bvh?.nodes.length ?? 0,
-      scene.bvh?.triangles.length ?? 0,
-      scene.sdf?.primitiveCount() ?? 0,
-      scene.sdf?.nodeCount() ?? 0,
-    ],
-  };
-}
-export function traceUniform(
-  scene: TraceScene,
-  s: CpuTraceSettings,
-  packed: ReturnType<typeof packTraceScene>,
-  sample: number,
-): ArrayBuffer {
-  const data = new ArrayBuffer(304),
-    u = new Uint32Array(data),
-    v = new Float32Array(data),
-    forward = unit(sub(s.camera.target, s.camera.origin)),
-    right = unit(cross(forward, s.camera.up)),
-    up = cross(right, forward);
-  u.set([s.width, s.height, sample, s.maxBounces], 0);
-  u.set(packed.counts, 4);
-  u.set(
-    [
-      s.mode === "hybrid" ? 0 : s.mode === "sdf-only" ? 1 : 2,
-      s.seed,
-      scene.lights.length,
-      s.restir?.initialCandidates ?? 0,
-    ],
-    8,
-  );
-  u.set(packed.offsets0, 12);
-  u.set(packed.offsets1, 16);
-  v.set(s.camera.origin, 20);
-  v.set(forward, 24);
-  v.set(right, 28);
-  v.set(up, 32);
-  v.set(scene.environment, 36);
-  // extra.w must have zero bits: WGSL contribution barriers XOR this word.
-  v.set(
-    [Math.tan((s.camera.fovY * Math.PI) / 360), s.width / s.height, s.clamp, 0],
-    40,
-  );
-  if (scene.medium) {
-    v.set(scene.medium.bounds.min, 44);
-    v.set(scene.medium.bounds.max, 48);
-    v.set([...scene.medium.sigmaA, scene.medium.g ?? 0], 52);
-    v.set([...scene.medium.sigmaS, 1], 56);
-  }
-  u.set(
-    [
-      s.restir?.temporalNeighbors ?? 0,
-      s.restir?.spatialNeighbors ?? 0,
-      s.restir?.maxTemporalAge ?? 0,
-      s.guiding?.binsPerCell ?? 0,
-    ],
-    60,
-  );
-  v.set(
-    [
-      s.restir?.depthThreshold ?? 0,
-      s.restir?.normalThreshold ?? 0,
-      s.restir?.spatialRadius ?? 0,
-      s.restir?.biasCorrection ? 1 : 0,
-    ],
-    64,
-  );
-  const bounds = scene.sdf?.getBounds();
-  if (bounds) {
-    v.set([...bounds.min, 1], 68);
-    v.set(bounds.max, 72);
-  }
-  return data;
-}
+export { packTraceScene, traceUniform } from './trace-packets.js';
+import { packTraceScene, traceUniform } from './trace-packets.js';
 export async function requestTraceDevice(
   minStorageBytes = 128 * 1024 * 1024,
 ): Promise<GPUDevice> {
@@ -243,6 +95,7 @@ export class TraceGpu {
     readonly settings: CpuTraceSettings,
     readonly budget: number,
     readonly ownsDevice: boolean,
+    work: TraceGpuWork,
   ) {
     if (device.limits.maxStorageBuffersPerShaderStage < 8)
       throw new Forge3DError(
@@ -294,7 +147,7 @@ export class TraceGpu {
         );
     }
     const create = (size: number, usage: number): GPUBuffer => {
-      const b = device.createBuffer({
+      const b = work.buffer({
         size: Math.max(4, size),
         usage,
         label: "forge3d W17 trace",
@@ -327,9 +180,9 @@ export class TraceGpu {
     engine: "megakernel" | "wavefront" = "megakernel",
   ): Promise<TraceGpu> {
     let gpu: TraceGpu | undefined;
-    device.pushErrorScope("validation");
+    const work = new TraceGpuWork(device,ownsDevice);
     try {
-      gpu = new TraceGpu(device, scene, settings, budget, ownsDevice);
+      gpu = new TraceGpu(device, scene, settings, budget, ownsDevice, work);
       let cache = compiledTracePipelines.get(device);
       if (!cache) {
         cache = new Map();
@@ -446,23 +299,19 @@ export class TraceGpu {
           }),
         );
       }
-      const error = await device.popErrorScope();
-      if (error)
-        throw new Forge3DError("SHADER_COMPILATION_FAILED", error.message);
+      await work.validate();
       gpu.checkAlive();
+      work.transfer();
       return gpu;
     } catch (error) {
       const lost = gpu ? gpu.#lost : false;
-      gpu?.dispose();
-      if (!gpu && ownsDevice) device.destroy();
-      await device.popErrorScope().catch(() => null);
       if (lost)
         throw new Forge3DError(
           "DEVICE_LOST",
           "Tracing device lost during pipeline creation",
         );
       throw error;
-    }
+    } finally { await work.close(); }
   }
   #guard(): void {
     live(this.#disposed);
@@ -478,22 +327,15 @@ export class TraceGpu {
   }
   async exportReservoirs(): Promise<ArrayBuffer> {
     this.#guard();
-    const bytes = this.settings.width * this.settings.height * 80,
-      buffer = this.device.createBuffer({
-        size: bytes,
-        usage: U.MAP_READ | U.COPY_DST,
-      });
+    const work=new TraceGpuWork(this.device);
     try {
-      const encoder = this.device.createCommandEncoder();
-      encoder.copyBufferToBuffer(this.#reservoirs, 0, buffer, 0, bytes);
-      this.device.queue.submit([encoder.finish()]);
-      await buffer.mapAsync(1);
-      this.#guard();
-      return buffer.getMappedRange().slice(0);
-    } finally {
-      buffer.unmap();
-      buffer.destroy();
-    }
+      const bytes=this.settings.width*this.settings.height*80;
+      const buffer=work.buffer({size:bytes,usage:U.MAP_READ|U.COPY_DST});
+      const encoder=this.device.createCommandEncoder();
+      encoder.copyBufferToBuffer(this.#reservoirs,0,buffer,0,bytes);
+      work.submit([encoder.finish()]);
+      const result=await work.read(buffer);this.#guard();await work.validate();return result;
+    }finally{await work.close();}
   }
   restore(sum: Float32Array, reservoirs: ArrayBuffer): void {
     this.#guard();

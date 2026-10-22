@@ -390,7 +390,7 @@ describe("W17 progressive rendering/lifecycle", () => {
     for await (const u of t.progressive()) continued = u.result;
     grid.reset();
     const fresh = await t.render({ spp: 4 });
-    expect(continued!.color).toEqual(fresh.color);
+    expect(continued).toEqual(fresh);
     t.dispose();
     grid.dispose();
   });

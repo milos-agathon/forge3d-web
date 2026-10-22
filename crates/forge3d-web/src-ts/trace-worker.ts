@@ -1,3 +1,4 @@
+import { TRACE_HIT_BYTES, writeTraceHit } from './trace-packets.js';
 import type { Forge3DMessageHandler } from "./index.js";
 import type {
   TraceTriangle,
@@ -29,17 +30,7 @@ export async function buildBvhWasm(
         indices: number[];
         maxDepth: number;
       };
-    handle.nodes.length = 0;
-    for (const node of result.nodes) handle.nodes.push(node);
-    handle.indices.set(result.indices);
-    Object.assign(handle.stats, {
-      backend: "wasm",
-      nodeCount: result.nodes.length,
-      maxDepth: result.maxDepth,
-      leafCount: result.nodes.filter((n) => n.count > 0).length,
-      buildTimeMs: performance.now() - start,
-      memoryUsageBytes: handle.triangles.length * 68 + result.nodes.length * 48,
-    });
+    handle.install({triangles:handle.triangles,nodes:result.nodes,indices:Uint32Array.from(result.indices),stats:{backend:"wasm",method:options.method??"sah",buildTimeMs:performance.now()-start}});
     return handle;
   } catch (error) {
     handle.dispose();
@@ -127,38 +118,14 @@ export function createTraceWorkerHandler(): Forge3DMessageHandler {
                 stats: { ...tree.stats },
               }
             : await (async () => {
-                const records = new ArrayBuffer(request.rays.length * 64),
-                  floats = new Float32Array(records),
-                  words = new Uint32Array(records);
+                const records = new ArrayBuffer(request.rays.length * TRACE_HIT_BYTES);
                 for (let i = 0; i < request.rays.length; i++) {
                   if (i % 1024 === 0) {
                     await new Promise<void>((r) => setTimeout(r, 0));
                     cancelled(context.signal);
                   }
                   const hit = tree.intersect(request.rays[i]!);
-                  if (hit) {
-                    const at = i * 16;
-                    floats.set(
-                      [
-                        ...hit.position,
-                        hit.t,
-                        ...hit.normal,
-                        Number(hit.frontFace),
-                        ...hit.barycentric,
-                        0,
-                      ],
-                      at,
-                    );
-                    words.set(
-                      [
-                        hit.id,
-                        hit.materialId,
-                        hit.steps,
-                        Number(hit.kind === "sdf"),
-                      ],
-                      at + 12,
-                    );
-                  }
+                  writeTraceHit(records,i,hit);
                 }
                 return {
                   kind: "trace-rays",

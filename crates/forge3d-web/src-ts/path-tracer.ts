@@ -1,3 +1,5 @@
+import { TraceCheckpoints } from './trace-checkpoints.js';
+import { TraceAccumulation } from './trace-accumulation.js';
 import { Forge3DError } from "./runtime-failure.js";
 import { Frame, HdrFrame } from "./frames.js";
 import type {
@@ -15,14 +17,11 @@ import {
   TraceGpu,
   requestTraceDevice,
   packTraceScene,
-  traceUniform,
 } from "./trace-gpu.js";
 import { emptyReservoir, normalizeRestirConfig } from "./trace-sampling.js";
 import type { TraceReservoir } from "./trace-sampling.js";
 import {
   traceCpuSample,
-  accumulateRecord,
-  decodeTraceRecords,
 } from "./trace-cpu.js";
 import type { CpuTraceSettings } from "./trace-cpu.js";
 import {
@@ -34,13 +33,6 @@ import {
   live,
 } from "./trace-math.js";
 /** Browser-owned, bounded progressive renderer. CPU is an explicit reference backend. */
-interface CachedTrace {
-  result: TraceResult;
-  sum: Float32Array;
-  reservoirs: TraceReservoir[];
-  gpuReservoirs: ArrayBuffer | undefined;
-  guiding: Float32Array | undefined;
-}
 export class PathTracer {
   readonly width: number;
   readonly height: number;
@@ -50,16 +42,12 @@ export class PathTracer {
   #settings: CpuTraceSettings;
   #scene: TraceScene | undefined;
   #gpu: TraceGpu | undefined;
-  #sum: Float32Array;
+  #accumulation: TraceAccumulation;
   #reservoirs: TraceReservoir[];
-  #samples = 0;
   #disposed = false;
   #busy = false;
-  #cache = new Map<string, CachedTrace>();
+  #cache = new TraceCheckpoints();
   #cacheEnabled = false;
-  #cacheCapacity = 8;
-  #cacheHits = 0;
-  #cacheMisses = 0;
   #peak = 0;
   #device: GPUDevice | undefined;
   #borrowed = false;
@@ -108,7 +96,7 @@ export class PathTracer {
       guiding: options.guiding,
     };
     this.#scene = new TraceScene();
-    this.#sum = new Float32Array(pixels * 28);
+    this.#accumulation = new TraceAccumulation(this.width, this.height);
     this.#reservoirs = Array.from({ length: pixels }, emptyReservoir);
     this.#admit();
   }
@@ -135,7 +123,7 @@ export class PathTracer {
     return [this.width, this.height];
   }
   get samples(): number {
-    return this.#samples;
+    return this.#accumulation.samples;
   }
   supportsGpu(): boolean {
     return this.backend === "webgpu";
@@ -165,7 +153,7 @@ export class PathTracer {
   }
   #cpuBytes(): number {
     return (
-      this.#sum.byteLength +
+      this.#accumulation.records.byteLength +
       this.#reservoirs.length * 160 +
       (this.#scene?.bvh?.stats.memoryUsageBytes ?? 0) +
       (this.#scene?.sdf?.nodeCount() ?? 0) * 32 +
@@ -178,47 +166,9 @@ export class PathTracer {
         : 0)
     );
   }
-  #cacheBytes(): number {
-    let bytes = 0;
-    for (const entry of this.#cache.values()) {
-      for (const value of Object.values(entry.result))
-        if (ArrayBuffer.isView(value)) bytes += value.byteLength;
-      bytes +=
-        entry.sum.byteLength +
-        (entry.gpuReservoirs?.byteLength ?? entry.reservoirs.length * 160) +
-        (entry.guiding?.byteLength ?? 0) +
-        128;
-    }
-    return bytes;
-  }
-  async #cacheKey(spp: number): Promise<string> {
-    const packed = packTraceScene(
-        this.#scene!,
-        this.#settings.guiding?.snapshot(),
-        this.#settings.guiding?.binsPerCell,
-      ),
-      uniform = traceUniform(this.#scene!, this.#settings, packed, 0),
-      suffix = new TextEncoder().encode(
-        JSON.stringify({ backend: this.backend, engine: this.engine, spp }),
-      );
-    this.#admit(
-      2 * packed.bytes.byteLength + uniform.byteLength + suffix.length,
-    );
-    const bytes = new Uint8Array(
-      packed.bytes.byteLength + uniform.byteLength + suffix.length,
-    );
-    bytes.set(new Uint8Array(packed.bytes));
-    bytes.set(new Uint8Array(uniform), packed.bytes.byteLength);
-    bytes.set(suffix, packed.bytes.byteLength + uniform.byteLength);
-    return Array.from(
-      new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
-    )
-      .map((v) => v.toString(16).padStart(2, "0"))
-      .join("");
-  }
   #admit(extra = 0): void {
     const bytes =
-      this.#cpuBytes() + (this.#gpu?.bytes ?? 0) + this.#cacheBytes() + extra;
+      this.#cpuBytes() + (this.#gpu?.bytes ?? 0) + this.#cache.bytes + extra;
     if (bytes > this.memoryBudgetBytes)
       traceLimit("trace working set", bytes, this.memoryBudgetBytes);
     this.#peak = Math.max(this.#peak, bytes);
@@ -233,7 +183,7 @@ export class PathTracer {
       this.#settings,
       this.memoryBudgetBytes -
         this.#cpuBytes() -
-        this.#cacheBytes() -
+        this.#cache.bytes -
         packTraceScene(
           this.#scene!,
           this.#settings.guiding?.snapshot(),
@@ -300,8 +250,7 @@ export class PathTracer {
     this.#resetState();
   }
   #resetState(): void {
-    this.#sum.fill(0);
-    this.#samples = 0;
+    this.#accumulation.reset();
     this.#reservoirs = Array.from(
       { length: this.width * this.height },
       emptyReservoir,
@@ -311,14 +260,12 @@ export class PathTracer {
   enableSceneCache(enabled = true, capacity = 8): void {
     this.#idle();
     this.#cacheEnabled = enabled;
-    this.#cacheCapacity = integer(capacity, "capacity", 1, 64);
+    this.#cache.capacity = integer(capacity, "capacity", 1, 64);
     this.resetSceneCache();
   }
   resetSceneCache(): void {
     this.#idle();
     this.#cache.clear();
-    this.#cacheHits = 0;
-    this.#cacheMisses = 0;
   }
   cacheStats(): {
     hits: number;
@@ -326,14 +273,9 @@ export class PathTracer {
     entries: number;
     bytes: number;
   } {
-    return {
-      hits: this.#cacheHits,
-      misses: this.#cacheMisses,
-      entries: this.#cache.size,
-      bytes: this.#cacheBytes(),
-    };
+    return this.#cache.stats();
   }
-  async #sample(signal?: AbortSignal): Promise<TraceResult> {
+  async #sample(signal?: AbortSignal): Promise<void> {
     this.#guard();
     cancelled(signal);
     this.#checkBackend();
@@ -345,19 +287,19 @@ export class PathTracer {
     );
     if (this.#gpu) {
       const downloaded = await this.#gpu.sample(
-        this.#samples,
+        this.#accumulation.samples,
         this.engine,
         signal,
       );
       this.#guard();
-      this.#sum = downloaded;
+      this.#accumulation.acceptGpu(downloaded);
       const grid = this.#settings.guiding;
       if (grid) {
-        const bins = new Uint32Array(this.#sum.buffer);
+        const bins = new Uint32Array(this.#accumulation.records.buffer);
         for (let p = 0; p < this.width * this.height; p++) {
           const bin = bins[p * 28 + 23]!;
           if (bin < grid.binsPerCell) {
-            const weight = this.#sum[p * 28 + 3]!;
+            const weight = this.#accumulation.records[p * 28 + 3]!;
             grid.update(
               p % this.width,
               Math.floor(p / this.width),
@@ -383,10 +325,10 @@ export class PathTracer {
           this.#scene!,
           this.#settings,
           pixel,
-          this.#samples,
+          this.#accumulation.samples,
           history,
         );
-        accumulateRecord(this.#sum, value.record, pixel, this.#samples);
+        this.#accumulation.add(value.record, pixel);
         next.push(value.reservoir);
         if (value.guidingBin !== undefined)
           updates.push({
@@ -404,14 +346,9 @@ export class PathTracer {
           update.weight,
         );
     }
-    this.#samples++;
+    this.#accumulation.complete();
     this.#admit();
-    return decodeTraceRecords(
-      this.#sum,
-      this.width,
-      this.height,
-      this.#samples,
-    );
+
   }
   async *#progressiveLocked(
     options: TraceRenderOptions & { updateEvery?: number } = {},
@@ -421,13 +358,13 @@ export class PathTracer {
     cancelled(options.signal);
     try {
       for (let i = 0; i < spp; i++) {
-        const result = await this.#sample(options.signal);
-        if ((i + 1) % updateEvery === 0 || i + 1 === spp)
-          yield { samples: this.#samples, progress: (i + 1) / spp, result };
+        await this.#sample(options.signal);
+        const result = this.#accumulation.resolveUpdate(i + 1, spp, updateEvery);
+        if (result)
+          yield { samples: this.#accumulation.samples, progress: (i + 1) / spp, result };
       }
     } catch (error) {
-      this.#sum.fill(0);
-      this.#samples = 0;
+      this.#accumulation.reset();
       try {
         this.#gpu?.reset();
       } catch {
@@ -448,6 +385,9 @@ export class PathTracer {
       this.#busy = false;
     }
   }
+  #checkpointState() {
+    return {accumulation:this.#accumulation,reservoirs:this.#reservoirs,guiding:this.#settings.guiding,gpu:this.#gpu};
+  }
   async render(options: TraceRenderOptions = {}): Promise<TraceResult> {
     this.#idle();
     this.#checkBackend();
@@ -457,23 +397,12 @@ export class PathTracer {
     try {
       let key = "";
       if (this.#cacheEnabled) {
-        key = await this.#cacheKey(spp);
+        key = await this.#cache.key(this.#scene!,this.#settings,this.backend,this.engine,spp,bytes=>this.#admit(bytes));
         this.#guard();
         this.#checkBackend();
         cancelled(options.signal);
-        const cached = this.#cache.get(key);
-        if (cached) {
-          this.#cache.delete(key);
-          this.#cache.set(key, cached);
-          this.#cacheHits++;
-          this.#sum = cached.sum.slice();
-          this.#samples = cached.result.samples;
-          this.#reservoirs = structuredClone(cached.reservoirs);
-          if (cached.guiding) this.#settings.guiding!.restore(cached.guiding);
-          if (this.#gpu) this.#gpu.restore(this.#sum, cached.gpuReservoirs!);
-          return structuredClone(cached.result);
-        }
-        this.#cacheMisses++;
+        const cached = this.#cache.restore(key,this.#checkpointState());
+        if(cached){this.#reservoirs=cached.reservoirs;return cached.result;}
       }
       this.#resetState();
       let result: TraceResult | undefined;
@@ -483,44 +412,9 @@ export class PathTracer {
         updateEvery: spp,
       }))
         result = progress.result;
-      if (this.#cacheEnabled) {
-        const bytes =
-          Object.values(result!).reduce(
-            (sum, v) => sum + (ArrayBuffer.isView(v) ? v.byteLength : 0),
-            0,
-          ) +
-          this.#sum.byteLength +
-          this.width * this.height * (this.#gpu ? 80 : 160) +
-          (this.#settings.guiding
-            ? this.width * this.height * this.#settings.guiding.binsPerCell * 4
-            : 0) +
-          128;
-        while (
-          this.#cache.size &&
-          (this.#cache.size >= this.#cacheCapacity ||
-            this.#cpuBytes() +
-              (this.#gpu?.bytes ?? 0) +
-              this.#cacheBytes() +
-              bytes >
-              this.memoryBudgetBytes)
-        )
-          this.#cache.delete(this.#cache.keys().next().value!);
-        if (
-          this.#cpuBytes() + (this.#gpu?.bytes ?? 0) + bytes <=
-          this.memoryBudgetBytes
-        ) {
-          const gpuReservoirs = await this.#gpu?.exportReservoirs();
-          this.#guard();
-          cancelled(options.signal);
-          this.#cache.set(key, {
-            result: structuredClone(result!),
-            sum: this.#sum.slice(),
-            reservoirs: this.#gpu ? [] : structuredClone(this.#reservoirs),
-            gpuReservoirs,
-            guiding: this.#settings.guiding?.snapshot(),
-          });
-          this.#admit();
-        }
+      if(this.#cacheEnabled) {
+        await this.#cache.retain(key,result!,this.#checkpointState(),this.memoryBudgetBytes-this.#cpuBytes()-(this.#gpu?.bytes??0),()=>{this.#guard();cancelled(options.signal);});
+        this.#admit();
       }
       return result!;
     } finally {
@@ -579,7 +473,7 @@ export class PathTracer {
     return {
       cpuBytes: this.#cpuBytes(),
       gpuBytes: this.#gpu?.allocatedBytes ?? 0,
-      cacheBytes: this.#cacheBytes(),
+      cacheBytes: this.#cache.bytes,
       peakBytes: this.#peak,
       budgetBytes: this.memoryBudgetBytes,
       disposed: this.#disposed,
@@ -594,7 +488,7 @@ export class PathTracer {
     this.#scene?.dispose();
     this.#scene = undefined;
     this.#settings.guiding = undefined;
-    this.#sum = new Float32Array(0);
+    this.#accumulation.dispose();
     this.#reservoirs = [];
     this.#cache.clear();
   }

@@ -1,0 +1,5 @@
+export const TRACE_RECORD = { words:28, color:0, training:3, albedo:4, id:7, normal:8, depth:11, direct:12, visibility:15, indirect:16, ao:19, emission:20, guidingBin:23, bentNormal:24, variance:27 } as const;
+export const TRACE_UNIFORM_FIELDS = [["dims", "vec4u"], ["counts", "vec4u"], ["mode", "vec4u"], ["offsets0", "vec4u"], ["offsets1", "vec4u"], ["origin", "vec4f"], ["forward", "vec4f"], ["right", "vec4f"], ["up", "vec4f"], ["environment", "vec4f"], ["extra", "vec4f"], ["mediumMin", "vec4f"], ["mediumMax", "vec4f"], ["mediumA", "vec4f"], ["mediumS", "vec4f"], ["reuse", "vec4u"], ["thresholds", "vec4f"], ["sdfMin", "vec4f"], ["sdfMax", "vec4f"]] as const;
+export const TRACE_UNIFORM_BYTES = TRACE_UNIFORM_FIELDS.length * 16;
+export const TRACE_PARAMS_WGSL = `struct Params {${TRACE_UNIFORM_FIELDS.map(([name,type])=>`${name}:${type}`).join(",")}};`;
+export const uniformOffset = Object.fromEntries(TRACE_UNIFORM_FIELDS.map(([name],i)=>[name,i*4])) as Record<typeof TRACE_UNIFORM_FIELDS[number][0],number>;
