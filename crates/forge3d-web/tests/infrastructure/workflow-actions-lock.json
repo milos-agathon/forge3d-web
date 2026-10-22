@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-10-19",
+  "reviewedAt": "2026-10-22",
   "actions": [
     {
       "repository": "actions/attest",
@@ -43,6 +43,13 @@
       "commit": "4cda84d5c5c54efe2404f9d843567869ab1699d4",
       "upstreamVersion": "stable",
       "reviewedAt": "2026-07-28"
+    },
+    {
+      "repository": "actions/download-artifact",
+      "path": "",
+      "commit": "d3f86a106a0bac45b974a628896c90dbdf5c8093",
+      "upstreamVersion": "v4.3.0",
+      "reviewedAt": "2026-10-22"
     }
   ]
 }

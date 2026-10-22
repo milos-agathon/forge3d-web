@@ -8,6 +8,7 @@ import {
   verifyWorkflowActionPins,
   verifyWorkflowText,
 } from "../../scripts/verify-workflow-action-pins.mjs";
+import { verifyBrowserPreflightResults } from "../../scripts/verify-browser-preflight-results.mjs";
 import { verifyWebWorkflowContract } from "../../scripts/verify-web-workflow-contract.mjs";
 
 const packageRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
@@ -52,7 +53,7 @@ function workflowJob(text, jobId) {
 }
 
 function verifyHostedEnginePreflightContract(text) {
-  const browserPreflight = workflowJob(text, "browser-preflight");
+  const browserPreflight = workflowJob(text, "chromium-preflight") + workflowJob(text, "firefox-preflight");
   assert.ok(browserPreflight, "hosted workflow must define browser-preflight");
   assert.equal(
     browserPreflight.includes("$env:"),
@@ -77,9 +78,9 @@ function verifyHostedEnginePreflightContract(text) {
     browserCommands,
     [
       'npm run test:browser:chromium -- --grep "reports browser WebGPU diagnostics"',
-      "run: npm run test:browser:chromium",
+      "run: npm run test:browser:chromium -- --shard=${{ matrix.shard }}/4 --workers=1",
       'npm run test:browser:firefox-preflight -- --grep "reports browser WebGPU diagnostics"',
-      "run: npm run test:browser:firefox-preflight",
+      "run: npm run test:browser:firefox-preflight -- --shard=${{ matrix.shard }}/4 --workers=1",
     ],
     "hosted source-browser commands must explicitly select the bundled Chromium and Firefox preflights",
   );
@@ -111,12 +112,11 @@ function verifyHostedEnginePreflightContract(text) {
     "hosted workflow must not describe branded Chrome or Edge as using preflight flags",
   );
 
-  const install = workflowStep(
-    text,
-    "Install bundled Chromium and Firefox for engine preflights",
-  );
-  assert.ok(install, "hosted workflow must install both bundled engines");
-  assert.match(install, /\n        run: npx playwright install chromium firefox\n/u);
+  for (const engine of ["Chromium", "Firefox"]) {
+    const install = workflowStep(text, `Install bundled ${engine} for engine preflight`);
+    assert.ok(install, "hosted workflow must install both bundled engines");
+    assert.ok(install.includes(`run: npx playwright install ${engine.toLowerCase()}`));
+  }
 
   const firefoxDiagnostics = workflowStep(
     text,
@@ -155,7 +155,7 @@ function verifyHostedEnginePreflightContract(text) {
   );
   assert.match(
     firefoxRun,
-    /\n        run: npm run test:browser:firefox-preflight\n/u,
+    /\n        run: npm run test:browser:firefox-preflight -- --shard=\$\{\{ matrix\.shard \}\}\/4 --workers=1\n/u,
   );
   for (const expected of [
     "Bundled Playwright Firefox",
@@ -186,7 +186,7 @@ function verifyHostedEnginePreflightContract(text) {
   for (const expected of [
     "name: forge3d-web-firefox-preflight-ENGINE_PASS-default-preferences",
     "path: crates/forge3d-web/test-results/**/browser-evidence.json",
-    "if-no-files-found: error",
+    "if-no-files-found: ignore",
     "retention-days: 30",
   ]) {
     assert.ok(
@@ -249,7 +249,9 @@ test("web workflow pins the package job to Windows and source-browser preflight 
     Object.fromEntries(contract.jobs.map((job) => [job.id, job.runsOn])),
     {
       "build-and-contract": "windows-latest",
-      "browser-preflight": "macos-15",
+      "chromium-preflight": "macos-15",
+      "firefox-preflight": "macos-15",
+      "browser-preflight": "ubuntu-latest",
       "webkit-engine-preflight": "macos-latest",
     },
   );
@@ -297,7 +299,7 @@ test("hosted source-browser workflow rejects generic invocation and flagged Chro
 });
 
 test("macOS source-browser diagnostics reject stale PowerShell environment syntax", () => {
-  const browserPreflight = workflowJob(workflowText, "browser-preflight");
+  const browserPreflight = workflowJob(workflowText, "chromium-preflight");
   assert.ok(browserPreflight);
   assert.throws(
     () =>
@@ -409,6 +411,8 @@ test("Playwright WebKit engine preflight is the only non-blocking web job", () =
     ]),
     [
       ["build-and-contract", false],
+      ["chromium-preflight", false],
+      ["firefox-preflight", false],
       ["browser-preflight", false],
       ["webkit-engine-preflight", true],
     ],
@@ -441,7 +445,7 @@ test("Playwright WebKit engine preflight rejects the wrong project or engine wor
       verifyWebWorkflowContract(
         workflowText.replace(
           "run: npm run test:browser:webkit",
-          "run: npm run test:browser:chromium",
+          "run: npm run test:browser:chromium -- --shard=${{ matrix.shard }}/4 --workers=1",
         ),
       ),
     /test:browser:webkit/u,
@@ -643,14 +647,14 @@ test("web workflow verifier rejects renamed, duplicate, missing, and runner muta
       verifyWebWorkflowContract(
         workflowText.replace("runs-on: macos-15", "runs-on: windows-latest"),
       ),
-    /browser-preflight runner must remain macos-15/u,
+    /chromium-preflight runner must remain macos-15/u,
   );
   assert.throws(
     () =>
       verifyWebWorkflowContract(
         workflowText.replace("runs-on: macos-15", "runs-on: self-hosted"),
       ),
-    /browser-preflight runner must remain macos-15/u,
+    /chromium-preflight runner must remain macos-15/u,
   );
 });
 
@@ -728,4 +732,47 @@ test("action verifier structurally accepts only digest-pinned job and service im
       lockedActions,
     ),
   );
+});
+
+
+test("browser gate rejects missing, failed, skipped, cancelled and unknown dependencies", () => {
+  const good = Object.fromEntries(["build-and-contract", "chromium-preflight", "firefox-preflight"].map((id) => [id, { result: "success" }]));
+  assert.doesNotThrow(() => verifyBrowserPreflightResults(good));
+  for (const id of Object.keys(good)) {
+    for (const result of ["failure", "skipped", "cancelled", "pending", undefined]) {
+      assert.throws(() => verifyBrowserPreflightResults({ ...good, [id]: { result } }), /did not succeed/u);
+    }
+    const missing = { ...good };
+    delete missing[id];
+    assert.throws(() => verifyBrowserPreflightResults(missing), /requires/u);
+  }
+  assert.throws(() => verifyBrowserPreflightResults(null), /requires/u);
+  assert.throws(() => verifyBrowserPreflightResults({ ...good, extra: { result: "success" } }), /requires/u);
+});
+
+test("sharding contract rejects missing shards, filtered runs and fail-open aggregation", () => {
+  for (const [before, after, expected] of [
+    ["shard: [1, 2, 3, 4]", "shard: [1, 2, 3]", /all four shards/u],
+    ["fail-fast: false", "fail-fast: true", /all four shards/u],
+    ["--shard=${{ matrix.shard }}/4 --workers=1", "--shard=${{ matrix.shard }}/4 --workers=1 --grep camera", /complete and unfiltered/u],
+    ["needs: [build-and-contract, chromium-preflight, firefox-preflight]", "needs: [build-and-contract, chromium-preflight]", /needs must be/u],
+    ["\n    if: always()\n", "\n    if: success()\n", /aggregate gate must always run/u],
+    ["node crates/forge3d-web/scripts/verify-browser-preflight-results.mjs", "echo passed", /fail closed/u],
+    ["FORGE3D_PREFLIGHT_RESULTS: ${{ toJSON(needs) }}", "FORGE3D_PREFLIGHT_RESULTS: '{}'", /inspect all dependency results/u],
+  ]) {
+    assert.notEqual(workflowText.replace(before, after), workflowText);
+    assert.throws(() => verifyWebWorkflowContract(workflowText.replace(before, after)), expected);
+  }
+});
+
+test("shared package contract rejects incomplete, stale or rebuilt artifacts", () => {
+  for (const [before, after, expected] of [
+    ["            crates/forge3d-web/pkg\n", "", /all generated browser inputs/u],
+    ["name: forge3d-web-browser-build-${{ github.sha }}", "name: forge3d-web-browser-build-main", /bind to this commit/u],
+    ["      - name: Download shared browser package build", "      - name: Rebuild instead\n        run: npm run build\n\n      - name: Download shared browser package build", /must not rebuild/u],
+    ["pattern: forge3d-web-source-browser-evidence-*", "pattern: unrelated-*", /collect every evidence shard/u],
+  ]) {
+    assert.notEqual(workflowText.replace(before, after), workflowText);
+    assert.throws(() => verifyWebWorkflowContract(workflowText.replace(before, after)), expected);
+  }
 });

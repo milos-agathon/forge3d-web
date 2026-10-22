@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+import { parse } from "yaml";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,11 +21,17 @@ const requiredJobs = new Map([
     "browser-preflight",
     {
       name: "Web Runtime / Browser Preflight",
-      needs: "build-and-contract",
-      runsOn: "macos-15",
+      needs: "[build-and-contract, chromium-preflight, firefox-preflight]",
+      runsOn: "ubuntu-latest",
     },
   ],
 ]);
+
+const shardJobs = new Map(["chromium", "firefox"].map((engine) => [
+  `${engine}-preflight`,
+  { name: `Web Runtime / ${engine[0].toUpperCase()}${engine.slice(1)} Preflight (\${{ matrix.shard }}/4)`,
+    needs: "build-and-contract", runsOn: "macos-15" },
+]));
 
 const nonBlockingJobs = new Map([
   [
@@ -57,7 +65,7 @@ export function verifyWebWorkflowContract(
     }
   }
 
-  const expectedJobCount = requiredJobs.size + nonBlockingJobs.size;
+  const expectedJobCount = requiredJobs.size + shardJobs.size + nonBlockingJobs.size;
   if (parsed.jobs.size !== expectedJobCount) {
     throw new Error(
       `web workflow must contain exactly ${expectedJobCount} jobs`,
@@ -66,6 +74,7 @@ export function verifyWebWorkflowContract(
   const displayNames = new Set();
   for (const [jobId, expected] of [
     ...requiredJobs,
+    ...shardJobs,
     ...nonBlockingJobs,
   ]) {
     const job = parsed.jobs.get(jobId);
@@ -101,16 +110,67 @@ export function verifyWebWorkflowContract(
     }
   }
 
+  verifyShardedBrowserPreflight(text);
   verifyPlaywrightWebKitEnginePreflight(text);
   const jobs = [...parsed.jobs].map(([id, job]) => ({ id, ...job }));
   return {
     triggers: triggerNames,
     jobs,
-    requiredChecks: jobs.filter((job) => job.continueOnError !== true),
+    requiredChecks: jobs.filter((job) => requiredJobs.has(job.id)),
     nonBlockingChecks: jobs.filter(
       (job) => job.continueOnError === true,
     ),
   };
+}
+
+function verifyShardedBrowserPreflight(text) {
+  const { jobs } = parse(text);
+  const gate = jobs["browser-preflight"];
+  assert.equal(gate.if, "always()", "aggregate gate must always run");
+  const resultStep = gate.steps.find((step) => step.name === "Require every browser shard and package build to succeed");
+  assert.equal(resultStep?.env?.FORGE3D_PREFLIGHT_RESULTS, "${{ toJSON(needs) }}", "aggregate gate must inspect all dependency results");
+  assert.equal(resultStep?.run, "node crates/forge3d-web/scripts/verify-browser-preflight-results.mjs", "aggregate gate must fail closed");
+  assert.equal(resultStep.if, undefined, "aggregate result check cannot be skipped");
+  assert.equal(resultStep["continue-on-error"], undefined, "aggregate result check cannot continue on error");
+  const build = jobs["build-and-contract"];
+  const upload = build.steps.find((step) => step.name === "Upload shared browser package build");
+  assert.equal(upload?.with?.name, "forge3d-web-browser-build-${{ github.sha }}", "shared build must bind to this commit");
+  assert.equal(upload?.with?.["if-no-files-found"], "error", "shared build upload must fail if absent");
+  assert.deepEqual(upload?.with?.path.trim().split(/\r?\n/u), [
+    "pkg", "dist", "assets", "types", "examples/vite/dist", "src-ts/codec-catalog.ts",
+    "docs/label-case-contract.json", "LICENSE", "LICENSE-APACHE",
+  ].map((path) => `crates/forge3d-web/${path}`), "shared build must include all generated browser inputs");
+  const buildIndex = build.steps.findIndex((step) => step.name === "Build browser package");
+  assert.equal(build.steps.indexOf(upload), buildIndex + 1, "capture canonical build before consumer scripts mutate outputs");
+  for (const engine of ["chromium", "firefox"]) {
+    const job = jobs[`${engine}-preflight`];
+    assert.deepEqual(job.strategy, { "fail-fast": false, matrix: { shard: [1, 2, 3, 4] } }, "every engine must run all four shards without fail-fast");
+    assert.equal(job.if, undefined, "engine matrix cannot be conditionally skipped");
+    const script = engine === "chromium" ? "chromium" : "firefox-preflight";
+    const run = job.steps.find((step) => step.id === `${engine}-preflight`);
+    assert.equal(run?.run, `npm run test:browser:${script} -- --shard=\${{ matrix.shard }}/4 --workers=1`, "engine shard command must be complete and unfiltered");
+    assert.equal(run.if, undefined, "full shard run cannot be conditionally skipped");
+    assert.equal(run["continue-on-error"], undefined, "engine shard cannot continue on error");
+    assert.equal(run.env.FORGE3D_WEBGPU_REQUIRED, "1");
+    assert.equal(run.env.FORGE3D_SOURCE_BENCHMARK_MODE, "probe");
+    assert.equal(run.env.FORGE3D_W20_STARTUP_RETRY, engine === "chromium" ? "1" : undefined, "W20 retry must remain Chromium-only");
+    const evidenceName = engine === "chromium" ? "forge3d-web-source-browser-evidence" : "forge3d-web-firefox-preflight-ENGINE_PASS-default-preferences";
+    const evidence = job.steps.find((step) => step.with?.name === `${evidenceName}-\${{ matrix.shard }}`);
+    assert.equal(evidence?.with?.path, "crates/forge3d-web/test-results/**/browser-evidence.json", "shards must retain browser evidence");
+    const aggregate = gate.steps.find((step) => step.with?.name === evidenceName);
+    assert.equal(aggregate?.with?.["if-no-files-found"], "error", "aggregate requires each engine's evidence");
+    assert.equal(aggregate?.with?.path, `\${{ runner.temp }}/${engine}-evidence`);
+    const collect = gate.steps.find((step) => step.with?.pattern === `${evidenceName}-*`);
+    assert.equal(collect?.with?.path, aggregate.with.path, "aggregate must collect every evidence shard");
+    assert.equal(collect?.with?.["merge-multiple"], true);
+  }
+  for (const id of ["chromium-preflight", "firefox-preflight", "webkit-engine-preflight"]) {
+    const steps = jobs[id].steps;
+    const download = steps.find((step) => step.name === "Download shared browser package build");
+    assert.equal(download?.with?.name, upload.with.name, "every engine must reuse this run's package build");
+    assert.equal(download?.with?.path, "crates/forge3d-web", "build must restore at package root");
+    assert.equal(steps.some((step) => /npm run build|rust-toolchain/u.test(`${step.run ?? ""} ${step.uses ?? ""}`)), false, "browser jobs must not rebuild the shared package");
+  }
 }
 
 function verifyPlaywrightWebKitEnginePreflight(text) {
