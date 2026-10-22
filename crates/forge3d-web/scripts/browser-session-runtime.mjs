@@ -2,11 +2,8 @@ import { execFileSync, spawn } from "node:child_process";
 import { isAbsolute } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import {
-  markProcessStopped,
-  registerProcess,
-  stopChild,
-} from "./browser-process-registry.mjs";
+import { registerProcess, markProcessStopped } from "./browser-process-registry.mjs";
+import { DriverLifetime } from "./driver-lifetime.mjs";
 import {
   installedPackageVersion,
   observeAppiumLaunch,
@@ -154,20 +151,13 @@ async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inv
     safaridriverVersion: inventory.tools.safaridriverVersion,
     browserVersion: stableInventory.version,
   });
-  let stableRegistered = false;
+  const lifetime = new DriverLifetime(processRegistryPath);
   let launch;
   try {
-    registerProcess(processRegistryPath, runtime.driver, stable.driverPid);
-    stableRegistered = true;
+    lifetime.composite(stable, runtime.driver);
     launch = observeLaunch({ runtime, session: { capabilities: {} } });
   } catch (error) {
-    try {
-      await stable.close();
-      if (stableRegistered) markProcessStopped(processRegistryPath, stable.driverPid);
-    } catch (cleanupError) {
-      throw new AggregateError([error, cleanupError], "INFRA_ERROR SAFARIDRIVER_POST_OPEN_CLEANUP_UNPROVEN");
-    }
-    throw error;
+    return lifetime.fail(error);
   }
   return {
     browser: stable.browser,
@@ -243,6 +233,7 @@ async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inv
           warning: "STP_PRODUCT_FAILURE bundle driver inventory does not match checked policy",
           cleanup: { notStarted: true, sessionDeleted: null, driverStopped: null, processAbsent: true, ok: true }, probe: null }, inventory, closedBinding, route.applicationUrl);
       }
+      const previewLifetime = new DriverLifetime(processRegistryPath);
       let preview;
       let cleanup;
       let result = "PASS";
@@ -257,7 +248,7 @@ async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inv
             browserVersion: installed.version,
             technologyPreview: true,
           });
-          registerProcess(processRegistryPath, "safaridriver-stp", preview.driverPid);
+          previewLifetime.composite(preview, "safaridriver-stp");
         } catch (error) {
           if (error?.cleanup?.ok !== true) throw error;
           result = "PRODUCT_FAILURE";
@@ -280,12 +271,10 @@ async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inv
           result = "PRODUCT_FAILURE";
           warning = error instanceof Error ? error.message : String(error);
         }
-      } finally {
-        if (preview) {
-          cleanup = { notStarted: false, ...await preview.close() };
-          markProcessStopped(processRegistryPath, preview.driverPid);
-        }
+      } catch (error) {
+        return previewLifetime.fail(error);
       }
+      if (preview) cleanup = { notStarted: false, ...await previewLifetime.close() };
       const record = { kind: "forge3d-saf03-stp-result-v1",
         binding: closedBinding,
         channel: "technology-preview", classification: "probe",
@@ -295,11 +284,7 @@ async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inv
         browser: preview?.browser ?? null, result, warning, cleanup, probe };
       return validateSaf03TechnologyPreviewResult(record, inventory, closedBinding, route.applicationUrl);
     },
-    close: async () => {
-      const cleanup = await stable.close();
-      markProcessStopped(processRegistryPath, stable.driverPid);
-      return cleanup;
-    },
+    close: () => lifetime.close(),
   };
 }
 
@@ -457,15 +442,15 @@ async function openLocalWebDriverSession({
   driverVersion,
   processRegistryPath,
 }) {
-  const child = spawn(command, args, {
+  const lifetime = new DriverLifetime(processRegistryPath);
+  try {
+  const child = lifetime.process(spawn(command, args, {
     shell: false,
     stdio: ["ignore", "ignore", "ignore"],
-  });
-  registerProcess(processRegistryPath, runtime.driver, child.pid);
-  try {
+  }), runtime.driver);
     const client = new WebDriverClient(`http://127.0.0.1:${port}`);
     await client.waitUntilReady();
-    const session = await client.createSession(capabilities);
+    const session = lifetime.session(await client.createSession(capabilities));
     await session.navigate(routeUrl);
     const launch = observeWebDriverLaunch({ runtime, session });
     const browser = {
@@ -508,16 +493,10 @@ async function openLocalWebDriverSession({
             }),
           }
         : {}),
-      close: async () => {
-        await session.delete().catch(() => undefined);
-        await stopChild(child);
-        markProcessStopped(processRegistryPath, child.pid);
-      },
+      close: () => lifetime.close(),
     };
   } catch (error) {
-    await stopChild(child);
-    markProcessStopped(processRegistryPath, child.pid);
-    throw error;
+    return lifetime.fail(error);
   }
 }
 
@@ -561,15 +540,15 @@ async function openAppiumSession({
   if (installedDriverVersion !== expectedDriverVersion) {
     throw new Error("installed Appium driver does not match checked policy");
   }
-  const child = spawn(
+  const lifetime = new DriverLifetime(processRegistryPath);
+  try {
+  const child = lifetime.process(spawn(
     executable,
     ["--port", "4723", "--base-path", "/wd/hub"],
     { shell: false, stdio: ["ignore", "ignore", "ignore"] },
-  );
-  registerProcess(processRegistryPath, "appium", child.pid);
+  ), "appium");
   const client = new WebDriverClient("http://127.0.0.1:4723/wd/hub");
   let session;
-  try {
     await client.waitUntilReady();
     const helper = requiredAbsoluteEnvironment(
       "FORGE3D_DEVICE_CONTROL_HELPER",
@@ -587,7 +566,7 @@ async function openAppiumSession({
         invokeDeviceHelper(helper, "probe", assetId, privateDeviceId),
       appiumClient: {
         createSession: async ({ capabilities }) => {
-          session = await client.createSession(capabilities);
+          session = lifetime.session(await client.createSession(capabilities));
           return session;
         },
       },
@@ -626,17 +605,10 @@ async function openAppiumSession({
         await record.assertHealthy();
       },
       runPage: (payload) => session.runHardwarePage(payload),
-      close: async () => {
-        await session.delete().catch(() => undefined);
-        await stopChild(child);
-        markProcessStopped(processRegistryPath, child.pid);
-      },
+      close: () => lifetime.close(),
     };
   } catch (error) {
-    await session?.delete().catch(() => undefined);
-    await stopChild(child);
-    markProcessStopped(processRegistryPath, child.pid);
-    throw error;
+    return lifetime.fail(error);
   }
 }
 

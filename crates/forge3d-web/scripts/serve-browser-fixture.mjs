@@ -1,6 +1,7 @@
+import { fixtureFileResponse as fileResponse, fixtureRequestPath } from "./fixture-http.mjs";
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const applicationRoutes = new Map([
@@ -107,7 +108,9 @@ export function resolveFixtureResponse({
       Buffer.from("method not allowed\n"),
     );
   }
-  const parsedUrl = new URL(request.url, `https://${expectedHost}`);
+  let parsedUrl;
+  try { parsedUrl = {pathname: fixtureRequestPath(request.url)}; }
+  catch { return response(404, commonHeaders(), Buffer.alloc(0)); }
   if (!parsedUrl.pathname.startsWith(basePath)) {
     return response(404, commonHeaders(), Buffer.from("not found\n"));
   }
@@ -241,47 +244,6 @@ function applyCorsPolicy(headers, policy, applicationHost) {
   }
 }
 
-function fileResponse({ fixtureRoot, route, request, headers }) {
-  const root = resolve(fixtureRoot);
-  const path = resolve(root, route.file);
-  const relativePath = relative(root, path);
-  if (
-    relativePath.startsWith("..") ||
-    isAbsolute(relativePath)
-  ) {
-    throw new Error("fixture route escaped its root");
-  }
-  const body = readFileSync(path);
-  if (route.ranges) {
-    headers["Accept-Ranges"] = "bytes";
-  }
-  const range = route.ranges ? parseRange(request.range, body.length) : null;
-  if (request.range && !range) {
-    return response(
-      416,
-      { ...headers, "Content-Range": `bytes */${body.length}` },
-      Buffer.alloc(0),
-    );
-  }
-  if (range) {
-    const slice = body.subarray(range.start, range.end + 1);
-    return response(
-      206,
-      {
-        ...headers,
-        "Content-Range": `bytes ${range.start}-${range.end}/${body.length}`,
-        "Content-Length": String(slice.length),
-      },
-      request.method === "HEAD" ? Buffer.alloc(0) : slice,
-    );
-  }
-  return response(
-    200,
-    { ...headers, "Content-Length": String(body.length) },
-    request.method === "HEAD" ? Buffer.alloc(0) : body,
-  );
-}
-
 function resolveApplicationRoute(relativePath) {
   const fixed = applicationRoutes.get(relativePath);
   if (fixed) return fixed;
@@ -314,19 +276,6 @@ function resolveApplicationRoute(relativePath) {
     };
   }
   return null;
-}
-
-function parseRange(value, length) {
-  if (!value) return null;
-  const match = value.match(/^bytes=([0-9]+)-([0-9]*)$/u);
-  if (!match) return null;
-  const start = Number(match[1]);
-  const requestedEnd = match[2] ? Number(match[2]) : length - 1;
-  const end = Math.min(requestedEnd, length - 1);
-  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start > end) {
-    return null;
-  }
-  return { start, end };
 }
 
 function commonHeaders(cacheCompatible = false) {

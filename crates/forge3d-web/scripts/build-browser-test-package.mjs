@@ -1,3 +1,6 @@
+import { installedFixtureHandler } from "./fixture-http.mjs";
+import { materializeInstalledAcceptance } from "./materialize-browser-fixture.mjs";
+import { attachInstalledSuite } from "./installed-artifact.mjs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
@@ -57,13 +60,11 @@ const evidenceDirectory = resolve(
   packageRoot,
   process.env.FORGE3D_EVIDENCE_DIR ?? "test-results/browser-gate",
 );
-assertCleanWorktree(repositoryRoot);
 const temporaryRoot = mkdtempSync(join(tmpdir(), "forge3d-web-consumer-"));
-const packDirectory = join(temporaryRoot, "pack");
 const consumerDirectory = join(temporaryRoot, "consumer");
 
 try {
-  run("npm", ["run", "build"], packageRoot);
+  const { tarball, packageSha256 } = attachInstalledSuite({ packageRoot, consumer: consumerDirectory, suite: w11Only ? "w11" : w10Only ? "w10" : w09Only ? "w09" : "release" });
   if (w09Only) {
     // A portable W09 package acceptance lane. The full release command still
     // requires the infrastructure suite (including POSIX runner/host tests).
@@ -74,38 +75,6 @@ try {
   } else {
     run("npm", ["run", "test:package"], packageRoot);
   }
-  mkdirSync(packDirectory);
-  const packResult = JSON.parse(
-    run(
-      "npm",
-      ["pack", "--json", "--pack-destination", packDirectory],
-      packageRoot,
-      true,
-    ),
-  );
-  if (!Array.isArray(packResult) || packResult.length !== 1) {
-    throw new Error("npm pack did not return exactly one package");
-  }
-  const tarball = resolve(packDirectory, packResult[0].filename);
-  const packageSha256 = sha256(readFileSync(tarball));
-
-  mkdirSync(consumerDirectory);
-  writeFileSync(
-    join(consumerDirectory, "package.json"),
-    JSON.stringify(
-      {
-        name: "forge3d-browser-tarball-consumer",
-        private: true,
-        type: "module",
-        devDependencies: {
-          "selenium-webdriver": "4.35.0",
-        },
-      },
-      null,
-      2,
-    ),
-  );
-  run("npm", ["install", "--no-save", tarball], consumerDirectory);
   run(
     process.execPath,
     [
@@ -116,164 +85,7 @@ try {
     consumerDirectory,
   );
 
-  const sourceFixture = join(
-    packageRoot,
-    "examples",
-    "test-interactive-viewer.html",
-  );
-  const consumerFixture = join(consumerDirectory, "test-interactive-viewer.html");
-  copyFileSync(sourceFixture, consumerFixture);
-  copyFileSync(
-    join(packageRoot, "examples", "test-lifecycle-away.html"),
-    join(consumerDirectory, "test-lifecycle-away.html"),
-  );
-  let fixture = readFileSync(consumerFixture, "utf8");
-  fixture = fixture.replace(
-    '<script type="module">',
-    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
-    <script type="module">`,
-  );
-  fixture = fixture.replace(
-    'from "../src-ts/index.ts"',
-    'from "@forge3d/web"',
-  );
-  fixture = fixture.replace(
-    "packageSha256: null",
-    `packageSha256: "${packageSha256}"`,
-  );
-  writeFileSync(consumerFixture, fixture);
-  const w03SourceFixture = join(
-    packageRoot,
-    "examples",
-    "test-w03-terrain.html",
-  );
-  const w03ConsumerFixture = join(consumerDirectory, "test-w03-terrain.html");
-  let w03Fixture = readFileSync(w03SourceFixture, "utf8");
-  w03Fixture = w03Fixture.replace(
-    '<script type="module">',
-    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
-    <script type="module">`,
-  );
-  w03Fixture = w03Fixture.replace(
-    'from "../src-ts/index.ts"',
-    'from "@forge3d/web"',
-  );
-  w03Fixture = w03Fixture.replace(
-    "packageSha256 = null",
-    `packageSha256 = "${packageSha256}"`,
-  );
-  writeFileSync(w03ConsumerFixture, w03Fixture);
-  const w04ConsumerFixture = join(consumerDirectory, "test-w04-package.html");
-  let w04Fixture = readFileSync(
-    join(packageRoot, "examples", "test-w04-package.html"),
-    "utf8",
-  );
-  w04Fixture = w04Fixture.replace(
-    '<script type="module">',
-    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
-    <script type="module">`,
-  );
-  w04Fixture = w04Fixture.replace(
-    'from "../src-ts/index.ts"',
-    'from "@forge3d/web"',
-  );
-  w04Fixture = w04Fixture.replace(
-    'new URL("../src-ts/index.ts", import.meta.url).href',
-    'new URL("/node_modules/@forge3d/web/dist/index.js", import.meta.url).href',
-  );
-  w04Fixture = w04Fixture.replace(
-    "packageSha256 = null",
-    `packageSha256 = "${packageSha256}"`,
-  );
-  writeFileSync(w04ConsumerFixture, w04Fixture);
-  const w05ConsumerFixture = join(consumerDirectory, "test-w05-package.html");
-  let w05Fixture = readFileSync(
-    join(packageRoot, "examples", "test-w05-package.html"),
-    "utf8",
-  );
-  w05Fixture = w05Fixture.replace(
-    '<script type="module">',
-    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
-    <script type="module">`,
-  );
-  w05Fixture = w05Fixture.replace(
-    'from "../src-ts/index.ts"',
-    'from "@forge3d/web"',
-  );
-  w05Fixture = w05Fixture.replace(
-    "packageSha256 = null",
-    `packageSha256 = "${packageSha256}"`,
-  );
-  writeFileSync(w05ConsumerFixture, w05Fixture);
-  const w06ConsumerFixture = join(consumerDirectory, "test-w06-package.html");
-  let w06Fixture = readFileSync(
-    join(packageRoot, "examples", "test-w06-package.html"),
-    "utf8",
-  );
-  w06Fixture = w06Fixture.replace(
-    '<script type="module">',
-    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
-    <script type="module">`,
-  );
-  w06Fixture = w06Fixture.replace(
-    'from "../src-ts/index.ts"',
-    'from "@forge3d/web"',
-  );
-  w06Fixture = w06Fixture.replace(
-    "packageSha256 = null",
-    `packageSha256 = "${packageSha256}"`,
-  );
-  writeFileSync(w06ConsumerFixture, w06Fixture);
-  const w07ConsumerFixture = join(consumerDirectory, "test-w07-package.html");
-  let w07Fixture = readFileSync(
-    join(packageRoot, "examples", "test-w07-package.html"),
-    "utf8",
-  );
-  w07Fixture = w07Fixture.replace(
-    '<script type="module">',
-    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
-    <script type="module">`,
-  );
-  w07Fixture = w07Fixture.replace(
-    'from "../src-ts/index.ts"',
-    'from "@forge3d/web"',
-  );
-  w07Fixture = w07Fixture.replace(
-    "packageSha256 = null",
-    `packageSha256 = "${packageSha256}"`,
-  );
-  writeFileSync(w07ConsumerFixture, w07Fixture);
-  const w08ConsumerFixture = join(consumerDirectory, "test-w08-package.html");
-  let w08Fixture = readFileSync(
-    join(packageRoot, "examples", "test-w08-package.html"),
-    "utf8",
-  );
-  w08Fixture = w08Fixture.replace(
-    '<script type="module">',
-    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
-    <script type="module">`,
-  );
-  w08Fixture = w08Fixture.replace(
-    'from "../src-ts/index.ts"',
-    'from "@forge3d/web"',
-  );
-  w08Fixture = w08Fixture.replace(
-    "packageSha256 = null",
-    `packageSha256 = "${packageSha256}"`,
-  );
-  writeFileSync(w08ConsumerFixture, w08Fixture);
-  // COG decode worker: in the consumer it imports the packaged dist module
-  // (worker-src 'self'), which in turn loads the vendored geotiff bundle.
-  const w08WorkerFixture = join(consumerDirectory, "test-w08-cog-worker.js");
-  let w08Worker = readFileSync(
-    join(packageRoot, "examples", "test-w08-cog-worker.js"),
-    "utf8",
-  );
-  w08Worker = w08Worker.replace(
-    'from "../src-ts/index.ts"',
-    'from "/node_modules/@forge3d/web/dist/index.js"',
-  );
-  writeFileSync(w08WorkerFixture, w08Worker);
+  materializeInstalledAcceptance({packageRoot, consumerDirectory, packageSha256});
   const w08FixtureDirectory = join(consumerDirectory, "fixtures", "w08");
   mkdirSync(w08FixtureDirectory, { recursive: true });
   copyFileSync(
@@ -286,35 +98,11 @@ try {
     ),
     join(w08FixtureDirectory, "predictor-deflate-u16.tif"),
   );
-  const w09Fixture = readFileSync(join(packageRoot, "examples", "test-w09.html"), "utf8")
-    .replace('const api = new URLSearchParams(location.search).has("dist") ? await import("../dist/index.js") : await import("../src-ts/index.ts");', 'const api = await import("/node_modules/@forge3d/web/dist/index.js");');
-  writeFileSync(join(consumerDirectory, "test-w09.html"), w09Fixture);
-  writeFileSync(join(consumerDirectory, "test-w09-worker.js"), readFileSync(join(packageRoot, "examples", "test-w09-worker.js"), "utf8").replace('../src-ts/index.ts', '/node_modules/@forge3d/web/dist/index.js'));
   const w09GoldenDirectory = join(consumerDirectory, "tests", "golden", "w09");
   mkdirSync(w09GoldenDirectory, {recursive:true});
   copyFileSync(join(packageRoot, "tests", "golden", "w09", "probes.json"), join(w09GoldenDirectory, "probes.json"));
-  const w10Fixture = readFileSync(join(packageRoot, "examples", "test-w10.html"), "utf8")
-    .replaceAll("../dist/index.js", "/node_modules/@forge3d/web/dist/index.js")
-    .replaceAll("../src-ts/index.ts", "/node_modules/@forge3d/web/dist/index.js")
-    .replace("../src-ts/viewer.ts", "/node_modules/@forge3d/web/dist/viewer.js");
-  writeFileSync(join(consumerDirectory, "test-w10.html"), w10Fixture);
-  copyFileSync(join(packageRoot,"examples","w10-acceptance.js"),join(consumerDirectory,"w10-acceptance.js"));
-  writeFileSync(join(consumerDirectory,"test-w10-native.html"),readFileSync(join(packageRoot,"examples","test-w07-materials.html"),"utf8")
-    .replaceAll("../src-ts/index.ts","/node_modules/@forge3d/web/dist/index.js")
-    .replaceAll("../src-ts/session.ts","/node_modules/@forge3d/web/dist/session.js")
-    .replaceAll("../src-ts/runtime-internals.ts","/node_modules/@forge3d/web/dist/runtime-internals.js"));
-
-  copyFileSync(join(packageRoot, "examples", "w10-reflection-metrics.js"), join(consumerDirectory, "w10-reflection-metrics.js"));
-  copyFileSync(join(packageRoot, "examples", "w10-native-probes.js"), join(consumerDirectory, "w10-native-probes.js"));
-  writeFileSync(join(consumerDirectory, "test-w10-worker.js"), readFileSync(join(packageRoot, "examples", "test-w10-worker.js"), "utf8").replace("../src-ts/index.ts", "/node_modules/@forge3d/web/dist/index.js"));
   cpSync(join(packageRoot, "tests", "golden", "w10"), join(consumerDirectory, "tests", "golden", "w10"), {recursive:true});
   for (const name of ["sky", "effects"]) copyFileSync(join(packageRoot, "src", "runtime", "environment", `${name}.wgsl`), join(consumerDirectory, `w10-runtime-${name}.wgsl`));
-  const w11Fixture = readFileSync(join(packageRoot,"examples","test-w11-postfx.html"),"utf8")
-    .replaceAll("../src-ts/index.ts","/node_modules/@forge3d/web/dist/index.js")
-    .replaceAll("../src-ts/runtime-internals.ts","/node_modules/@forge3d/web/dist/runtime-internals.js")
-    .replaceAll("../src-ts/viewer.ts","/node_modules/@forge3d/web/dist/viewer.js");
-  writeFileSync(join(consumerDirectory,"test-w11-postfx.html"),w11Fixture);
-  writeFileSync(join(consumerDirectory,"test-w11-worker.js"),readFileSync(join(packageRoot,"examples","test-w11-worker.js"),"utf8").replace("../src-ts/index.ts","/node_modules/@forge3d/web/dist/index.js"));
   mkdirSync(join(consumerDirectory,"tests","browser"),{recursive:true});
   copyFileSync(join(packageRoot,"tests","browser","w11-native-oracle.js"),join(consumerDirectory,"tests","browser","w11-native-oracle.js"));
   cpSync(join(packageRoot,"tests","golden","w11"),join(consumerDirectory,"tests","golden","w11"),{recursive:true});
@@ -399,7 +187,7 @@ try {
     }
     const servedFixture = await htmlResponse.text();
     if (
-      !servedFixture.includes('from "@forge3d/web"') ||
+      !servedFixture.includes('from "/node_modules/@forge3d/web/dist/index.js"') ||
       !servedFixture.includes(packageSha256)
     ) {
       throw new Error("served fixture did not import the tarball or record its hash");
@@ -1139,93 +927,10 @@ function run(command, args, cwd, capture = false) {
   return result.stdout ?? "";
 }
 
-function assertCleanWorktree(repositoryRoot) {
-  const status = run(
-    "git",
-    ["status", "--porcelain=v1", "--untracked-files=all"],
-    repositoryRoot,
-    true,
-  ).trimEnd();
-  if (status !== "") {
-    const preview = status.split(/\r?\n/).slice(0, 20).join("\n");
-    throw new Error(
-      `exact-HEAD browser evidence requires a clean worktree before build:\n${preview}`,
-    );
-  }
-}
-
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
 function createStaticServer(root) {
-  return createServer((request, response) => {
-    const url = new URL(request.url ?? "/", "http://127.0.0.1");
-    const requested =
-      url.pathname === "/" ? "/test-interactive-viewer.html" : url.pathname;
-    const path = resolve(root, `.${requested}`);
-    const relativePath = relative(root, path);
-    if (
-      relativePath === ".." ||
-      relativePath.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) ||
-      isAbsolute(relativePath)
-    ) {
-      response.writeHead(403).end("forbidden");
-      return;
-    }
-    let bytes;
-    try {
-      bytes = readFileSync(path);
-    } catch {
-      response.writeHead(404).end("not found");
-      return;
-    }
-    const contentTypes = {
-      ".html": "text/html; charset=utf-8",
-      ".js": "text/javascript; charset=utf-8",
-      ".json": "application/json; charset=utf-8",
-      ".wasm": "application/wasm",
-    };
-    const headers = {
-      "content-type": contentTypes[extname(path)] ?? "application/octet-stream",
-      "cache-control": "no-store",
-      "accept-ranges": "bytes",
-    };
-    // W08 COG streaming reads byte ranges and rejects a 200 full-body reply,
-    // so serve single `bytes=` ranges as 206 like a range-capable host.
-    const range = request.headers.range;
-    if (range !== undefined) {
-      const slice = parseByteRange(range, bytes.length);
-      if (slice === null) {
-        response
-          .writeHead(416, { "content-range": `bytes */${bytes.length}` })
-          .end();
-        return;
-      }
-      response.writeHead(206, {
-        ...headers,
-        "content-range": `bytes ${slice.start}-${slice.end}/${bytes.length}`,
-        "content-length": String(slice.end - slice.start + 1),
-      });
-      response.end(bytes.subarray(slice.start, slice.end + 1));
-      return;
-    }
-    response.writeHead(200, headers);
-    response.end(bytes);
-  });
-}
-
-function parseByteRange(header, size) {
-  const match = /^bytes=(\d*)-(\d*)$/u.exec(header.trim());
-  if (match === null || (match[1] === "" && match[2] === "")) return null;
-  let start;
-  let end;
-  if (match[1] === "") {
-    start = Math.max(0, size - Number(match[2]));
-    end = size - 1;
-  } else {
-    start = Number(match[1]);
-    end = match[2] === "" ? size - 1 : Math.min(Number(match[2]), size - 1);
-  }
-  return start <= end && start < size ? { start, end } : null;
+  return createServer(installedFixtureHandler({route:pathname=>({root,file:pathname==="/"?"test-interactive-viewer.html":"."+pathname}),headers:{"cache-control":"no-store"}}));
 }

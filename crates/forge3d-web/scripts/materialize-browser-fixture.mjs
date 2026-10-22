@@ -1,3 +1,5 @@
+import { materializeFixtureGraph } from "./fixture-graph.mjs";
+export { materializeFixtureGraph } from "./fixture-graph.mjs";
 import {
   copyFileSync,
   lstatSync,
@@ -164,4 +166,17 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     packageSha256: args.get("--package-sha256"),
   });
   console.log(JSON.stringify({ ok: true, ...record }));
+}
+
+export function materializeInstalledAcceptance({ packageRoot, consumerDirectory, packageSha256 }) {
+  const pages = ["test-interactive-viewer.html", "test-lifecycle-away.html", "test-w03-terrain.html", ...[4,5,6,7,8].map(n=>`test-w0${n}-package.html`), "test-w09.html", "test-w10.html", "test-w11-postfx.html"];
+  const workers = ["test-w08-cog-worker.js", "test-w09-worker.js", "test-w10-worker.js", "test-w11-worker.js"];
+  const graph = materializeFixtureGraph({ sourceRoot: packageRoot, outputRoot: consumerDirectory,
+    entries: [...pages, ...workers, "w10-acceptance.js", "w10-reflection-metrics.js", "w10-native-probes.js"].map(name=>({source:`examples/${name}`, destination:name})).concat([{source:"examples/test-w07-materials.html",destination:"test-w10-native.html"}]),
+    externalUrls: ["http:", "https:", "data:", "blob:", "node:"], externalImports: ["module"] });
+  for (const name of pages) {
+    const file = join(consumerDirectory, name);
+    writeFileSync(file, readFileSync(file,"utf8").replaceAll("packageSha256: null", `packageSha256: "${packageSha256}"`).replaceAll("packageSha256 = null", `packageSha256 = "${packageSha256}"`));
+  }
+  return graph;
 }

@@ -119,7 +119,8 @@
     "generate:w23": "node ../../scripts/generate-w23.mjs",
     "verify:w23": "node --test tests/parity/w23-coverage.test.mjs && node ../../scripts/verify-w23.mjs && tsc -p tsconfig.migration.json",
     "test:w23": "npm run verify:w23 && playwright test tests/playwright/w23_migration.spec.ts --project=chromium-preflight",
-    "test:package-consumer:w23": "node scripts/test-w23-package-consumer.mjs"
+    "test:package-consumer:w23": "node scripts/test-w23-package-consumer.mjs",
+    "prepare:acceptance": "node scripts/installed-artifact.mjs"
   },
   "devDependencies": {
     "@noble/ed25519": "3.2.0",

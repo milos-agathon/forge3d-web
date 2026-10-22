@@ -28,8 +28,10 @@ const unitRuns=[1,2,3].map(n=>{
 });
 const installed=json(prefix+'test-results/w23-installed/consumer.json');
 assert.equal(installed.exitCode,0);assert.equal(installed.revision,revision);
-assert.equal(installed.sourceImplementationAvailable,false);
-assert.equal(installed.migrationTextHeadBlobsVerified,18);
+if (installed.status !== undefined) assert.equal(installed.status, 'passed');
+const installedObservations = installed.observations ?? installed;
+assert.equal(installedObservations.sourceImplementationAvailable,false);
+assert.equal(installedObservations.migrationTextHeadBlobsVerified,18);
 const coverage=json('docs/parity/w23-coverage-report.json'),assets=json('docs/parity/w23-assets.json');
 assert.deepEqual(coverage.unmapped,[]);
 const verifyLog=read(prefix+'test-results/w23-review3-verify.log').toString();

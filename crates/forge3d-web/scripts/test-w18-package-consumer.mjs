@@ -1,3 +1,6 @@
+import { installedRun } from "./installed-run.mjs";
+import { installedFixtureHandler } from "./fixture-http.mjs";
+import { attachInstalledSuite } from "./installed-artifact.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
@@ -32,40 +35,13 @@ function run(command, args, cwd = root) {
     throw Error(r.error?.message ?? r.stdout + r.stderr);
   return r.stdout;
 }
-assert.equal(
-  run("git", ["status", "--porcelain"]).trim(),
-  "",
-  "W18 installed gate requires a clean committed worktree",
-);
-run("npm", ["run", "build:ts"]);
-run("npm", ["run", "prepare-dist"]);
+await installedRun({suite:"w18",destination:join(root,"test-results/w18-package-consumer.json"),requiredPhases:["setup","browser"]}, async evidence => {
+const temp = mkdtempSync(join(tmpdir(), "forge3d-w18-consumer-"));
+const consumer = join(temp, "consumer");
+const artifact = attachInstalledSuite({ packageRoot: root, consumer, suite: "w18" });
+const { metadata, tarball, packageSha256 } = artifact;
+evidence.artifact(artifact);
 run("npm", ["run", "test:api"]);
-assert.equal(
-  run("git", ["status", "--porcelain"]).trim(),
-  "",
-  "Generated declarations must be committed",
-);
-const temp = mkdtempSync(join(tmpdir(), "forge3d-w18-consumer-")),
-  consumer = join(temp, "consumer"),
-  pack = join(temp, "pack");
-mkdirSync(consumer);
-mkdirSync(pack);
-const metadata = JSON.parse(
-    run("npm", ["pack", "--json", "--pack-destination", pack]),
-  )[0],
-  tarball = join(pack, metadata.filename),
-  packageSha256 = createHash("sha256")
-    .update(readFileSync(tarball))
-    .digest("hex");
-writeFileSync(
-  join(consumer, "package.json"),
-  JSON.stringify({ private: true, type: "module" }),
-);
-run(
-  "npm",
-  ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball],
-  consumer,
-);
 const installed = join(consumer, "node_modules/@forge3d/web");
 for (const file of [
   "dist/map-scene.js", "dist/diagnostics.js", "dist/diagnostic-style.js", "dist/map-render.js",
@@ -99,45 +75,15 @@ run(
   ],
   consumer,
 );
-const server = createServer((req, res) => {
-  try {
-    const url = new URL(req.url, "http://localhost"),
-      pathname = decodeURIComponent(url.pathname);
-    let path;
-    if (pathname.startsWith("/dist/") || pathname.startsWith("/assets/"))
-      path = resolve(installed, "." + pathname);
-    else if (
-      pathname.startsWith("/examples/") ||
-      pathname.startsWith("/tests/fixtures/w16/") ||
-      pathname.startsWith("/tests/fixtures/w18/")
-    )
-      path = resolve(root, "." + pathname);
-    else throw Error("consumer route unavailable");
-    const allowed = path.startsWith(installed) ? installed : root,
-      rel = relative(allowed, path);
-    if (rel.startsWith("..") || isAbsolute(rel))
-      throw Error("outside consumer");
-    let bytes = readFileSync(path);
-    if (extname(path) === ".html")
-      bytes = Buffer.from(
-        bytes
-          .toString("utf8")
-          .replaceAll("../src-ts/index.ts", "/dist/index.js")
-          .replaceAll("/src-ts/index.ts", "/dist/index.js"),
-      );
-    const headers={
-      "content-type": {".html":"text/html", ".js":"text/javascript", ".mjs":"text/javascript", ".json":"application/json", ".wasm":"application/wasm", ".ttf":"font/ttf", ".png":"image/png"}[extname(path)] ?? "application/octet-stream",
-      "cross-origin-opener-policy":"same-origin", "cross-origin-embedder-policy":"require-corp", "accept-ranges":"bytes"
-    };
-    const range=req.headers.range;
-    if(range){const match=/^bytes=(\d+)-(\d*)$/.exec(range);if(!match)throw Error("invalid Range");const start=Number(match[1]),end=match[2]?Math.min(Number(match[2]),bytes.length-1):bytes.length-1;if(start>end||start>=bytes.length){res.writeHead(416);res.end();return;}headers['content-range']=`bytes ${start}-${end}/${bytes.length}`;bytes=bytes.subarray(start,end+1);res.writeHead(206,{...headers,'content-length':bytes.length});}
-    else res.writeHead(200,{...headers,'content-length':bytes.length});
-    res.end(bytes);
-  } catch {
-    res.writeHead(404);
-    res.end("Missing installed resource");
-  }
-});
+const server = createServer(installedFixtureHandler({
+ route(pathname) {
+  if(["/dist/","/assets/"].some(prefix=>pathname.startsWith(prefix))) return {root:installed};
+  if(["/examples/","/tests/fixtures/w18/","/tests/fixtures/w16/"].some(prefix=>pathname.startsWith(prefix))) return {root};
+  return null;
+ }, headers:{"cross-origin-opener-policy":"same-origin","cross-origin-embedder-policy":"require-corp"},
+ transform(bytes,path) {return extname(path)===".html" ? Buffer.from(bytes.toString("utf8").replaceAll("../src-ts/index.ts","/dist/index.js").replaceAll("/src-ts/index.ts","/dist/index.js")) : bytes;},
+}));
+
 let result;
 try {
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
@@ -148,8 +94,9 @@ try {
   const config = join(temp, "w18-package.config.mts");
   writeFileSync(
     config,
-    `import config from ${JSON.stringify(pathToFileURL(join(root, "playwright.config.ts")).href)};export default {...config,testDir:${JSON.stringify(join(root, "tests/playwright"))},testMatch:'w18_mapscene.spec.ts',webServer:undefined,use:{...config.use,baseURL:${JSON.stringify(origin)}},reporter:[['list'],['json',{outputFile:${JSON.stringify(join(out, "w18-installed-playwright.json"))}}]]};`,
+    `import config from ${JSON.stringify(pathToFileURL(join(root, "playwright.config.ts")).href)};export default {...config,testDir:${JSON.stringify(join(root, "tests/playwright"))},testMatch:'w18_mapscene.spec.ts',outputDir:${JSON.stringify(join(out, "w18-installed-output"))},webServer:undefined,use:{...config.use,baseURL:${JSON.stringify(origin)}},reporter:[['list'],['json',{outputFile:${JSON.stringify(join(out, "w18-installed-playwright.json"))}}]]};`,
   );
+  evidence.phase("browser");
   result = await new Promise((resolveResult, reject) => {
     const child = spawn(
       process.execPath,
@@ -176,21 +123,10 @@ try {
     child.on("error", reject);
     child.on("exit", (code) => resolveResult(code));
   });
-  const report = {
-    schemaVersion: 1,
-    verifiedAt: new Date().toISOString(),
-    revision: run("git", ["rev-parse", "HEAD"]).trim(),
-    packageSha256,
-    tarball,
-    installed,
-    exitCode: result,
-  };
-  writeFileSync(
-    join(out, "w18-package-consumer.json"),
-    JSON.stringify(report, null, 2) + "\n",
-  );
-  console.log(JSON.stringify(report, null, 2));
+  evidence.observe({exitCode:result,servedRoot:installed});
   assert.equal(result, 0, "Installed W18 probes failed");
 } finally {
   await new Promise((r) => server.close(r));
 }
+
+});
