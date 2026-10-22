@@ -148,7 +148,7 @@ function verifyPlaywrightWebKitEnginePreflight(text) {
   if (
     browserCommands.length !== 1 ||
     browserCommands[0] !==
-      "run: npm run test:browser:webkit -- --reporter=json"
+      "run: npm run test:browser:webkit -- --reporter=json,line"
   ) {
     throw new Error(
       "Playwright WebKit engine preflight must select only test:browser:webkit",

@@ -391,7 +391,9 @@ jobs:
     needs: build-and-contract
     runs-on: macos-latest
     continue-on-error: true
-    timeout-minutes: 25
+    # A slower full preflight can take over 25m across all 469 cases.
+    # Complete the report before classification; per-test deadlines stay fixed.
+    timeout-minutes: 60
 
     steps:
       - name: Check out the protected source
@@ -435,7 +437,7 @@ jobs:
           FORGE3D_WEBGPU_REQUIRED: "1"
           FORGE3D_SOURCE_BENCHMARK_MODE: probe
           PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/webkit-preflight-actual.json
-        run: npm run test:browser:webkit -- --reporter=json
+        run: npm run test:browser:webkit -- --reporter=json,line
 
       - name: Classify Playwright WebKit engine preflight
         id: classify-webkit
