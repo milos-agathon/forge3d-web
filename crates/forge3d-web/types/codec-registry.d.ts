@@ -1,5 +1,5 @@
 import type { CodecDenoiseTarget, CodecDenoiseOptions, CodecDenoiserSelection } from './codec-denoiser.js';
-import { HdrFrame, AovFrame } from "./index.js";
+import { HdrFrame, AovFrame } from './index.js';
 import type { CodecFormat, CodecDecodeOptions, CodecReplayOptions, CodecRegistryOptions, CodecRegistryStats, CodecResult, CodecSelection, CodecSource } from './codec-types.js';
 /** Integrated E05 dispatch. Platform adapters and feature codecs retain ownership. */
 export declare class CodecRegistry {

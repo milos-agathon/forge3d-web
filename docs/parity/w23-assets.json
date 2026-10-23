@@ -19,7 +19,7 @@
           },
           {
             "path": "crates/forge3d-web/scripts/generate-codec-catalog.mjs",
-            "sha256": "629921acffd3f944144092395790da42dbd4b353e7f3a43d149ea8579bcc1809",
+            "sha256": "1f7bb2c20940eeba891963acfbb309c54ff30f9ee3895e440bcccefd6a9c74dd",
             "hashMode": "utf8-lf"
           }
         ],
@@ -48,7 +48,7 @@
           },
           {
             "path": "crates/forge3d-web/scripts/generate-codec-catalog.mjs",
-            "sha256": "629921acffd3f944144092395790da42dbd4b353e7f3a43d149ea8579bcc1809",
+            "sha256": "1f7bb2c20940eeba891963acfbb309c54ff30f9ee3895e440bcccefd6a9c74dd",
             "hashMode": "utf8-lf"
           }
         ],
@@ -77,7 +77,7 @@
           },
           {
             "path": "crates/forge3d-web/scripts/generate-codec-catalog.mjs",
-            "sha256": "629921acffd3f944144092395790da42dbd4b353e7f3a43d149ea8579bcc1809",
+            "sha256": "1f7bb2c20940eeba891963acfbb309c54ff30f9ee3895e440bcccefd6a9c74dd",
             "hashMode": "utf8-lf"
           }
         ],
@@ -106,7 +106,7 @@
           },
           {
             "path": "crates/forge3d-web/scripts/generate-codec-catalog.mjs",
-            "sha256": "629921acffd3f944144092395790da42dbd4b353e7f3a43d149ea8579bcc1809",
+            "sha256": "1f7bb2c20940eeba891963acfbb309c54ff30f9ee3895e440bcccefd6a9c74dd",
             "hashMode": "utf8-lf"
           }
         ],
@@ -135,7 +135,7 @@
           },
           {
             "path": "crates/forge3d-web/scripts/generate-codec-catalog.mjs",
-            "sha256": "629921acffd3f944144092395790da42dbd4b353e7f3a43d149ea8579bcc1809",
+            "sha256": "1f7bb2c20940eeba891963acfbb309c54ff30f9ee3895e440bcccefd6a9c74dd",
             "hashMode": "utf8-lf"
           }
         ],
@@ -1019,7 +1019,7 @@
           },
           {
             "path": "crates/forge3d-web/scripts/generate-codec-catalog.mjs",
-            "sha256": "629921acffd3f944144092395790da42dbd4b353e7f3a43d149ea8579bcc1809",
+            "sha256": "1f7bb2c20940eeba891963acfbb309c54ff30f9ee3895e440bcccefd6a9c74dd",
             "hashMode": "utf8-lf"
           }
         ],

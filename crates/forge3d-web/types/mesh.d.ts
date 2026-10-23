@@ -1,4 +1,4 @@
-import { TerrainScatterBatch } from "./index.js";
+import { TerrainScatterBatch } from "./terrain-scatter.js";
 import type { ScatterBatchInput, ScatterLevel } from "./scatter-types.js";
 /** Owned, packed triangle buffers. Empty optional attributes mean absent. */
 export interface MeshBuffers {

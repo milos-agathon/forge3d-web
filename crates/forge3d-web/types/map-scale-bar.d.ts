@@ -1,7 +1,7 @@
 import { BBox } from './map-layout.js';
 import { type CartographicColor } from './cartography-common.js';
 import { type CartographicRenderOptions } from './cartography-canvas.js';
-import type { Frame } from "./index.js";
+import type { Frame } from './index.js';
 export interface ScaleBarConfig {
     units?: 'm' | 'km' | 'mi' | 'ft';
     style?: 'simple' | 'alternating';

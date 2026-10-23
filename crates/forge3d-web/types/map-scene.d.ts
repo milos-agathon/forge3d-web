@@ -1,4 +1,4 @@
-import { Frame } from "./index.js";
+import { Frame } from './index.js';
 import { ValidationReport, type ValidationReportData, type JsonValue } from './diagnostics.js';
 import { SceneRecipe } from './map-recipe.js';
 import { type MapSceneRenderContext } from './map-render-context.js';

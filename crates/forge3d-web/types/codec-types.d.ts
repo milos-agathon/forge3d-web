@@ -2,7 +2,7 @@ import type { BrowserByteSource, ByteReadOptions, ExrImage, RgbeImage, TextureIm
 import type { PointData } from './pointcloud-types.js';
 import type { GltfAsset } from './mesh-gltf.js';
 import type { GlyphRange } from './style-assets.js';
-import type { PersistentByteStore } from "./index.js";
+import type { PersistentByteStore } from './index.js';
 export type CodecFormat = 'tiff' | 'laz' | 'ktx2' | 'hdr' | 'exr' | 'glb' | 'glyph-pbf';
 export interface CodecRaster {
     width: number;

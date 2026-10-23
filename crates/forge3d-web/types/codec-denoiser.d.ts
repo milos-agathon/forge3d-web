@@ -1,4 +1,4 @@
-import { HdrFrame, AovFrame } from "./index.js";
+import { HdrFrame, AovFrame } from './index.js';
 import type { DenoiseSettingsInput } from './index.js';
 /** Implemented by W06 Forge3DRuntime and Forge3DSession. Application-owned. */
 export interface CodecDenoiseTarget {
