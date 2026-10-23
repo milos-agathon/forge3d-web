@@ -38,46 +38,56 @@ export class CodecPersistentCache {
     if(value.checksum!==await codecDigest(new TextEncoder().encode(JSON.stringify(value.entries))))throw invalid();
     return value.entries;
   }
-  async #save(entries:Entry[]):Promise<void> {
-    let encoded=await this.#encode(entries);
-    while(entries.length&&(entries.length>MAX_ENTRIES||entries.reduce((n,e)=>n+e.size,0)+encoded.length>this.budgetBytes||encoded.length>MAX_INDEX_BYTES)){
-      await this.store.delete(entries.shift()!.key);encoded=await this.#encode(entries);
+  /** Compute the whole final state without storage side effects. */
+  async #plan(entries: Entry[]) {
+    entries = entries.slice();
+    let encoded = await this.#encode(entries);
+    while(entries.length && (entries.length > MAX_ENTRIES || encoded.length > MAX_INDEX_BYTES ||
+      encoded.length + entries.reduce((n,e)=>n+e.size,0) > this.budgetBytes)) {
+      entries.shift(); encoded = await this.#encode(entries);
     }
-    if(!entries.length){await this.store.delete(INDEX);this.#bytes=0;this.#entries=0;return;}
-    await this.store.put(INDEX,encoded);
-    this.#bytes=encoded.length+entries.reduce((n,e)=>n+e.size,0);this.#entries=entries.length;
+    return { entries, encoded };
+  }
+  async #publish(plan: { entries: Entry[]; encoded: Uint8Array }): Promise<void> {
+    if(plan.entries.length) await this.store.put(INDEX,plan.encoded);
+    else await this.store.delete(INDEX);
+    this.#entries=plan.entries.length;
+    this.#bytes=plan.entries.length ? plan.encoded.length+plan.entries.reduce((n,e)=>n+e.size,0) : 0;
+  }
+  /** All mutation, peak admission and partial-write recovery passes through here. */
+  #transition(kind: 'put'|'get'|'delete', key: string, input?: Uint8Array): Promise<Uint8Array|undefined> {
+    return this.#exclusive(async()=>{
+      const previous=await this.#load();
+      const bytes=kind==='put'?input:kind==='get'?await this.store.get(key):undefined;
+      const oversized=kind==='get' && bytes!==undefined && bytes.length>this.budgetBytes;
+      const desired=previous.filter(e=>e.key!==key);
+      if(bytes && !oversized && (await this.#plan([{key,size:bytes.length}])).entries.length)
+        desired.push({key,size:bytes.length});
+      const final=await this.#plan(desired);
+      const retained=new Set(final.entries.map(e=>e.key));
+      // Delete before either index growth or artifact allocation.
+      const removed=new Set(previous.filter(e=>!retained.has(e.key)).map(e=>e.key));
+      if(kind==='put'||kind==='delete'||oversized||!retained.has(key))removed.add(key);
+      for(const removedKey of removed)await this.store.delete(removedKey);
+      if(kind==='put' && retained.has(key)) {
+        const rollback=await this.#plan(final.entries.filter(e=>e.key!==key));
+        await this.#publish(rollback);
+        try { await this.store.put(key,bytes!); await this.#publish(final); }
+        catch(error) {
+          // The store cannot transact or enumerate; preserve the primary failure and
+          // repair the known namespace as far as this adapter permits.
+          await this.store.delete(key).catch(()=>{});
+          await this.#publish(rollback).catch(()=>{});
+          throw error;
+        }
+      } else await this.#publish(final);
+      if(oversized)throw codecFailure('IO_ERROR','cache-corrupt','Persistent codec artifact exceeds its storage budget');
+      return retained.has(key)?bytes:undefined;
+    });
   }
   put(key:string,bytes:Uint8Array):Promise<void> {
-    return this.#exclusive(async()=>{
-      let entries=(await this.#load()).filter(e=>e.key!==key);
-      const single=[{key,size:bytes.length}];
-      if(bytes.length+(await this.#encode(single)).length>this.budgetBytes){await this.store.delete(key);await this.#save(entries);return;}
-      entries.push(single[0]!);
-      // Evict before allocating the new stored artifact; include index bytes in the budget.
-      let encoded=await this.#encode(entries);
-      while(entries.length>MAX_ENTRIES||entries.reduce((n,e)=>n+e.size,0)+encoded.length>this.budgetBytes){
-        await this.store.delete(entries.shift()!.key);encoded=await this.#encode(entries);
-      }
-      await this.store.delete(key);
-      await this.#save(entries.filter(e=>e.key!==key));
-      try{await this.store.put(key,bytes);await this.#save(entries);}
-      catch(error){await this.store.delete(key).catch(()=>{});await this.#save(entries.filter(e=>e.key!==key)).catch(()=>{});throw error;}
-    });
+    return this.#transition('put',key,bytes).then(()=>{});
   }
-  get(key:string):Promise<Uint8Array|undefined> {
-    return this.#exclusive(async()=>{
-      const entries=(await this.#load()).filter(e=>e.key!==key);
-      const bytes=await this.store.get(key);
-      if(!bytes){await this.#save(entries);return undefined;}
-      if(bytes.length>this.budgetBytes){await this.store.delete(key);await this.#save(entries);throw codecFailure('IO_ERROR','cache-corrupt','Persistent codec artifact exceeds its storage budget');}
-      entries.push({key,size:bytes.length});await this.#save(entries);
-      return entries.some(e=>e.key===key)?bytes:undefined;
-    });
-  }
-  delete(key:string):Promise<void> {
-    return this.#exclusive(async()=>{
-      await this.store.delete(key);
-      await this.#save((await this.#load()).filter(e=>e.key!==key));
-    });
-  }
+  get(key:string):Promise<Uint8Array|undefined> { return this.#transition('get',key); }
+  delete(key:string):Promise<void> { return this.#transition('delete',key).then(()=>{}); }
 }
