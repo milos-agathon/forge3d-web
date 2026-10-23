@@ -1,3 +1,5 @@
+export {indexedDbByteStore} from "./byte-store-indexeddb.js";
+import {indexedDbByteStore} from "./byte-store-indexeddb.js";
 // W08/T09-T10 byte caches (F2): an in-memory LRU plus persistent
 // digest-verified adapters (OPFS, IndexedDB, CacheStorage) following the
 // `IblCache` backend patterns in `ibl.ts`.
@@ -220,6 +222,7 @@ export class DigestCheckedByteCache implements PersistentByteCache {
 }
 
 interface OpfsWritableLike {
+  abort?():Promise<void>;
   write(data: Uint8Array): Promise<void>;
   close(): Promise<void>;
 }
@@ -293,8 +296,8 @@ export function opfsByteStore(namespace: string): PersistentByteStore {
         create: true,
       });
       const writable = await file.createWritable();
-      await writable.write(value);
-      await writable.close();
+      try{await writable.write(value);await writable.close();}
+      catch(error){await writable.abort?.().catch(()=>undefined);throw error;}
     },
     async delete(key) {
       const dir = await directory();
@@ -324,108 +327,6 @@ export function opfsByteStore(namespace: string): PersistentByteStore {
       } catch {
         // Clearing is best-effort.
       }
-    },
-  };
-}
-
-interface IdbRequestLike<T = unknown> {
-  result: T;
-  error: unknown;
-  onsuccess: ((event: unknown) => void) | null;
-  onerror: ((event: unknown) => void) | null;
-}
-
-interface IdbStoreLike {
-  get(key: string): IdbRequestLike<unknown>;
-  put(value: unknown, key: string): IdbRequestLike<unknown>;
-  delete(key: string): IdbRequestLike<unknown>;
-  clear(): IdbRequestLike<unknown>;
-}
-
-interface IdbTransactionLike {
-  objectStore(name: string): IdbStoreLike;
-}
-
-interface IdbDatabaseLike {
-  objectStoreNames: { contains(name: string): boolean };
-  createObjectStore(name: string): IdbStoreLike;
-  transaction(name: string, mode: string): IdbTransactionLike;
-  close(): void;
-}
-
-interface IdbOpenRequestLike extends IdbRequestLike<IdbDatabaseLike> {
-  onupgradeneeded: ((event: unknown) => void) | null;
-}
-
-interface IdbFactoryLike {
-  open(name: string, version?: number): IdbOpenRequestLike;
-}
-
-function indexedDbFactory(): IdbFactoryLike | undefined {
-  const candidate = (
-    globalThis as typeof globalThis & { indexedDB?: IdbFactoryLike }
-  ).indexedDB;
-  if (candidate !== undefined && typeof candidate.open === "function") {
-    return candidate;
-  }
-  return undefined;
-}
-
-function idbRequest<T>(request: IdbRequestLike<T>): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () =>
-      reject(request.error ?? new Error("IndexedDB request failed"));
-  });
-}
-
-const IDB_STORE_NAME = "entries";
-
-export function indexedDbByteStore(namespace: string): PersistentByteStore {
-  let opened: Promise<IdbDatabaseLike> | undefined;
-  const database = () => {
-    opened ??= (async () => {
-      const factory = indexedDbFactory();
-      if (factory === undefined) {
-        throw new Forge3DError(
-          "UNSUPPORTED_FEATURE",
-          "IndexedDB is unavailable",
-        );
-      }
-      const request = factory.open(namespace, 1);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(IDB_STORE_NAME)) {
-          db.createObjectStore(IDB_STORE_NAME);
-        }
-      };
-      return idbRequest(request);
-    })();
-    return opened;
-  };
-  const store = async (mode: "readonly" | "readwrite") => {
-    const db = await database();
-    return db.transaction(IDB_STORE_NAME, mode).objectStore(IDB_STORE_NAME);
-  };
-  return {
-    async get(key) {
-      const value = await idbRequest((await store("readonly")).get(key));
-      if (value instanceof Uint8Array) {
-        return value;
-      }
-      if (value instanceof ArrayBuffer) {
-        return new Uint8Array(value);
-      }
-      return undefined;
-    },
-    async put(key, value) {
-      await idbRequest((await store("readwrite")).put(value, key));
-    },
-    async delete(key) {
-      await idbRequest((await store("readwrite")).delete(key));
-    },
-    async clear() {
-      await idbRequest((await store("readwrite")).clear());
     },
   };
 }

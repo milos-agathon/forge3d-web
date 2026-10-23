@@ -1,4 +1,4 @@
-import {readFileSync,writeFileSync,readdirSync} from "node:fs";
+import {readFileSync,writeFileSync,readdirSync,existsSync} from "node:fs";
 import {join,resolve,dirname,basename} from "node:path";
 import ts from "typescript";
 
@@ -6,6 +6,7 @@ import ts from "typescript";
 // particular, index.d.ts remains an independent, snapshot-reviewed contract.
 const reviewed=new Set(["index","postfx","postfx-types","probe-bake-options","scatter-mesh","scatter-random","scatter-source","terrain-probes","terrain-scatter","vector-picking"]);
 const facadeModules=new Set(["frames","scene","camera","range-scheduler","byte-cache","renderer-config","runtime-failure"]);
+const normalizeNewlines=text=>text.replace(/\r\n/g,"\n");
 export function publishDeclarationGraph(root) {
  const types=join(root,"types"),dist=join(root,"dist"),visited=new Set(),outputs=new Map();
  function visit(name) {
@@ -24,10 +25,15 @@ export function publishDeclarationGraph(root) {
  // Existing shipped declaration modules are roots too: preserve direct type
  // consumers, and recursively publish newly introduced private dependencies.
  for(const file of readdirSync(types).filter(f=>f.endsWith(".d.ts")))visit(file.slice(0,-5));
- for(const [file,text]of outputs)writeFileSync(file,text);
+ for(const [file,text]of outputs) {
+  // Preserve unchanged checkout bytes and metadata: rewriting CRLF as LF can
+  // make Windows Git status dirty even when its tracked content diff is empty.
+  if(existsSync(file)&&normalizeNewlines(readFileSync(file,"utf8"))===normalizeNewlines(text))continue;
+  writeFileSync(file,text);
+ }
  return [...visited].sort();
 }
-const normalize=text=>text.replace(/\r\n/g,"\n").trimEnd();
+const normalize=text=>normalizeNewlines(text).trimEnd();
 export function verifyDeclarationContract({root,emittedExports,facade=join(root,"types/index.d.ts"),snapshot=join(root,"tests/api/index.d.ts.snapshot"),consumerConfig=join(root,"tsconfig.api.json")}) {
  if(normalize(readFileSync(facade,"utf8"))!==normalize(readFileSync(snapshot,"utf8")))throw Error("Reviewed declaration facade differs from its snapshot");
  const config=ts.readConfigFile(consumerConfig,ts.sys.readFile);
