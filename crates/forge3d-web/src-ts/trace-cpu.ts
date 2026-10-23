@@ -1,3 +1,4 @@
+import { TRACE_RECORD } from './trace-packets.js';
 import type {
   TraceCamera,
   TraceVec3,
@@ -54,32 +55,6 @@ export interface CpuTraceSettings {
   clamp: number;
   restir: RestirConfig | undefined;
   guiding: OnlineGuidingGrid | undefined;
-}
-export function emptyTraceResult(
-  width: number,
-  height: number,
-  samples = 0,
-): TraceResult {
-  const n = width * height,
-    a = () => new Float32Array(n * 3),
-    b = () => new Float32Array(n);
-  return {
-    width,
-    height,
-    samples,
-    color: a(),
-    albedo: a(),
-    normal: a(),
-    depth: b(),
-    id: new Uint32Array(n),
-    direct: a(),
-    indirect: a(),
-    emission: a(),
-    visibility: b(),
-    ao: b(),
-    bentNormal: a(),
-    variance: b(),
-  };
 }
 export function cameraRay(
   s: CpuTraceSettings,
@@ -172,7 +147,7 @@ export function traceCpuSample(
 } {
   const rng = new TraceRng(sampleSeed(s.seed, pixel, sample)),
     initial = cameraRay(s, pixel, rng),
-    record = new Float32Array(28),
+    record = new Float32Array(TRACE_RECORD.words),
     bits = new Uint32Array(record.buffer);
   let origin = initial.origin,
     direction = initial.direction,
@@ -278,18 +253,18 @@ export function traceCpuSample(
     beauty = add(beauty, emitted);
     emission = add(emission, emitted);
     if (bounce === 0) {
-      record.set(material.albedo, 4);
-      bits[7] = hit.id;
-      record.set(n, 8);
-      record[11] = hit.t;
-      record[15] = 1;
+      record.set(material.albedo, TRACE_RECORD.albedo);
+      bits[TRACE_RECORD.id] = hit.id;
+      record.set(n, TRACE_RECORD.normal);
+      record[TRACE_RECORD.depth] = hit.t;
+      record[TRACE_RECORD.visibility] = 1;
       const aoDir = cosineDirection(rng.next(), rng.next(), n),
         occluded = scene.intersect(
           { origin: add(p, mul(n, 1e-4)), direction: aoDir, tMax: 1 },
           s.mode,
         );
-      record[19] = occluded ? 0 : 1;
-      record.set(occluded ? [0, 0, 0] : aoDir, 24);
+      record[TRACE_RECORD.ao] = occluded ? 0 : 1;
+      record.set(occluded ? [0, 0, 0] : aoDir, TRACE_RECORD.bentNormal);
     }
     let lighting: TraceVec3 = [0, 0, 0],
       lightIndex = 0,
@@ -564,83 +539,13 @@ export function traceCpuSample(
     indirect = mul(indirect, scale);
     emission = mul(emission, scale);
   }
-  record.set(beauty, 0);
-  record[3] = guidingWeight ?? 0;
-  bits[23] = guidingBin ?? 0xffffffff;
-  record.set(direct, 12);
-  record.set(indirect, 16);
-  record.set(emission, 20);
-  record[27] = f(luminance(beauty) ** 2);
+  record.set(beauty, TRACE_RECORD.color);
+  record[TRACE_RECORD.training] = guidingWeight ?? 0;
+  bits[TRACE_RECORD.guidingBin] = guidingBin ?? 0xffffffff;
+  record.set(direct, TRACE_RECORD.direct);
+  record.set(indirect, TRACE_RECORD.indirect);
+  record.set(emission, TRACE_RECORD.emission);
+  record[TRACE_RECORD.variance] = f(luminance(beauty) ** 2);
   return { record, reservoir: primaryReservoir, guidingBin, guidingWeight };
 }
-/** Average linear AOVs; nearest first-sample ID/depth remains stable for integer picking. */
-export function decodeTraceRecords(
-  data: Float32Array,
-  width: number,
-  height: number,
-  samples: number,
-): TraceResult {
-  const out = emptyTraceResult(width, height, samples),
-    bits = new Uint32Array(data.buffer, data.byteOffset, data.length);
-  for (let i = 0; i < width * height; i++) {
-    const base = i * 28;
-    for (const [name, offset] of [
-      ["color", 0],
-      ["albedo", 4],
-      ["normal", 8],
-      ["direct", 12],
-      ["indirect", 16],
-      ["emission", 20],
-      ["bentNormal", 24],
-    ] as const)
-      out[name].set(
-        data.subarray(base + offset, base + offset + 3).map((v) => v / samples),
-        i * 3,
-      );
-    out.id[i] = bits[base + 7]!;
-    out.depth[i] = data[base + 11]!;
-    out.visibility[i] = data[base + 15]! / samples;
-    out.ao[i] = data[base + 19]! / samples;
-    const color: TraceVec3 = [
-      out.color[i * 3]!,
-      out.color[i * 3 + 1]!,
-      out.color[i * 3 + 2]!,
-    ];
-    out.variance[i] = Math.max(
-      0,
-      data[base + 27]! / samples - luminance(color) ** 2,
-    );
-    const n = unit([
-        out.normal[i * 3]!,
-        out.normal[i * 3 + 1]!,
-        out.normal[i * 3 + 2]!,
-      ]),
-      b = unit([
-        out.bentNormal[i * 3]!,
-        out.bentNormal[i * 3 + 1]!,
-        out.bentNormal[i * 3 + 2]!,
-      ]);
-    out.normal.set(n, i * 3);
-    out.bentNormal.set(b, i * 3);
-  }
-  return out;
-}
-export function accumulateRecord(
-  sum: Float32Array,
-  record: Float32Array,
-  pixel: number,
-  sample: number,
-): void {
-  const off = pixel * 28;
-  const ids = new Uint32Array(sum.buffer),
-    inputIds = new Uint32Array(record.buffer);
-  for (let i = 0; i < 28; i++) {
-    if (i === 3 || i === 23) {
-      ids[off + i] = inputIds[i]!;
-    } else if (i === 7) {
-      if (sample === 0) ids[off + i] = inputIds[i]!;
-    } else if (i === 11) {
-      if (sample === 0) sum[off + i] = record[i]!;
-    } else sum[off + i] = f(sum[off + i]! + record[i]!);
-  }
-}
+export { emptyTraceResult, decodeTraceRecords, accumulateRecord } from './trace-packets.js';

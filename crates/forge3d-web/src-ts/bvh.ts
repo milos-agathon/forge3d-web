@@ -1,3 +1,4 @@
+import {ownBvhResult,type BvhResult} from "./bvh-result.js";
 import type {
   TraceTriangle,
   TraceRay,
@@ -115,6 +116,7 @@ export class BvhHandle {
       backend: "cpu",
       method: options.method ?? "sah",
     };
+    this.install(this);
   }
   /** Validated primitive storage for an external builder; no CPU tree build. */
   static prepare(
@@ -129,11 +131,21 @@ export class BvhHandle {
       method: this.stats.method,
       memoryBudgetBytes,
     });
-    copy.nodes.length = 0;
-    for (const node of structuredClone(this.nodes)) copy.nodes.push(node);
-    copy.indices = this.indices.slice();
-    Object.assign(copy.stats, this.stats);
+    copy.install(this);
     return copy;
+  }
+  /** Internal builder seam. Existing mutable inspection fields remain compatible. */
+  install(result:BvhResult):void {
+    live(this.#disposed);
+    const owned=ownBvhResult(result);
+    this.triangles.length=0;for(const triangle of owned.triangles)this.triangles.push(triangle);
+    this.nodes.length=0;for(const node of owned.nodes)this.nodes.push(node);
+    this.indices=owned.indices;Object.assign(this.stats,owned.stats);
+  }
+  /** Build privately; failures cannot expose partially refitted query state. */
+  async refitOwned(input:readonly TraceTriangle[],work:(candidate:BvhHandle)=>Promise<void>):Promise<void> {
+    live(this.#disposed);const candidate=this.clone();
+    try{candidate.refit(input);await work(candidate);this.install(candidate);}finally{candidate.dispose();}
   }
   get worldBounds(): TraceBounds {
     live(this.#disposed);
@@ -184,21 +196,20 @@ export class BvhHandle {
     const replacement = normalizeTriangles(input);
     if (replacement.some((t, i) => t.id !== this.triangles[i]!.id))
       traceInvalid("Refit must preserve triangle IDs");
-    const boxes = replacement.map(triangleBounds);
-    for (let i = this.nodes.length - 1; i >= 0; i--) {
-      const n = this.nodes[i]!;
+    const boxes = replacement.map(triangleBounds),nodes=structuredClone(this.nodes);
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i]!;
       const b = n.count
         ? Array.from(this.indices.subarray(n.first, n.first + n.count)).reduce(
             (a, id) => unionBounds(a, boxes[id]!),
             emptyBounds(),
           )
         : n.left || n.right
-          ? unionBounds(this.nodes[n.left]!, this.nodes[n.right]!)
+          ? unionBounds(nodes[n.left]!, nodes[n.right]!)
           : emptyBounds();
-      this.nodes[i] = { ...n, ...b };
+      nodes[i] = { ...n, ...b };
     }
-    for (let i = 0; i < replacement.length; i++)
-      this.triangles[i] = replacement[i]!;
+    this.install({triangles:replacement,nodes,indices:this.indices,stats:this.stats});
   }
   /** 48-byte nodes: two padded vec3 bounds, four u32 topology words. */
   packNodes(): ArrayBuffer {

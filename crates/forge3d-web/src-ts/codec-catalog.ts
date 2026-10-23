@@ -5,7 +5,7 @@ export const CODEC_CATALOG: readonly CodecDescriptor[] = [
     "id": "geotiff",
     "format": "tiff",
     "owner": "W08",
-    "revision": "0bb5779cf6933e49492981607c59f4713e4ad62ec5671b66bb823a240ebe3cd9",
+    "revision": "3c52cabb6f6aa8fd63b22e2075640a4a30d61224a3721cdab0de1db1ff3301ba",
     "dependencies": [
       {
         "id": "geotiff",
@@ -18,7 +18,7 @@ export const CODEC_CATALOG: readonly CodecDescriptor[] = [
     "id": "laz-perf",
     "format": "laz",
     "owner": "W16",
-    "revision": "5a49000b9bb43ea1947eec001a4083d409f868fb3333684a12241f4e1145acf6",
+    "revision": "c0ffec47b39773b724ed84257c4b5679d286326d8a4a9f4fab960a272e06e49d",
     "dependencies": [
       {
         "id": "laz-perf",
@@ -31,7 +31,7 @@ export const CODEC_CATALOG: readonly CodecDescriptor[] = [
     "id": "ktx2-basis",
     "format": "ktx2",
     "owner": "W04",
-    "revision": "39701e9bcd142c4952f3bdbd876e92c9f9229d6fcb16b42e2e672da37b0221df",
+    "revision": "7febd9d84c6b81ab5691a84b56808c639fdefb11b2ee543fdf16ef9a0b31643e",
     "dependencies": [
       {
         "id": "ktx-parse",
@@ -49,14 +49,14 @@ export const CODEC_CATALOG: readonly CodecDescriptor[] = [
     "id": "radiance-rgbe",
     "format": "hdr",
     "owner": "W04/W15",
-    "revision": "4e33330e52a65840ae84adc61018e2a4ae000d1e5fe41cd1859e2b4b8871c539",
+    "revision": "6e23a820a45d5e933635b3a0488568b961cbbf9dbfa91ed5f099f125e016f1e8",
     "dependencies": []
   },
   {
     "id": "exr-wasm",
     "format": "exr",
     "owner": "W06",
-    "revision": "b21e170342bda86284393e83eb23330d83591e5e0668099039f621b0e2fe8ac4",
+    "revision": "ae3df5eb1235570d316312ae022b053423e700c188d097c53e3d4352c64b27e3",
     "dependencies": [
       {
         "id": "exr",
@@ -69,15 +69,15 @@ export const CODEC_CATALOG: readonly CodecDescriptor[] = [
     "id": "gltf2",
     "format": "glb",
     "owner": "W15",
-    "revision": "4e33330e52a65840ae84adc61018e2a4ae000d1e5fe41cd1859e2b4b8871c539",
+    "revision": "6e23a820a45d5e933635b3a0488568b961cbbf9dbfa91ed5f099f125e016f1e8",
     "dependencies": []
   },
   {
     "id": "mapbox-glyph-pbf",
     "format": "glyph-pbf",
     "owner": "W13/W19",
-    "revision": "4e33330e52a65840ae84adc61018e2a4ae000d1e5fe41cd1859e2b4b8871c539",
+    "revision": "6e23a820a45d5e933635b3a0488568b961cbbf9dbfa91ed5f099f125e016f1e8",
     "dependencies": []
   }
 ];
-export const DENOISER_REVISION = 'e74b2ff41e66544bf76e6f0faf1460e254c2f16f530345a6fd63cebcd40f1cb8';
+export const DENOISER_REVISION = '9ead2b822e232477e18eee98a58b175d30f3854c87c04a5022218bcd7e8e2cce';

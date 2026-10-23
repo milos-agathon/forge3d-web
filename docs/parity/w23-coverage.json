@@ -6390,7 +6390,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w17-tracing.test.ts",
-      "sha256": "174e0e3a8cff9e48969416d88032994d34fb86ef39c06c7399ae67ca8f98d386",
+      "sha256": "ea7402fe9d09131bd7c09271ab08eebae1511c8c9fb743bc1ed500bb013438b6",
       "declarations": [
         "${method} queries stable IDs, barycentrics and refits topology",
         "rejects invalid inputs and enforces admission before allocating",

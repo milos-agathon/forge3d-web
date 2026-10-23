@@ -1,3 +1,5 @@
+import { TraceGpuWork } from './trace-gpu-work.js';
+import { readTraceHits, TRACE_QUERY_WGSL_LAYOUT } from './trace-packets.js';
 import { Forge3DError } from "./runtime-failure.js";
 import { TraceScene, normalizeTraceCamera } from "./trace-scene.js";
 import {
@@ -17,8 +19,7 @@ import { ray, vec, cancelled, integer, traceLimit } from "./trace-math.js";
 const QUERY =
   TRACE_QUERY_WGSL +
   `
-struct Query {o:vec4f,d:vec4f};
-struct Result {p:vec4f,n:vec4f,bary:vec4f,tags:vec4u};
+${TRACE_QUERY_WGSL_LAYOUT}
 @group(0) @binding(2) var<storage,read> queries:array<Query>;
 @group(0) @binding(3) var<storage,read_write> results:array<Result>;
 @compute @workgroup_size(64) fn query_rays(@builtin(global_invocation_id) gid:vec3u){let i=gid.x;if(i>=params.dims.x){return;}let r=queries[i];let h=scene_hit(r.o.xyz,r.d.xyz,r.o.w,r.d.w);var result:Result;result.p=vec4f(h.p,h.t);result.n=vec4f(h.n,f32(h.front));result.bary=vec4f(h.bary,0.);result.tags=vec4u(h.id,h.material,h.steps,select(0u,1u,h.steps>0u));results[i]=result;}
@@ -72,7 +73,7 @@ async function compute(
       device.limits.maxComputeWorkgroupsPerDimension * 64,
     );
   }
-  const buffers: GPUBuffer[] = [];
+  const work = new TraceGpuWork(device,!options.device);
   let lost = false;
   device.lost.then(() => {
     lost = true;
@@ -90,11 +91,9 @@ async function compute(
           device.limits.maxStorageBufferBindingSize,
         ),
       );
-    const b = device.createBuffer({ size: Math.max(4, size), usage });
-    buffers.push(b);
+    const b = work.buffer({ size: Math.max(4, size), usage });
     return b;
   };
-  device.pushErrorScope("validation");
   try {
     const params = create(304, 72),
       storage = create(packed.bytes.byteLength, 136),
@@ -151,26 +150,20 @@ async function compute(
     pass.dispatchWorkgroups(Math.ceil(count / 64));
     pass.end();
     encoder.copyBufferToBuffer(output, 0, readback, 0, count * 64);
-    device.queue.submit([encoder.finish()]);
-    await readback.mapAsync(1);
+    work.submit([encoder.finish()]);
+    const data = await work.read(readback);
     cancelled(options.signal);
     if (lost)
       throw new Forge3DError("DEVICE_LOST", "Tracing query device lost");
-    const data = readback.getMappedRange().slice(0);
-    readback.unmap();
-    const error = await device.popErrorScope();
-    if (error)
-      throw new Forge3DError("SHADER_COMPILATION_FAILED", error.message);
+    await work.validate();
     return data;
   } catch (error) {
-    await device.popErrorScope().catch(() => null);
     if (lost)
       throw new Forge3DError("DEVICE_LOST", "Tracing query device lost");
     throw error;
   } finally {
-    for (const b of buffers) b.destroy();
+    await work.close();
     scene.dispose();
-    if (!options.device) device.destroy();
   }
 }
 export async function traceRaysGpu(
@@ -192,24 +185,7 @@ export async function traceRaysGpu(
       i * 8,
     );
   });
-  const data = await compute(scene, input, "query_rays", options),
-    v = new Float32Array(data),
-    u = new Uint32Array(data);
-  return rays.map((_, i) => {
-    const at = i * 16;
-    if (u[at + 12] === 0) return undefined;
-    return {
-      id: u[at + 12]!,
-      materialId: u[at + 13]!,
-      t: v[at + 3]!,
-      position: [v[at]!, v[at + 1]!, v[at + 2]!] as TraceVec3,
-      normal: [v[at + 4]!, v[at + 5]!, v[at + 6]!] as TraceVec3,
-      frontFace: v[at + 7] !== 0,
-      barycentric: [v[at + 8]!, v[at + 9]!, v[at + 10]!] as TraceVec3,
-      kind: u[at + 15] ? "sdf" : "mesh",
-      steps: u[at + 14]!,
-    };
-  });
+  return readTraceHits(await compute(scene,input,"query_rays",options));
 }
 export async function evaluateSdfGpu(
   scene: import("./sdf.js").SdfScene,

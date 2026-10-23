@@ -1,3 +1,4 @@
+import { type BvhResult } from "./bvh-result.js";
 import type { TraceTriangle, TraceRay, TraceHit, BvhNode, BvhBuildOptions, BvhStats, TraceBounds } from "./trace-types.js";
 export declare function intersectTriangle(t: Required<TraceTriangle>, r: Required<TraceRay>, max?: number): TraceHit | undefined;
 /** Owned CPU query tree; packed layout is shared by WASM and WebGPU. */
@@ -11,6 +12,10 @@ export declare class BvhHandle {
     /** Validated primitive storage for an external builder; no CPU tree build. */
     static prepare(input: readonly TraceTriangle[], options?: BvhBuildOptions): BvhHandle;
     clone(memoryBudgetBytes?: number): BvhHandle;
+    /** Internal builder seam. Existing mutable inspection fields remain compatible. */
+    install(result: BvhResult): void;
+    /** Build privately; failures cannot expose partially refitted query state. */
+    refitOwned(input: readonly TraceTriangle[], work: (candidate: BvhHandle) => Promise<void>): Promise<void>;
     get worldBounds(): TraceBounds;
     isGpu(): boolean;
     isCpu(): boolean;

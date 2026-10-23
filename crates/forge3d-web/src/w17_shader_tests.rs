@@ -1,9 +1,58 @@
-fn literals(source: &str) -> Vec<&str> {
+fn literals(source: &str) -> Vec<String> {
     source
         .split('`')
         .enumerate()
-        .filter_map(|(i, s)| (i % 2 == 1).then_some(s))
+        .filter_map(|(i, s)| (i % 2 == 1).then(|| resolve_packet_fragments(s)))
         .collect()
+}
+// Resolve the same leaf declarations consumed by TypeScript, rather than
+// validating unexpanded interpolation syntax or copying a second ABI here.
+fn resolve_packet_fragments(source: &str) -> String {
+    let layout = include_str!("../src-ts/trace-packet-layout.ts");
+    let fields = layout
+        .split("export const TRACE_UNIFORM_FIELDS = ")
+        .nth(1)
+        .unwrap()
+        .split(" as const;")
+        .next()
+        .unwrap();
+    let fields: Vec<(String, String)> = serde_json::from_str(fields).unwrap();
+    let params = format!(
+        "struct Params {{{}}};",
+        fields
+            .iter()
+            .map(|(n, t)| format!("{n}:{t}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+    let mut code = source.replace("${TRACE_PARAMS_WGSL}", &params);
+    let records = layout
+        .split("export const TRACE_RECORD = {")
+        .nth(1)
+        .unwrap()
+        .split('}')
+        .next()
+        .unwrap();
+    for field in records.split(',') {
+        let (name, value) = field.trim().split_once(':').unwrap();
+        let value: u32 = value.trim().parse().unwrap();
+        code = code.replace(
+            &format!("${{TRACE_RECORD.{}}}", name.trim()),
+            &value.to_string(),
+        );
+    }
+    let packet = include_str!("../src-ts/trace-packets.ts");
+    let query = packet
+        .split("export const TRACE_QUERY_WGSL_LAYOUT = '")
+        .nth(1)
+        .unwrap()
+        .split("';")
+        .next()
+        .unwrap()
+        .replace("\\n", "\n");
+    code = code.replace("${TRACE_QUERY_WGSL_LAYOUT}", &query);
+    assert!(!code.contains("${"), "unresolved WGSL fragment");
+    code
 }
 fn validate(code: &str) {
     let module =
@@ -22,7 +71,7 @@ fn w17_path_queries_radix_and_refit_validate() {
     let query = literals(include_str!("../src-ts/trace-compute.ts"));
     validate(&format!("{}{}", trace[0], query[0]));
     let bvh = literals(include_str!("../src-ts/bvh-gpu.ts"));
-    validate(bvh[0]);
+    validate(&bvh[0]);
 }
 
 #[test]
@@ -116,7 +165,7 @@ fn w17_storage_layouts_match_host_packing() {
         assert_layout(&module, name, span, &expected);
     }
     let bvh =
-        naga::front::wgsl::parse_str(literals(include_str!("../src-ts/bvh-gpu.ts"))[0]).unwrap();
+        naga::front::wgsl::parse_str(&literals(include_str!("../src-ts/bvh-gpu.ts"))[0]).unwrap();
     assert_layout(&bvh, "Node", 48, &[("lo", 0), ("hi", 16), ("tags", 32)]);
     assert_layout(
         &bvh,

@@ -1,5 +1,6 @@
 import { Frame, HdrFrame } from "./index.js";
 import type { PathTracerOptions, TraceSceneInput, TraceRenderOptions, TraceProgress, TraceResult, TraceMemoryReport, TraceCamera, TraceTraversalMode } from "./trace-types.js";
+/** Browser-owned, bounded progressive renderer. CPU is an explicit reference backend. */
 export declare class PathTracer {
     #private;
     readonly width: number;

@@ -1,6 +1,7 @@
+import { TRACE_PARAMS_WGSL, TRACE_RECORD } from './trace-packet-layout.js';
 /** Shared query kernel. Scene storage uses explicit word offsets, avoiding vec3 ABI drift. */
 export const TRACE_QUERY_WGSL = `
-struct Params {dims:vec4u,counts:vec4u,mode:vec4u,offsets0:vec4u,offsets1:vec4u,origin:vec4f,forward:vec4f,right:vec4f,up:vec4f,environment:vec4f,extra:vec4f,mediumMin:vec4f,mediumMax:vec4f,mediumA:vec4f,mediumS:vec4f,reuse:vec4u,thresholds:vec4f,sdfMin:vec4f,sdfMax:vec4f};
+${TRACE_PARAMS_WGSL}
 @group(0) @binding(0) var<uniform> params:Params;
 @group(0) @binding(1) var<storage,read> scene:array<u32>;
 struct Hit {t:f32,id:u32,material:u32,steps:u32,bary:vec3f,p:vec3f,n:vec3f,front:u32};
@@ -138,9 +139,9 @@ fn shade(input:Path,hit:Hit,queued:bool,slot:u32)->Path {
   p.o=vec4f(hit.p+direction*0.0001,0.);p.d=vec4f(direction,0.);if(bounce>=2u){let survival=clamp(max(max(p.t.x,p.t.y),p.t.z),0.05,0.95);if(rng(&state)>survival){p.tags.z=0u;}p.t=vec4f(p.t.xyz/survival,0.);}
   p.tags.y=state;p.tags.w+=1u;if(p.tags.w>=params.dims.w){p.tags.z=0u;}return p;
 }
-fn finish(input:Path) {var p=input;var training=0.;if(p.identity.z!=0u){training=max(0.,lum(p.indirect.xyz+p.emission.xyz)-p.c.w);}let l=lum(p.c.xyz);if(params.extra.z>0.&&l>params.extra.z){let s=params.extra.z/l;p.c=vec4f(p.c.xyz*s,0.);p.direct=vec4f(p.direct.xyz*s,p.direct.w);p.indirect=vec4f(p.indirect.xyz*s,p.indirect.w);p.emission=vec4f(p.emission.xyz*s,0.);}let at=p.tags.x*28u;
+fn finish(input:Path) {var p=input;var training=0.;if(p.identity.z!=0u){training=max(0.,lum(p.indirect.xyz+p.emission.xyz)-p.c.w);}let l=lum(p.c.xyz);if(params.extra.z>0.&&l>params.extra.z){let s=params.extra.z/l;p.c=vec4f(p.c.xyz*s,0.);p.direct=vec4f(p.direct.xyz*s,p.direct.w);p.indirect=vec4f(p.indirect.xyz*s,p.indirect.w);p.emission=vec4f(p.emission.xyz*s,0.);}let at=p.tags.x*${TRACE_RECORD.words}u;
   let fields=array<vec4f,7>(vec4f(p.c.xyz,training),p.a,p.n,p.direct,p.indirect,p.emission,vec4f(p.bent.xyz,lum(p.c.xyz)*lum(p.c.xyz)));
-  for(var slot=0u;slot<7u;slot++){for(var c=0u;c<4u;c++){let i=slot*4u+c;if(i==3u){output[at+i]=bitcast<u32>(training);}else if(i==23u){output[at+i]=select(0xffffffffu,p.identity.y,p.identity.z!=0u);}else if(i==7u){if(params.dims.z==0u){output[at+i]=p.identity.x;}}else if(i==11u){if(params.dims.z==0u){output[at+i]=bitcast<u32>(p.n.w);}}else{output[at+i]=bitcast<u32>(bitcast<f32>(output[at+i])+fields[slot][c]);}}}
+  for(var slot=0u;slot<7u;slot++){for(var c=0u;c<4u;c++){let i=slot*4u+c;if(i==${TRACE_RECORD.training}u){output[at+i]=bitcast<u32>(training);}else if(i==${TRACE_RECORD.guidingBin}u){output[at+i]=select(0xffffffffu,p.identity.y,p.identity.z!=0u);}else if(i==${TRACE_RECORD.id}u){if(params.dims.z==0u){output[at+i]=p.identity.x;}}else if(i==${TRACE_RECORD.depth}u){if(params.dims.z==0u){output[at+i]=bitcast<u32>(p.n.w);}}else{output[at+i]=bitcast<u32>(bitcast<f32>(output[at+i])+fields[slot][c]);}}}
 }
 @compute @workgroup_size(64) fn megakernel(@builtin(global_invocation_id) gid:vec3u){let pixel=gid.x;if(pixel>=params.dims.x*params.dims.y){return;}var p=initial(pixel);for(var b=0u;b<params.dims.w;b++){p=shade(p,scene_hit(p.o.xyz,p.d.xyz,0.00001,1e30),false,pixel);if(p.tags.z==0u){break;}}finish(p);}
 @compute @workgroup_size(64) fn raygen(@builtin(global_invocation_id) gid:vec3u){let pixel=gid.x;if(pixel<params.dims.x*params.dims.y){paths[pixel]=initial(pixel);}}

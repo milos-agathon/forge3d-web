@@ -219,18 +219,7 @@ async function gpuBuild(
         count: uv[at + 11]!,
       });
     }
-    handle.nodes.length = 0;
-    for (const node of replacement) handle.nodes.push(node);
-    handle.indices.set(uv.subarray(nodeCount * 12));
-    Object.assign(handle.stats, {
-      nodeCount,
-      maxDepth,
-      leafCount: replacement.filter((n) => n.count > 0).length,
-      method: "lbvh",
-      backend: "webgpu",
-      buildTimeMs: performance.now() - start,
-      memoryUsageBytes: count * 68 + nodeCount * 48,
-    });
+    handle.install({triangles:handle.triangles,nodes:replacement,indices:uv.slice(nodeCount*12),stats:{method:"lbvh",backend:"webgpu",buildTimeMs:performance.now()-start}});
   } catch (error) {
     await device.popErrorScope().catch(() => null);
     throw error;
@@ -266,20 +255,5 @@ export async function refitBvhGpu(
   } = {},
 ): Promise<void> {
   cancelled(options.signal);
-  const original = handle.triangles.slice(),
-    nodes = structuredClone(handle.nodes),
-    indices = handle.indices.slice(),
-    stats = { ...handle.stats };
-  try {
-    handle.refit(triangles);
-    await gpuBuild(handle, options, true);
-  } catch (error) {
-    handle.triangles.length = 0;
-    for (const triangle of original) handle.triangles.push(triangle);
-    handle.nodes.length = 0;
-    for (const node of nodes) handle.nodes.push(node);
-    handle.indices = indices;
-    Object.assign(handle.stats, stats);
-    throw error;
-  }
+  await handle.refitOwned(triangles,candidate=>gpuBuild(candidate,options,true));
 }

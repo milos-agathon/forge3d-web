@@ -1,0 +1,21 @@
+export declare const TRACE_RECORD: {
+    readonly words: 28;
+    readonly color: 0;
+    readonly training: 3;
+    readonly albedo: 4;
+    readonly id: 7;
+    readonly normal: 8;
+    readonly depth: 11;
+    readonly direct: 12;
+    readonly visibility: 15;
+    readonly indirect: 16;
+    readonly ao: 19;
+    readonly emission: 20;
+    readonly guidingBin: 23;
+    readonly bentNormal: 24;
+    readonly variance: 27;
+};
+export declare const TRACE_UNIFORM_FIELDS: readonly [readonly ["dims", "vec4u"], readonly ["counts", "vec4u"], readonly ["mode", "vec4u"], readonly ["offsets0", "vec4u"], readonly ["offsets1", "vec4u"], readonly ["origin", "vec4f"], readonly ["forward", "vec4f"], readonly ["right", "vec4f"], readonly ["up", "vec4f"], readonly ["environment", "vec4f"], readonly ["extra", "vec4f"], readonly ["mediumMin", "vec4f"], readonly ["mediumMax", "vec4f"], readonly ["mediumA", "vec4f"], readonly ["mediumS", "vec4f"], readonly ["reuse", "vec4u"], readonly ["thresholds", "vec4f"], readonly ["sdfMin", "vec4f"], readonly ["sdfMax", "vec4f"]];
+export declare const TRACE_UNIFORM_BYTES: number;
+export declare const TRACE_PARAMS_WGSL: string;
+export declare const uniformOffset: Record<(typeof TRACE_UNIFORM_FIELDS)[number][0], number>;

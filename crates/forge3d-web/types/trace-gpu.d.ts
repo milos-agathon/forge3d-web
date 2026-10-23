@@ -1,12 +1,7 @@
 import { TraceScene } from "./trace-scene.js";
 import type { CpuTraceSettings } from "./trace-cpu.js";
-export declare function packTraceScene(scene: TraceScene, guiding?: Float32Array, guidingBins?: number): {
-    bytes: ArrayBuffer;
-    offsets0: number[];
-    offsets1: number[];
-    counts: number[];
-};
-export declare function traceUniform(scene: TraceScene, s: CpuTraceSettings, packed: ReturnType<typeof packTraceScene>, sample: number): ArrayBuffer;
+export { packTraceScene, traceUniform } from './trace-packets.js';
+import { packTraceScene } from './trace-packets.js';
 export declare function requestTraceDevice(minStorageBytes?: number): Promise<GPUDevice>;
 export declare class TraceGpu {
     #private;
