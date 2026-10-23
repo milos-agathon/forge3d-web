@@ -1,3 +1,4 @@
+import { assembleRasterLevel } from './raster-level.js';
 import { requirePro, LicenseError } from './license.js';
 import { proGatedPathDiagnostic } from './diagnostic-paths.js';
 import { Forge3DError } from "./runtime-failure.js";
@@ -81,14 +82,7 @@ async function load(resource: MapResource, input: SceneRecipeInput, signal: Abor
                     const m = cog.ifdInfo(0);
                     if (m.width * m.height * 4 > maxBytes)
                         throw new Forge3DError('RESOURCE_LIMIT_EXCEEDED', 'Decoded terrain exceeds MapScene resource limit');
-                    const heights = new Float32Array(m.width * m.height);
-                    for (let y = 0; y < m.tilesDown; y++)
-                        for (let x = 0; x < m.tilesAcross; x++) {
-                            mapCancelled(signal);
-                            const tile = await cog.readTile(x, y, 0, { signal });
-                            for (let row = 0; row < Math.min(m.tileHeight, m.height - y * m.tileHeight); row++)
-                                heights.set(tile.subarray(row * m.tileWidth, row * m.tileWidth + Math.min(m.tileWidth, m.width - x * m.tileWidth)), (y * m.tileHeight + row) * m.width + x * m.tileWidth);
-                        }
+                    const heights=await assembleRasterLevel({...m,padded:true,maxBytes,readTile:(x,y,s)=>cog.readTile(x,y,0,s?{signal:s}:{})},signal);
                     value = { ...resource.parameters, width: m.width, height: m.height, heights, ...(crs ?? cog.crs ? { crs: crs ?? cog.crs } : {}), ...(cog.geoTransform ? { transform: cog.geoTransform } : {}), ...(cog.nodata === null ? {} : { nodata: cog.nodata }) };
                 }
                 finally {

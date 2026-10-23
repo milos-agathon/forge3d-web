@@ -1,3 +1,4 @@
+import { MemoryByteCache } from '../../src-ts/byte-cache.js';
 // W08 (F4/F5): TerrainStreamer + HeightTileSource against a fake
 // runtime implementing the wasm streaming contract — commit shape,
 // fetch/upload flow, upload bound, cancellation, failure handling,
@@ -371,6 +372,22 @@ describe("TerrainStreamer", () => {
     streamer.dispose();
   });
 
+  it('cancels stalled convergence and releases request listeners and replay bytes on dispose',async()=>{
+    const runtime=new FakeRuntime(),lifetime=new AbortController();
+    const add=vi.spyOn(lifetime.signal,'addEventListener'),remove=vi.spyOn(lifetime.signal,'removeEventListener');
+    let cache:MemoryByteCache|undefined;const original=MemoryByteCache.prototype.put;
+    const put=vi.spyOn(MemoryByteCache.prototype,'put').mockImplementation(function(this:MemoryByteCache,k,v){cache=this;return original.call(this,k,v);});
+    const source={width:64,height:64,tileSize:32,readTile:(lod:number,x:number)=>lod===1||x===0?Promise.resolve(new Float32Array(1024)):new Promise<Float32Array>(()=>{})};
+    const streamer=await TerrainStreamer.create(runtime,source,{signal:lifetime.signal});
+    try {
+      runtime.queuePlan({requests:[{lod:0,x:0,y:0,priority:0,prefetch:false}],cancelled:[]});await streamer.update();await flush();await streamer.update();expect(cache!.stats().bytes).toBeGreaterThan(0);
+      runtime.queuePlan({requests:[{lod:0,x:1,y:0,priority:0,prefetch:false}],cancelled:[]});await streamer.update();
+      const abort=new AbortController(),pending=streamer.whenConverged({signal:abort.signal});await flush();abort.abort();await expect(pending).rejects.toMatchObject({name:'AbortError'});
+      const disposed=streamer.whenConverged();await flush();streamer.dispose();await expect(disposed).rejects.toMatchObject({code:'RUNTIME_DISPOSED'});
+      expect(cache!.stats().bytes).toBe(0);expect(streamer.stats()).toMatchObject({pendingFetches:0,queuedFetches:0});
+      for(const [event,listener] of add.mock.calls)expect(remove.mock.calls.some(([e,l])=>e===event&&l===listener)).toBe(true);
+    }finally{streamer.dispose();add.mockRestore();remove.mockRestore();put.mockRestore();}
+  });
   it("times out of whenConverged past the frame budget", async () => {
     const runtime = new FakeRuntime();
     const source = recordingSource(64, 64, 32);

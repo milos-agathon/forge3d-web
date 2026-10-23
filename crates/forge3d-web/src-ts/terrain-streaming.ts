@@ -1,3 +1,4 @@
+import { assembleRasterLevel, SharedRasterLevel } from './raster-level.js';
 // W08 / DESIGN F4 — `TerrainStreamer` drives the wasm height-streaming
 // contract (E3): `planHeightTiles` → `readTile` fetches →
 // `completeHeightTile` (bounded uploads per update) → render request.
@@ -20,7 +21,7 @@ import type {
   TerrainStreamerStats,
 } from "./index.js";
 import { Forge3DError } from "./runtime-failure.js";
-import { MemoryByteCache } from "./byte-cache.js";
+import { TerrainStreamingSession } from './terrain-streaming-session.js';
 import type { CogDataset } from "./cog.js";
 
 const DEFAULT_TILE_SIZE = 256;
@@ -50,9 +51,7 @@ export interface TerrainStreamerTarget {
   render?(): void;
 }
 
-function tileKey(lod: number, x: number, y: number): string {
-  return `${lod}/${x}/${y}`;
-}
+
 
 /** B2: smallest n such that `dims(n-1)` fits a single tile. */
 export function heightPyramidLodCount(
@@ -245,8 +244,10 @@ export class CogHeightSource implements HeightTileSource {
   readonly height: number;
   readonly tileSize: number;
   readonly #cog: CogDataset;
-  #coarsest: Float32Array | undefined;
-  #coarsestPromise: Promise<Float32Array> | undefined;
+  readonly #coarse = new SharedRasterLevel(signal=>{
+    const level=this.#cog.overviewCount-1,info=this.#cog.ifdInfo(level);
+    return assembleRasterLevel({...info,padded:true,readTile:(x,y,s)=>this.#cog.readTile(x,y,level,s?{signal:s}:{})},signal);
+  });
 
   constructor(cog: CogDataset) {
     const info = cog.ifdInfo(0);
@@ -337,57 +338,8 @@ export class CogHeightSource implements HeightTileSource {
   /** Assemble the full coarsest IFD level into one Float32Array
    * (once, via the COG's decoded-tile cache). */
   #coarsestLevel(options: { signal?: AbortSignal }): Promise<Float32Array> {
-    if (this.#coarsest !== undefined) return Promise.resolve(this.#coarsest);
-    this.#coarsestPromise ??= (async () => {
-      const level = this.#cog.overviewCount - 1;
-      const info = this.#cog.ifdInfo(level);
-      const out = new Float32Array(info.width * info.height);
-      const reads: Promise<void>[] = [];
-      for (let ty = 0; ty < info.tilesDown; ty += 1) {
-        for (let tx = 0; tx < info.tilesAcross; tx += 1) {
-          reads.push(
-            this.#cog
-              .readTile(tx, ty, level, options)
-              .then((tile) => {
-                const copyWidth = Math.min(
-                  info.tileWidth,
-                  info.width - tx * info.tileWidth,
-                );
-                const copyHeight = Math.min(
-                  info.tileHeight,
-                  info.height - ty * info.tileHeight,
-                );
-                for (let row = 0; row < copyHeight; row += 1) {
-                  const src = row * info.tileWidth;
-                  const dst =
-                    (ty * info.tileHeight + row) * info.width +
-                    tx * info.tileWidth;
-                  for (let column = 0; column < copyWidth; column += 1) {
-                    out[dst + column] = tile[src + column]!;
-                  }
-                }
-              }),
-          );
-        }
-      }
-      await Promise.all(reads);
-      this.#coarsest = out;
-      return out;
-    })();
-    return this.#coarsestPromise;
+    return this.#coarse.get(options.signal);
   }
-}
-
-interface PendingTile extends HeightTileId {
-  heights: Float32Array;
-  priority: number;
-}
-
-interface InflightFetch extends HeightTileId {
-  controller: AbortController;
-  settled: Promise<void>;
-  /** Detaches the streamer-signal forwarding for this fetch. */
-  detach: () => void;
 }
 
 /**
@@ -410,10 +362,7 @@ export class TerrainStreamer {
   readonly #maxUploadsPerFrame: number;
   readonly #signal: AbortSignal | undefined;
   readonly #onError: ((error: unknown) => void) | undefined;
-  readonly #inflight = new Map<string, InflightFetch>();
-  readonly #ready: PendingTile[] = [];
-  readonly #tileCache: MemoryByteCache;
-  readonly #detachListeners: (() => void)[] = [];
+  readonly #session: TerrainStreamingSession;
   #uploadedTiles = 0;
   #disposed = false;
 
@@ -433,8 +382,8 @@ export class TerrainStreamer {
     this.#onError = options.onError;
     // Resident-tile replay cache: sized to the mosaic budget so every
     // tile the runtime could be asked to re-upload is present.
-    this.#tileCache = new MemoryByteCache(
-      options.maxResidentBytes ?? terrain.streaming?.maxResidentBytes ?? 64 * 1024 * 1024,
+    this.#session = new TerrainStreamingSession(
+      options.maxResidentBytes ?? terrain.streaming?.maxResidentBytes ?? 64 * 1024 * 1024, this.#signal,
     );
   }
 
@@ -472,44 +421,7 @@ export class TerrainStreamer {
       source.height,
       coarsestLod,
     );
-    // B2: the coarsest level always fits one tile per axis; read all
-    // coarsest tiles generically in case a source reports otherwise.
-    const tilesAcross = Math.ceil(coarseWidth / source.tileSize);
-    const tilesDown = Math.ceil(coarseHeight / source.tileSize);
-    const heights = new Float32Array(coarseWidth * coarseHeight);
-    const reads: Promise<void>[] = [];
-    for (let ty = 0; ty < tilesDown; ty += 1) {
-      for (let tx = 0; tx < tilesAcross; tx += 1) {
-        reads.push(
-          source
-            .readTile(coarsestLod, tx, ty, {
-              ...(options.signal !== undefined
-                ? { signal: options.signal }
-                : {}),
-            })
-            .then((tile) => {
-              const copyWidth = Math.min(
-                source.tileSize,
-                coarseWidth - tx * source.tileSize,
-              );
-              const copyHeight = Math.min(
-                source.tileSize,
-                coarseHeight - ty * source.tileSize,
-              );
-              for (let row = 0; row < copyHeight; row += 1) {
-                for (let column = 0; column < copyWidth; column += 1) {
-                  heights[
-                    (ty * source.tileSize + row) * coarseWidth +
-                      tx * source.tileSize +
-                      column
-                  ] = tile[row * copyWidth + column]!;
-                }
-              }
-            }),
-        );
-      }
-    }
-    await Promise.all(reads);
+    const heights=await assembleRasterLevel({width:coarseWidth,height:coarseHeight,tileWidth:source.tileSize,tileHeight:source.tileSize,padded:false,readTile:(x,y,signal)=>source.readTile(coarsestLod,x,y,signal?{signal}:{})},options.signal);
 
     const clipmap: TerrainClipmapInput = {
       ...options.terrain?.geometry?.clipmap,
@@ -550,7 +462,7 @@ export class TerrainStreamer {
     const streamer = new TerrainStreamer(target, source, terrain, options);
     const hooks = target as TerrainStreamerTarget;
     if (typeof hooks.addRecoveryListener === "function") {
-      streamer.#detachListeners.push(
+      streamer.#session.listen(
         hooks.addRecoveryListener(() => {
           void streamer.update().catch(streamer.#reportError);
         }),
@@ -560,7 +472,7 @@ export class TerrainStreamer {
       options.autoUpdate === true &&
       typeof hooks.addFrameListener === "function"
     ) {
-      streamer.#detachListeners.push(
+      streamer.#session.listen(
         hooks.addFrameListener(() => {
           void streamer.update().catch(streamer.#reportError);
           return !streamer.converged;
@@ -581,7 +493,7 @@ export class TerrainStreamer {
     const target = this.#target;
     let uploads = 0;
     while (uploads < this.#maxUploadsPerFrame) {
-      const pending = this.#ready.shift();
+      const pending = this.#session.next();
       if (pending === undefined) break;
       try {
         const completion = target.completeHeightTile!(
@@ -593,23 +505,10 @@ export class TerrainStreamer {
         uploads += 1;
         this.#uploadedTiles += 1;
         if (completion && completion.accepted !== false) {
-          this.#tileCache.put(
-            tileKey(pending.lod, pending.x, pending.y),
-            new Uint8Array(
-              pending.heights.buffer,
-              pending.heights.byteOffset,
-              pending.heights.byteLength,
-            ),
-          );
+          this.#session.retain(pending);
         }
         if (completion && completion.evicted) {
-          this.#tileCache.delete(
-            tileKey(
-              completion.evicted.lod,
-              completion.evicted.x,
-              completion.evicted.y,
-            ),
-          );
+          this.#session.evict(completion.evicted);
         }
       } catch (error) {
         this.#failTile(pending.lod, pending.x, pending.y);
@@ -620,96 +519,21 @@ export class TerrainStreamer {
 
     if (this.#disposed || this.#signal?.aborted) return;
     const plan = target.planHeightTiles!(this.#maxInFlight);
-    for (const cancelled of plan.cancelled) {
-      const key = tileKey(cancelled.lod, cancelled.x, cancelled.y);
-      // Forget the fetch now, not when the abort settles: a re-plan of the
-      // same tile must start a fresh fetch, and the late result of this
-      // one is discarded by its entry token.
-      const inflight = this.#inflight.get(key);
-      if (inflight !== undefined) {
-        this.#inflight.delete(key);
-        inflight.detach();
-        inflight.controller.abort();
-      }
-      const readyIndex = this.#ready.findIndex(
-        (tile) =>
-          tile.lod === cancelled.lod &&
-          tile.x === cancelled.x &&
-          tile.y === cancelled.y,
-      );
-      if (readyIndex >= 0) this.#ready.splice(readyIndex, 1);
-    }
+    for (const cancelled of plan.cancelled) this.#session.cancel(cancelled);
     for (const request of plan.requests) {
-      const key = tileKey(request.lod, request.x, request.y);
-      if (this.#inflight.has(key)) continue;
-      const cached = this.#tileCache.get(key);
-      if (cached !== undefined) {
-        this.#ready.push({
-          lod: request.lod,
-          x: request.x,
-          y: request.y,
-          heights: new Float32Array(
-            cached.buffer.slice(
-              cached.byteOffset,
-              cached.byteOffset + cached.byteLength,
-            ) as ArrayBuffer,
-          ),
-          priority: request.priority,
-        });
-        continue;
-      }
-      if (this.#inflight.size >= this.#maxInFlight) break;
-      const controller = new AbortController();
-      const forwardAbort = () => controller.abort();
-      this.#signal?.addEventListener("abort", forwardAbort, { once: true });
-      const entry: InflightFetch = {
-        lod: request.lod,
-        x: request.x,
-        y: request.y,
-        controller,
-        settled: undefined as unknown as Promise<void>,
-        detach: () => this.#signal?.removeEventListener("abort", forwardAbort),
-      };
-      // `entry` is the per-request token: a result is only used while its
-      // entry is still the current fetch for the key.
-      const settle = (): boolean => {
-        if (this.#inflight.get(key) !== entry) return false;
-        this.#inflight.delete(key);
-        entry.detach();
-        return !this.#disposed;
-      };
-      entry.settled = this.source
-        .readTile(request.lod, request.x, request.y, {
-          signal: controller.signal,
-          priority: request.priority,
-        })
-        .then((heights) => {
-          if (!settle()) return;
-          if (controller.signal.aborted) {
-            // Still wanted by the runtime, but dropped: release its slot.
-            this.#failTile(request.lod, request.x, request.y);
-            return;
-          }
-          this.#ready.push({ ...request, heights });
-        })
-        .catch((error) => {
-          if (!settle()) return;
-          this.#failTile(request.lod, request.x, request.y);
-          if (!controller.signal.aborted) this.#reportError(error);
-        });
-      this.#inflight.set(key, entry);
+      if(!this.#session.request(request,this.source,this.#maxInFlight,()=>this.#failTile(request.lod,request.x,request.y),this.#reportError))break;
     }
     // Serve any cache-hit completions immediately within this cycle's
     // upload budget rather than waiting a frame.
-    if (this.#ready.length > 0 && uploads === 0) {
+    if (this.#session.readyCount > 0 && uploads === 0) {
       await this.update();
     }
   }
 
   get converged(): boolean {
     return (
-      this.#inflight.size === 0 &&
-      this.#ready.length === 0 &&
+      this.#session.pendingCount === 0 &&
+      this.#session.readyCount === 0 &&
       this.#target.getHeightStreamingStats?.().converged === true
     );
   }
@@ -732,14 +556,7 @@ export class TerrainStreamer {
       }
       await this.update();
       if (this.converged) return;
-      const pending = [...this.#inflight.values()].map((fetch) => fetch.settled);
-      if (pending.length === 0) {
-        // Nothing in flight and not converged: yield so the caller can
-        // interleave work, then keep polling within the frame budget.
-        await Promise.resolve();
-        continue;
-      }
-      await Promise.race(pending);
+      await this.#session.wait(options.signal);
     }
     throw new Forge3DError(
       "INTERNAL_ERROR",
@@ -760,8 +577,8 @@ export class TerrainStreamer {
     return {
       runtime,
       uploadedTiles: this.#uploadedTiles,
-      pendingFetches: this.#inflight.size,
-      queuedFetches: this.#ready.length,
+      pendingFetches: this.#session.pendingCount,
+      queuedFetches: this.#session.readyCount,
       converged: this.converged,
     };
   }
@@ -769,14 +586,7 @@ export class TerrainStreamer {
   dispose(): void {
     if (this.#disposed) return;
     this.#disposed = true;
-    for (const detach of this.#detachListeners.splice(0)) {
-      detach();
-    }
-    for (const fetch of this.#inflight.values()) {
-      fetch.controller.abort();
-    }
-    this.#inflight.clear();
-    this.#ready.length = 0;
+    this.#session.dispose();
   }
 
   #requestRender(): void {

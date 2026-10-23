@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "1e539e59a16d6bd763319f8561101ad53462f9c07e9dfb6225984e3183ef2c89",
+      "sha256": "6edd517e7ee9b3dafa901f73c0273143020fc867ed931eb9218c73fa3714f0f0",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -3412,8 +3412,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-streaming.test.ts.txt",
-      "sha256": "a752fc266036c6d668be3cc91b7a0d713d51bed7930614c962cadc7622bfb5e8",
-      "bytes": 20739,
+      "sha256": "93e675268a96ba9a48ad47a8f6a4d2405df10ac58bd78f5bf94b0c96fced9373",
+      "bytes": 22609,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -3423,7 +3423,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/unit/terrain-streaming.test.ts",
-            "sha256": "a752fc266036c6d668be3cc91b7a0d713d51bed7930614c962cadc7622bfb5e8",
+            "sha256": "93e675268a96ba9a48ad47a8f6a4d2405df10ac58bd78f5bf94b0c96fced9373",
             "hashMode": "utf8-lf"
           }
         ],
