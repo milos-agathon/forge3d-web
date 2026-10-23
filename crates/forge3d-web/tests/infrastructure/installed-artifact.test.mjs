@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -30,7 +30,7 @@ test("installed suites share verified bytes and reject dirty, changed, or incomp
     assert.deepEqual(records.map(r=>r.suite), ["first", "second"]);
     assert.equal(new Set(records.map(r=>r.packageSha256)).size, 1);
     writeFileSync(join(root, "dirty.txt"), "uncommitted");
-    assert.throws(()=>verifyInstalledArtifact(manifest, root), /clean committed/);
+    assert.throws(()=>verifyInstalledArtifact(manifest, root), /clean committed[\s\S]*\?\? dirty\.txt/);
     assert.throws(()=>createInstalledArtifact(root, join(temp,"dirty/manifest.json")), /clean committed/);
     rmSync(join(root,"dirty.txt"));
     const bytes = readFileSync(artifact.tarball);
@@ -39,5 +39,26 @@ test("installed suites share verified bytes and reject dirty, changed, or incomp
     writeFileSync(artifact.tarball, bytes);
     rmSync(join(artifact.installed,"dist/index.js"));
     assert.throws(()=>verifyInstalledArtifact(manifest, root), /ENOENT/);
+  } finally { rmSync(temp, { recursive: true, force: true }); }
+});
+
+test("post-build cleanliness failure identifies changed inputs without publishing a manifest", () => {
+  const temp = mkdtempSync(join(tmpdir(), "artifact-dirty-build-"));
+  const root = join(temp, "source"), manifest = join(temp, "artifact/manifest.json");
+  mkdirSync(root);
+  try {
+    writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: { build: "node build.cjs" } }));
+    writeFileSync(join(root, "generated.d.ts"), "export type Value = string;\n");
+    writeFileSync(join(root, "build.cjs"), "require('node:fs').writeFileSync('generated.d.ts', 'export type Value = number;\\n');");
+    for (const args of [["init"], ["add", "."], ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture"]]) {
+      const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+      assert.equal(result.status, 0, result.stderr);
+    }
+    assert.throws(() => createInstalledArtifact(root, manifest), error => {
+      assert.match(error.message, /clean committed[\s\S]* M generated\.d\.ts/);
+      assert.match(error.message, /Tracked diff:[\s\S]*generated\.d\.ts.*2/);
+      return true;
+    });
+    assert.equal(existsSync(manifest), false);
   } finally { rmSync(temp, { recursive: true, force: true }); }
 });

@@ -13,8 +13,11 @@ function run(command, args, cwd) {
 }
 const digest = file => createHash("sha256").update(readFileSync(file)).digest("hex");
 function revision(root) {
-  if (run("git", ["status", "--porcelain=v1", "--untracked-files=all"], root).trim())
-    throw Error("Installed artifact requires clean committed release inputs");
+  const status = run("git", ["status", "--porcelain=v1", "--untracked-files=all"], root);
+  if (status.trim()) {
+    const diff = run("git", ["diff", "--no-ext-diff", "--stat", "HEAD"], root).trim();
+    throw Error(`Installed artifact requires clean committed release inputs\nGit status:\n${status.trimEnd()}\nTracked diff:\n${diff || "(none)"}`);
+  }
   return run("git", ["rev-parse", "HEAD"], root).trim();
 }
 
