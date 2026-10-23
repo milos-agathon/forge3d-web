@@ -20,9 +20,6 @@ jobs:
     # The full corpus and bounded live-download retries exceed 40m on slower runners.
     # Only the outer job budget changes; per-test deadlines and runtime budgets stay fixed.
     timeout-minutes: 60
-    env:
-      FORGE3D_INSTALLED_ARTIFACT: ${{ runner.temp }}/forge3d-acceptance/manifest.json
-
     steps:
       - name: Check out the protected source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -99,6 +96,11 @@ jobs:
       - name: Test browser API contract
         working-directory: crates/forge3d-web
         run: npm run test:api
+
+      - name: Configure installed acceptance artifact
+        shell: pwsh
+        run: |
+          "FORGE3D_INSTALLED_ARTIFACT=$env:RUNNER_TEMP/forge3d-acceptance/manifest.json" >> $env:GITHUB_ENV
 
       - name: Build browser package
         working-directory: crates/forge3d-web
