@@ -1,3 +1,3 @@
 import { SupportMatrixEntry } from './diagnostics.js';
-export declare const MAP_SCENE_LAYER_KINDS: readonly ["raster", "vector", "labels", "buildings", "mesh", "point-cloud", "tiles3d", "nodes", "scatter", "trace", "diagnostic"];
+export { MAP_SCENE_LAYER_KINDS } from './map-kind-policy.js';
 export declare function getMapSceneSupportMatrix(): SupportMatrixEntry[];

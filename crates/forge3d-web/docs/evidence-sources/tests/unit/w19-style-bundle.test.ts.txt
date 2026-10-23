@@ -173,6 +173,38 @@ describe('W19 bundles, review registry and migration', () => {
         expect(() => decodeBundleArchive(duplicate)).toThrow('Duplicate');
         const compressed = zipSync({ data: new Uint8Array(100000) }, { level: 6 }); expect(decodeBundleArchive(compressed).data).toHaveLength(100000); expect(() => decodeBundleArchive(compressed, { maxExpandedBytes: 10 })).toThrow('expanded');
     });
+    it.each(['variant', 'visibility'] as const)('keeps committed state when %s preparation is cancelled and releases it on disposal', async operation => {
+        for (const dispose of [false, true]) {
+            const initial = state().value;
+            initial.reviewLayers = [{id:'remote', layers:[{kind:'mesh', layerId:'remote-mesh', source:{id:'remote',format:'obj',crs:'LOCAL',url:'https://example.test/mesh.obj'}}]}];
+            initial.variants = [{id:'plain',activeLayerIds:[]},{id:'remote',activeLayerIds:['remote']}];
+            const scene=MapScene.fromSceneState(initial); await scene.prepare();
+            const before=scene.recipe.serialize(), memory=scene.getMemoryReport().cpuBytes;
+            let started!:()=>void; const entered=new Promise<void>(r=>started=r);
+            vi.stubGlobal('fetch',async (_url:unknown, options:RequestInit)=>{started(); return new Promise<Response>((_,reject)=>options.signal!.addEventListener('abort',()=>reject(Error('aborted')),{once:true}));});
+            const abort=new AbortController();
+            const pending=operation==='variant'?scene.applyVariant('remote',{signal:abort.signal}):scene.setReviewLayerVisible('remote',true,{signal:abort.signal});
+            await entered;
+            if(dispose) scene.dispose(); else abort.abort();
+            await expect(pending).rejects.toMatchObject({code:'REQUEST_CANCELLED'});
+            if(dispose) expect(scene.getMemoryReport().cpuBytes).toBe(0);
+            else { expect(scene.recipe.serialize()).toBe(before); expect(scene.getActiveVariantId()).toBe('plain'); expect(scene.getMemoryReport().cpuBytes).toBe(memory); }
+            scene.dispose();
+        }
+    });
+    it('inventories shared supported references while preserving asset-looking unknown metadata',async()=>{
+        const url='https://example.test/shared.json', data=new TextEncoder().encode('{"features":[]}');
+        const metadata={url,data:url,hdr:'https://never.test/hdr',nested:{url:'forge3d-asset:not-a-reference'}};
+        const r=recipe(); r.layers=[{kind:'vector',layerId:'one',metadata,source:{id:'one',format:'vector',crs:'LOCAL',url}}];
+        const input={base:r,reviewLayers:[{id:'review',layers:[{kind:'vector' as const,layerId:'two',source:{id:'two',format:'vector',crs:'LOCAL',url}}]}],style:{version:8,sources:{shared:{type:'geojson',data:url}},layers:[]},nativeSceneState:{metadata}};
+        const fetcher=vi.fn(async()=>new Response(data));vi.stubGlobal('fetch',fetcher);
+        const bundle=await loadBundle(await saveBundle(input));
+        const saved=bundle.sceneState.value,one=(saved.base.layers![0] as any).source.url,two=(saved.reviewLayers![0]!.layers[0] as any).source.url;
+        expect(one).toBe(two);expect((saved.style!.sources!.shared as any).data).toBe(one);expect(fetcher).toHaveBeenCalledTimes(1);
+        expect(saved.base.layers![0]!.metadata).toEqual(metadata);expect(saved.nativeSceneState).toEqual({metadata});
+        const runtime=await bundle.runtimeSceneState();expect(runtime.value.base.layers![0]!.metadata).toEqual(metadata);
+        const again=await loadBundle(await bundle.save());expect(again.sceneState.value.base.layers![0]!.metadata).toEqual(metadata);again.dispose();bundle.dispose();
+    });
     it('leaves active recipe and variant unchanged after candidate validation or cancellation failure', async () => {
         const initial = state().value; initial.reviewLayers = [{ id: 'bad', layers: [{ kind: 'diagnostic', layerId: 'bad-render', feature: 'unsupported', supportLevel: 'unsupported' }] }]; initial.variants = [{ id: 'plain', activeLayerIds: [] }, { id: 'bad', activeLayerIds: ['bad'] }];
         const scene = MapScene.fromSceneState(initial), before = scene.recipe.serialize(); await expect(scene.applyVariant('bad')).rejects.toMatchObject({ code: 'UNSUPPORTED_FEATURE' }); expect(scene.recipe.serialize()).toBe(before); expect(scene.getActiveVariantId()).toBe('plain');
