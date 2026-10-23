@@ -294,8 +294,9 @@ for (const asset of assetManifest.assets) {
 }
 
 const distIndex = readText(distIndexPath);
-assertIncludes(distIndex, "\"./forge3d_web.js\"", "dist facade must load packaged wasm bridge locally");
-assertNotIncludes(distIndex, "../pkg/forge3d_web.js", "dist facade must not reference unpublished pkg directory");
+const distRealm = readText(join(root,"dist/wasm-realm.js"));
+assertIncludes(distRealm, "\"./forge3d_web.js\"", "dist realm must load packaged wasm bridge locally");
+assertNotIncludes(distIndex + distRealm, "../pkg/forge3d_web.js", "dist facade must not reference unpublished pkg directory");
 const packagedFacade = await import(
   `${pathToFileURL(distIndexPath).href}?contract=${Date.now()}`
 );

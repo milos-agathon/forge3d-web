@@ -1,3 +1,4 @@
+import { CommittedRenderState } from './committed-render-state.js';
 import { Forge3DScene } from "./scene.js";
 import { LightCollection } from "./lighting.js";
 import type { LabelLayer, LabelPlacementReport, LabelRenderOptions } from './labels.js';
@@ -92,18 +93,6 @@ interface ViewerRuntimeFactory {
 
 let runtimeFactoryOverride: ViewerRuntimeFactory | undefined;
 
-interface DirectTerrainReplay {
-  kind: "direct";
-  value: TerrainHeightmapInput;
-}
-
-interface SourceTerrainReplay {
-  kind: "source";
-  value: TerrainHeightmapSourceInput;
-}
-
-type TerrainReplay = DirectTerrainReplay | SourceTerrainReplay;
-
 const DEFAULT_VIEW: Readonly<OrbitView> = Object.freeze({
   target: [0, 0, 0] as [number, number, number],
   distance: 2.72,
@@ -134,16 +123,7 @@ export class Forge3DViewer {
   #controls: ViewerControls | undefined;
   #scheduler: RenderScheduler | undefined;
   #resizeController: ResizeController | undefined;
-  /** W08: registered VT sources retained across device-loss replay. */
-  readonly #vtSources = new Map<
-    string,
-    {
-      materialIndex: number;
-      family: string;
-      image: MaterialVtSourceImage;
-      fallback?: [number, number, number, number];
-    }
-  >();
+  readonly #retained=new CommittedRenderState();
   readonly #frameListeners = new Set<
     (timestamp: number) => boolean | void
   >();
@@ -159,19 +139,12 @@ export class Forge3DViewer {
   #terminalError: Forge3DError | undefined;
   #capabilities: Forge3DRuntimeCapabilities;
   #lastSize: ResizeInput | undefined;
-  #terrainReplay: TerrainReplay | undefined;
   #sourceController: AbortController | undefined;
   #sourcePromise: Promise<void> | undefined;
   #screenshotPromise: Promise<Blob> | undefined;
   #generation = 0;
   #activeRuntimes = 0;
   #recoveryAttempts = 0;
-  #environmentReplay:EnvironmentSnapshot|null|undefined;
-  #vectorsReplay:{snapshot:VectorSnapshot|null;terrain?:TerrainHeightmapInput}|undefined;
-  #postFxReplay:PostFxSnapshot|null|undefined;
-  #scatterReplay: ScatterBatchSnapshot[] | undefined;
-  #probeReplay: TerrainProbeSnapshot | null | undefined;
-  #scatterTime = 0;
   #recoveryPromise: Promise<void> | undefined;
   #recoveryController: AbortController | undefined;
   #recoveringFromGeneration: number | undefined;
@@ -344,10 +317,10 @@ export class Forge3DViewer {
 
   #commitLabelScene(runtime: ViewerRuntime): void {
     const scene = this.#labelScene!;
-    if (this.#environmentReplay !== undefined) scene.setEnvironment(this.#environmentReplay);
-    if (this.#scatterReplay !== undefined) scene.setScatterBatches(this.#scatterReplay);
-    if (this.#probeReplay !== undefined) scene.setLightingProbes(this.#probeReplay);
-    scene.setTimeSeconds(this.#scatterTime);
+    if (this.#retained.environment !== undefined) scene.setEnvironment(this.#retained.environment);
+    if (this.#retained.scatter !== undefined) scene.setScatterBatches(this.#retained.scatter);
+    if (this.#retained.probes !== undefined) scene.setLightingProbes(this.#retained.probes);
+    scene.setTimeSeconds(this.#retained.time);
     runtime.setScene!(scene.snapshot());
   }
   #clearLabelScene(): void {
@@ -480,7 +453,7 @@ export class Forge3DViewer {
     );
     const replay = cloneTerrain(terrain);
     this.#callRuntime(() => runtime.setTerrain(replay));
-    this.#terrainReplay = { kind: "direct", value: replay };
+    this.#retained.terrain = { kind: "direct", value: replay };
     this.#scheduler?.requestRender();
   }
 
@@ -514,7 +487,7 @@ export class Forge3DViewer {
           "Terrain source request was cancelled",
         );
       }
-      this.#terrainReplay = { kind: "source", value: replay };
+      this.#retained.terrain = { kind: "source", value: replay };
       this.#scheduler?.requestRender();
     } catch (error) {
       if (controller.signal.aborted) {
@@ -662,7 +635,7 @@ export class Forge3DViewer {
         );
       runtime.setEnvironment(snapshot);
     });
-    this.#environmentReplay = structuredClone(snapshot);
+    this.#retained.environment = structuredClone(snapshot);
     this.#scheduler?.requestRender();
   }
   getEnvironmentMemoryReport(): EnvironmentMemoryReport {
@@ -679,7 +652,7 @@ export class Forge3DViewer {
   setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void|Promise<void> {
     const runtime=this.#operationalRuntime();const snapshot=input instanceof VectorLayers?input.snapshot():input;
     const result=this.#callRuntime(()=>{if(!runtime.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector layers unavailable");return runtime.setVectorLayers(input,terrain);});
-    const commit=()=>{this.#vectorsReplay={snapshot:structuredClone(snapshot),...(terrain?{terrain:structuredClone(terrain)}:{})};this.#scheduler?.requestRender();};
+    const commit=()=>{this.#retained.vectors={snapshot:structuredClone(snapshot),...(terrain?{terrain:structuredClone(terrain)}:{})};this.#scheduler?.requestRender();};
     if(result instanceof Promise)return result.then(commit);commit();
   }
   getVectorReport():VectorReport {const runtime=this.#operationalRuntime();if(!runtime.getVectorReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector report unavailable");return runtime.getVectorReport();}
@@ -687,7 +660,7 @@ export class Forge3DViewer {
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void {
     const runtime=this.#operationalRuntime(), snapshot=resolvePostFx(input);
     this.#callRuntime(()=>{if(!runtime.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support post-FX");runtime.setPostFx(snapshot);});
-    this.#postFxReplay=structuredClone(snapshot);this.#scheduler?.requestRender();
+    this.#retained.postFx=structuredClone(snapshot);this.#scheduler?.requestRender();
   }
   getPostFxReport():PostFxReport {
     const runtime=this.#operationalRuntime();return this.#callRuntime(()=>{if(!runtime.getPostFxReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not report post-FX");return runtime.getPostFxReport();});
@@ -702,21 +675,21 @@ export class Forge3DViewer {
   setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void {
     const runtime = this.#operationalRuntime(), snapshot = normalizeScatterBatches(batches);
     this.#callRuntime(() => { if (!runtime.setScatterBatches) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain scatter"); runtime.setScatterBatches(snapshot); });
-    this.#scatterReplay = structuredClone(snapshot); this.#scheduler?.requestRender();
+    this.#retained.scatter = structuredClone(snapshot); this.#scheduler?.requestRender();
   }
 
   setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void {
     const runtime = this.#operationalRuntime(), snapshot = probes instanceof TerrainLightingProbes ? probes.snapshot() : structuredClone(probes);
     if (snapshot) validateProbeSnapshot(snapshot);
     this.#callRuntime(() => { if (!runtime.setLightingProbes) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain probes"); runtime.setLightingProbes(snapshot); });
-    this.#probeReplay = structuredClone(snapshot); this.#scheduler?.requestRender();
+    this.#retained.probes = structuredClone(snapshot); this.#scheduler?.requestRender();
   }
 
   setTimeSeconds(seconds: number): void {
     const runtime = this.#operationalRuntime();
     if (!Number.isFinite(seconds)) throw new Forge3DError("INVALID_INPUT", "timeSeconds must be finite");
     this.#callRuntime(() => { if (!runtime.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support scatter time"); runtime.setTimeSeconds(seconds); });
-    this.#scatterTime = seconds; this.#scheduler?.requestRender();
+    this.#retained.time = seconds; this.#scheduler?.requestRender();
   }
 
   getScatterStats(): ScatterFrameStats { const runtime = this.#operationalRuntime(); return this.#callRuntime(() => { if (!runtime.getScatterStats) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report scatter"); return runtime.getScatterStats(); }); }
@@ -741,7 +714,7 @@ export class Forge3DViewer {
       }
       runtime.registerMaterialVtSource(materialIndex, family, image, fallback);
     });
-    this.#vtSources.set(`${materialIndex}:${family}`, {
+    this.#retained.sources.set(`${materialIndex}:${family}`, {
       materialIndex,
       family,
       image: cloneVtSourceImage(image),
@@ -762,7 +735,7 @@ export class Forge3DViewer {
       }
       runtime.clearMaterialVtSources();
     });
-    this.#vtSources.clear();
+    this.#retained.sources.clear();
   }
 
   /** W08: forward `getMaterialVtStats`. */
@@ -894,7 +867,7 @@ export class Forge3DViewer {
     if(this.#labelLayer&&this.#labelScene)this.#labelLayer.detach(this.#labelScene);
     this.#labelUnsubscribe?.();this.#labelUnsubscribe=undefined;
     this.#labelScene?.dispose();this.#labelScene=undefined;this.#labelLayer=undefined;
-    this.#vtSources.clear();
+    this.#retained.sources.clear();
     this.#frameListeners.clear();
     this.#recoveryListeners.clear();
     this.#disposeOwnedResources(true);
@@ -1187,48 +1160,8 @@ export class Forge3DViewer {
       if (this.#runtime !== replacement || recoveryController.signal.aborted) {
         return;
       }
-      // W08: replay the retained VT sources before the terrain: the runtime
-      // snapshots VT sources when a terrain is committed, so sources
-      // registered after `setTerrain` would never reach the replayed frame.
-      for (const source of this.#vtSources.values()) {
-        replacement.registerMaterialVtSource?.(
-          source.materialIndex,
-          source.family,
-          cloneVtSourceImage(source.image),
-          source.fallback === undefined
-            ? undefined
-            : [...source.fallback],
-        );
-      }
-      if (this.#terrainReplay?.kind === "direct") {
-        replacement.setTerrain(this.#terrainReplay.value);
-      } else if (this.#terrainReplay?.kind === "source") {
-        await replacement.setTerrainFromSource(
-          cloneSourceRequest(
-            this.#terrainReplay.value,
-            recoveryController.signal,
-            false,
-          ),
-        );
-      }
-      if (
-        this.#hasTerminalStatus() ||
-        this.#runtime !== replacement ||
-        recoveryController.signal.aborted
-      ) {
-        return;
-      }
-      if(this.#environmentReplay!==undefined){if(!replacement.setEnvironment)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery runtime does not support environment");replacement.setEnvironment(structuredClone(this.#environmentReplay));}
-      if(this.#vectorsReplay!==undefined){if(!replacement.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery vectors unavailable");await replacement.setVectorLayers(structuredClone(this.#vectorsReplay.snapshot),this.#vectorsReplay.terrain);}
-      if(this.#postFxReplay!==undefined){if(!replacement.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery runtime does not support post-FX");replacement.setPostFx(structuredClone(this.#postFxReplay));}
-      if (this.#scatterReplay !== undefined) {
-        if (!replacement.setScatterBatches || !replacement.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Recovery runtime does not support terrain scatter");
-        replacement.setScatterBatches(structuredClone(this.#scatterReplay)); replacement.setTimeSeconds(this.#scatterTime);
-      }
-      if (this.#probeReplay !== undefined) {
-        if (!replacement.setLightingProbes) throw new Forge3DError("UNSUPPORTED_FEATURE", "Recovery runtime does not support terrain probes");
-        replacement.setLightingProbes(structuredClone(this.#probeReplay));
-      }
+      await this.#retained.replayViewer(replacement,value=>cloneSourceRequest(value,recoveryController.signal,false),()=>!this.#hasTerminalStatus()&&this.#runtime===replacement&&!recoveryController.signal.aborted);
+      if(this.#hasTerminalStatus()||this.#runtime!==replacement||recoveryController.signal.aborted)return;
       this.#terminalError = undefined;
       if (this.#initializationComplete) {
         this.#transition("ready");
@@ -1376,8 +1309,8 @@ export class Forge3DViewer {
   }
 
   #disposeOwnedResources(transitionRuntime: boolean): void {
-    this.#environmentReplay = undefined;
-    this.#scatterReplay = undefined; this.#probeReplay = undefined;
+    this.#retained.environment = undefined;
+    this.#retained.scatter = undefined; this.#retained.probes = undefined;
     this.#sourceController?.abort();
     this.#sourceController = undefined;
     this.#recoveryController?.abort();

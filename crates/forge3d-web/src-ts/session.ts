@@ -1,3 +1,4 @@
+import { CommittedRenderState } from './committed-render-state.js';
 import { VectorLayers } from "./vector-layers.js";
 import type { VectorSnapshot, VectorReport, VectorPickMap, VectorPickRegion } from "./vector-types.js";
 import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
@@ -31,7 +32,6 @@ import type {
   LightingSnapshot,
   MaterialCollectionSnapshot,
   MemoryReport,
-  RendererConfigData,
   RenderStats,
   ResizeInput,
   SceneSnapshot,
@@ -54,7 +54,6 @@ import {
   clonePayload,
   estimateSceneTriangles,
   Forge3DScene,
-  sceneShadowsConfigured,
 } from "./scene.js";
 import { compileScenePasses } from "./render-graph.js";
 import { SceneMemoryTracker } from "./memory-policy.js";
@@ -157,17 +156,7 @@ export class Forge3DSession {
   #sceneSource: Forge3DScene | undefined;
   #camera: CameraInput | undefined;
   #appliedRevision = -1;
-  #committedSnapshot: SceneSnapshot | undefined;
-  /** W08: registered VT sources retained across device-loss replay. */
-  readonly #vtSources = new Map<
-    string,
-    {
-      materialIndex: number;
-      family: string;
-      image: MaterialVtSourceImage;
-      fallback?: [number, number, number, number];
-    }
-  >();
+  readonly #retained=new CommittedRenderState();
   #sceneReservation: { requestedBytes: number } | undefined;
   #stats: RenderStats = {
     frameIndex: 0,
@@ -294,7 +283,7 @@ export class Forge3DSession {
           : normalizeEnvironment(input);
     runtime.setEnvironment(snapshot);
     this.#scene?.setEnvironment(input);
-    if (this.#committedSnapshot) this.#committedSnapshot.environment = snapshot;
+    if (this.#retained.snapshot) this.#retained.snapshot.environment = snapshot;
   }
   getVectorReport():VectorReport {const runtime=this.#runtimeOrThrow();if(!runtime.getVectorReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector report unavailable");return runtime.getVectorReport();}
   async readVectorPickMap(region?:VectorPickRegion):Promise<VectorPickMap> {const runtime=this.#runtimeOrThrow();if(!runtime.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector picking unavailable");this.#syncScene(runtime);return runtime.readVectorPickMap(region);}
@@ -304,7 +293,7 @@ export class Forge3DSession {
     const snapshot=resolvePostFx(input);
     runtime.setPostFx(snapshot);
     this.#scene?.setPostFx(input);
-    if(this.#committedSnapshot)this.#committedSnapshot.postFx=snapshot;
+    if(this.#retained.snapshot)this.#retained.snapshot.postFx=snapshot;
   }
   getPostFxReport():PostFxReport {
     const runtime=this.#runtimeOrThrow();
@@ -326,7 +315,7 @@ export class Forge3DSession {
     if (!Number.isFinite(seconds)) throw new Forge3DError("INVALID_INPUT", "timeSeconds must be finite");
     if (!runtime.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support scatter time");
     runtime.setTimeSeconds(seconds);
-    if (this.#committedSnapshot) this.#committedSnapshot.timeSeconds = seconds;
+    if (this.#retained.snapshot) this.#retained.snapshot.timeSeconds = seconds;
     this.#scene?.setTimeSeconds(seconds);
   }
   getScatterStats(): ScatterFrameStats { const r = this.#runtimeOrThrow(); if (!r.getScatterStats) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report scatter"); return r.getScatterStats(); }
@@ -483,7 +472,7 @@ export class Forge3DSession {
       );
     }
     runtime.registerMaterialVtSource(materialIndex, family, image, fallback);
-    this.#vtSources.set(`${materialIndex}:${family}`, {
+    this.#retained.sources.set(`${materialIndex}:${family}`, {
       materialIndex,
       family,
       image: {
@@ -506,7 +495,7 @@ export class Forge3DSession {
       );
     }
     runtime.clearMaterialVtSources();
-    this.#vtSources.clear();
+    this.#retained.sources.clear();
   }
 
   /** W08: forward `getMaterialVtStats`. */
@@ -793,15 +782,11 @@ export class Forge3DSession {
   }
 
   #commitScene(runtime: SessionRuntimeLike, scene: Forge3DScene): void {
-    const copy = scene.copy();
-    applyRendererConfigMaterials(copy, this.#config.toJSON());
-    applyRendererConfigShadows(copy, this.#config.toJSON());
-    const estimatedBytes = copy.estimatedGpuBytes();
-    const snapshot = copy.snapshot();
+    const {copy,snapshot,estimatedBytes}=CommittedRenderState.prepare(scene,this.#config.toJSON());
     const config = this.#config.toJSON();
     const previous = this.#sceneReservation;
     const previousScene = this.#scene;
-    const previousSnapshot = this.#committedSnapshot;
+    const previousSnapshot = this.#retained.snapshot;
 
     this.#tracker.release(SCENE_ALLOCATION_KEY);
     let applied = false;
@@ -845,7 +830,7 @@ export class Forge3DSession {
     this.#scene = copy;
     this.#sceneSource = scene;
     this.#appliedRevision = scene.revision;
-    this.#committedSnapshot = snapshot;
+    this.#retained.snapshot = snapshot;
     this.#sceneReservation =
       estimatedBytes > 0 ? { requestedBytes: estimatedBytes } : undefined;
   }
@@ -855,31 +840,7 @@ export class Forge3DSession {
     scene: Forge3DScene,
     snapshot: SceneSnapshot,
   ): void {
-    for (const node of scene.getNodes()) {
-      if (node.node.kind === "terrain") {
-        runtime.setTerrain?.(clonePayload(node.node.terrain));
-      }
-    }
-    if (runtime.setScene !== undefined) {
-      runtime.setScene(snapshot);
-      return;
-    }
-    runtime.setLighting?.(clonePayload(snapshot.environmentLighting ?? snapshot.lighting));
-    runtime.setMaterials?.(clonePayload(snapshot.materials));
-    runtime.setIbl?.(clonePayload(snapshot.ibl));
-    runtime.setShadows?.(clonePayload(snapshot.shadows));
-    if (snapshot.scatter !== undefined) {
-      if (!runtime.setScatterBatches) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain scatter");
-      runtime.setScatterBatches(clonePayload(snapshot.scatter));
-    }
-    if (snapshot.probes !== undefined) {
-      if (!runtime.setLightingProbes) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain probes");
-      runtime.setLightingProbes(clonePayload(snapshot.probes));
-    }
-    if (snapshot.environment !== undefined) {if(!runtime.setEnvironment)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support environment");runtime.setEnvironment(snapshot.environment);}
-    if(snapshot.vectors!==undefined){if(!runtime.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support vectors");const terrain=snapshot.nodes.find(n=>n.node.kind==="terrain")?.node;runtime.setVectorLayers(snapshot.vectors,terrain?.kind==="terrain"?terrain.terrain:undefined);}
-    if(snapshot.postFx!==undefined){if(!runtime.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support post-FX");runtime.setPostFx(clonePayload(snapshot.postFx));}
-    if (snapshot.timeSeconds !== undefined) runtime.setTimeSeconds?.(snapshot.timeSeconds);
+    this.#retained.applyScene(runtime,snapshot);
   }
 
   #attachLossHandler(runtime: SessionRuntimeLike): void {
@@ -953,32 +914,7 @@ export class Forge3DSession {
       try {
         this.#capabilitiesBase = replacement.getCapabilities();
         this.#attachLossHandler(replacement);
-        // W08: replay retained VT sources before the committed scene: the
-        // runtime snapshots VT sources when the terrain is committed.
-        for (const source of this.#vtSources.values()) {
-          replacement.registerMaterialVtSource?.(
-            source.materialIndex,
-            source.family,
-            {
-              width: source.image.width,
-              height: source.image.height,
-              data: source.image.data.slice(),
-            },
-            source.fallback === undefined
-              ? undefined
-              : [...source.fallback],
-          );
-        }
-        if (
-          this.#committedSnapshot !== undefined &&
-          this.#scene !== undefined
-        ) {
-          this.#applyCommittedScene(
-            replacement,
-            this.#scene,
-            this.#committedSnapshot,
-          );
-        }
+        this.#retained.replayScene(replacement);
         if (this.#camera !== undefined) {
           replacement.setCamera?.(cloneCameraInput(this.#camera));
         }
@@ -1142,81 +1078,6 @@ function sortedUnique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
-
-function applyRendererConfigMaterials(
-  scene: Forge3DScene,
-  config: RendererConfigData,
-): void {
-  const shadingBrdf = config.brdfOverride ?? config.shading.brdf;
-  scene.setMaterial("default", {
-    id: "default",
-    brdf: shadingBrdf,
-    baseColor: [1, 1, 1, 1],
-    metallic: config.shading.metallic,
-    roughness: config.shading.roughness,
-    sheen: 0,
-    clearcoat: 0,
-    subsurface: 0,
-    anisotropy: 0,
-  });
-  for (const [slot, entry] of Object.entries(config.materials)) {
-    const parameters = entry.parameters;
-    const numeric = (key: string): number | undefined => {
-      const value = parameters[key];
-      return typeof value === "number" && Number.isFinite(value)
-        ? value
-        : undefined;
-    };
-    const brdfParameter = parameters["brdf"];
-    const baseColorParameter = parameters["baseColor"];
-    const baseColor: [number, number, number, number] =
-      Array.isArray(baseColorParameter) &&
-      baseColorParameter.length === 4 &&
-      baseColorParameter.every(
-        (component) =>
-          typeof component === "number" && Number.isFinite(component),
-      )
-        ? baseColorParameter
-        : [1, 1, 1, 1];
-    scene.setMaterial(slot, {
-      id: entry.id,
-      brdf:
-        typeof brdfParameter === "string" && brdfParameter.length > 0
-          ? brdfParameter
-          : shadingBrdf,
-      baseColor,
-      metallic: numeric("metallic") ?? config.shading.metallic,
-      roughness: numeric("roughness") ?? config.shading.roughness,
-      sheen: numeric("sheen") ?? 0,
-      clearcoat: numeric("clearcoat") ?? 0,
-      subsurface: numeric("subsurface") ?? 0,
-      anisotropy: numeric("anisotropy") ?? 0,
-    });
-  }
-}
-
-function applyRendererConfigShadows(
-  scene: Forge3DScene,
-  config: RendererConfigData,
-): void {
-  if (sceneShadowsConfigured(scene)) {
-    return;
-  }
-  const shadows = config.shadows;
-  const technique = shadows.technique.trim().toLowerCase();
-  const cascades = shadows.cascades;
-  scene.setShadows(
-    {
-      enabled: shadows.enabled,
-      filter: technique,
-      mapSize: shadows.mapSize,
-    },
-    {
-      enabled: shadows.enabled && technique !== "none" && cascades > 1,
-      cascadeCount: cascades > 1 ? (cascades as 2 | 3 | 4) : 3,
-    },
-  );
-}
 
 function nowMilliseconds(): number {
   const performanceLike = (

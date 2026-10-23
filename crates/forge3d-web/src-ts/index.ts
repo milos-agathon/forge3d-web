@@ -1,3 +1,5 @@
+import { loadWasmBridge, selectedWasmBridge } from './wasm-realm.js';
+import { RuntimeOperations } from './runtime-operations.js';
 import { Forge3DError } from './runtime-failure.js';
 export type { CartographicColor } from './cartography-common.js';
 export { Colormap, ColormapRegistry, colormaps, colormapFromStops, hexToRgb, hexToRgba, rgbToNormalized, interpolateHexColors, elevationStopsFromHexColors, OKABE_ITO, CORE_COLORMAP_STOPS } from './colormaps.js';
@@ -87,7 +89,6 @@ import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } f
 export { Forge3DEnvironment, sunPosition, environmentMemoryReport } from "./environment.js";
 export type * from "./environment.js";
 import {
-  registerOfflineWasmLoader,
   registerRuntimeInternals,
   registerMapRuntimeFactory,
   getSceneVectorPacket,
@@ -2776,21 +2777,6 @@ interface WasmBridge extends Partial<OfflineWasmExports> {
   default?: (options?: { module_or_path: unknown }) => Promise<unknown>;
 }
 
-interface WasmBridgeCoordinatorRecord {
-  selectedUrl: string;
-  promise: Promise<WasmBridge>;
-  state: "pending" | "ready";
-}
-
-interface WasmBridgeCoordinator {
-  schemaVersion: 1;
-  record?: WasmBridgeCoordinatorRecord;
-}
-
-const WASM_COORDINATOR_KEY = Symbol.for(
-  "@forge3d/web.wasm-bridge-coordinator",
-);
-
 export { Forge3DError } from './runtime-failure.js';
 export class Forge3DRuntime {
   readonly #inner: WasmRuntime;
@@ -2803,13 +2789,7 @@ export class Forge3DRuntime {
   #detachDeviceLostRegistration: (() => void) | undefined;
   #width: number;
   #height: number;
-  #disposeRequested = false;
-  #nativeDisposed = false;
-  #screenshotPromise: Promise<Blob> | undefined;
-  #readbackPromise: Promise<unknown> | undefined;
-  #rgbaReadbackPromise: Promise<Uint8Array> | undefined;
-  #pendingMutations: Array<() => void> = [];
-  #offlineActive = false;
+  readonly #operations: RuntimeOperations;
   #deviceLossError: Forge3DError | undefined;
   #vectorState: { input: VectorLayers | VectorSnapshot; terrain: TerrainHeightmapInput | undefined; geometryRevision: number; highlightRevision: number } | undefined;
   #geospatialTerrain: TerrainDataset | TerrainHeightmapInput | undefined;
@@ -2821,6 +2801,12 @@ export class Forge3DRuntime {
     loadTerrainHeightmapSource: WasmBridge["loadTerrainHeightmapSource"],
   ) {
     this.#inner = inner;
+    this.#operations=new RuntimeOperations(()=>{
+      this.#inner.dispose();this.#lastCapabilities={...this.#lastCapabilities,deviceState:'disposed'};
+    },error=>{
+      if(error.code==='DEVICE_LOST')this.#deviceLostHandler?.(error);
+      else reportUnhandledRuntimeError(error);
+    });
     this.#loadTerrainHeightmapSource = loadTerrainHeightmapSource;
     this.#deviceLostHandler = undefined;
     this.#pendingDeviceLoss = undefined;
@@ -2847,7 +2833,7 @@ export class Forge3DRuntime {
       this.#deviceLossError = deviceLoss;
       if (this.#deviceLostHandler !== undefined) {
         this.#deviceLostHandler(deviceLoss);
-      } else if (!this.#disposeRequested && this.#pendingDeviceLoss === undefined) {
+      } else if (!this.#operations.disposed && this.#pendingDeviceLoss === undefined) {
         this.#pendingDeviceLoss = deviceLoss;
       }
     };
@@ -2861,7 +2847,7 @@ export class Forge3DRuntime {
     }
     registerRuntimeInternals(this, {
       createMapContext: () => {
-        this.#assertNotDisposed(); this.#assertNoOffline();
+        this.#assertNotDisposed(); this.#operations.assertDisplay();
         const context = this.#inner.createMapContext?.();
         if (!context) return undefined;
         const loadTerrain = this.#loadTerrainHeightmapSource;
@@ -2884,7 +2870,7 @@ export class Forge3DRuntime {
       },
       readMapFrame: async () => {
         this.#assertNotDisposed();
-        this.#assertNoOffline();
+        this.#operations.assertDisplay();
         const read = this.#inner.readMapFrame;
         if (read === undefined) return undefined;
         const result = await this.#exclusiveReadback(() => read.call(this.#inner));
@@ -2895,7 +2881,7 @@ export class Forge3DRuntime {
         return { rgba: new Uint8Array(result.rgba), coverage: new Uint8Array(result.coverage) };
       },
       setDeviceLostHandler: (handler) => {
-        if (this.#disposeRequested) {
+        if (this.#operations.disposed) {
           this.#deviceLostHandler = undefined;
           this.#pendingDeviceLoss = undefined;
           return;
@@ -2945,7 +2931,7 @@ export class Forge3DRuntime {
     }
 
     try {
-      const bridge = await loadWasmBridge(options.wasmUrl);
+      const bridge = await loadWasmBridge(options.wasmUrl) as WasmBridge;
       const normalized = normalizeRuntimeOptions(options);
       const offscreen =
         typeof OffscreenCanvas !== "undefined" &&
@@ -2980,7 +2966,7 @@ export class Forge3DRuntime {
   }
 
   get disposed(): boolean {
-    return this.#disposeRequested;
+    return this.#operations.disposed;
   }
 
   get width(): number {
@@ -3015,7 +3001,7 @@ export class Forge3DRuntime {
 
   render(): boolean {
     this.#assertNotDisposed();
-    if (this.#captureInFlight() || this.#offlineActive) {
+    if (this.#captureInFlight() || this.#operations.offline) {
       return false;
     }
     try {
@@ -3028,70 +3014,13 @@ export class Forge3DRuntime {
   }
 
   async screenshot(): Promise<Blob> {
-    this.#assertNotDisposed();
-    this.#assertNoOffline();
-    if (this.#screenshotPromise !== undefined) {
-      return this.#screenshotPromise;
-    }
-    if (this.#readbackPromise !== undefined) {
-      await this.#readbackPromise.catch(() => undefined);
-      this.#assertNotDisposed();
-    }
-    const native = this.#inner.screenshot();
-    const result = native.then(
-      (blob) => {
-        this.#assertNotDisposed();
-        return blob;
-      },
-      (error: unknown) => {
-        this.#assertNotDisposed();
-        throw Forge3DError.from(error);
-      },
-    );
-    this.#screenshotPromise = result;
-    void result.then(
-      () => this.#completeCaptureSafely(result),
-      () => this.#completeCaptureSafely(result),
-    );
-    return result;
+    return this.#operations.capture('screenshot',()=>this.#inner.screenshot());
   }
-
   async readRgba(): Promise<Uint8Array> {
-    this.#assertNotDisposed();
-    this.#assertNoOffline();
-    const readRgba = this.#inner.readRgba;
-    if (readRgba === undefined) {
-      throw new Forge3DError(
-        "UNSUPPORTED_FEATURE",
-        "Runtime does not support readback",
-      );
-    }
-    while (this.#readbackPromise !== undefined) {
-      if(this.#rgbaReadbackPromise===this.#readbackPromise)return this.#rgbaReadbackPromise;
-      await this.#readbackPromise.catch(()=>undefined);this.#assertNotDisposed();
-    }
-    if (this.#screenshotPromise !== undefined) {
-      await this.#screenshotPromise.catch(() => undefined);
-      this.#assertNotDisposed();
-    }
-    const native = readRgba.call(this.#inner);
-    const result = native.then(
-      (bytes) => {
-        this.#assertNotDisposed();
-        return new Uint8Array(bytes);
-      },
-      (error: unknown) => {
-        this.#assertNotDisposed();
-        throw Forge3DError.from(error);
-      },
-    );
-    this.#readbackPromise = result;
-    this.#rgbaReadbackPromise = result;
-    void result.then(
-      () => this.#completeCaptureSafely(result),
-      () => this.#completeCaptureSafely(result),
-    );
-    return result;
+    this.#assertNotDisposed();this.#operations.assertDisplay();
+    const read=this.#inner.readRgba;
+    if(!read)throw new Forge3DError('UNSUPPORTED_FEATURE','Runtime does not support readback');
+    return this.#operations.capture('rgba',async()=>new Uint8Array(await read.call(this.#inner)));
   }
 
   setScene(scene: SceneSnapshot): void {
@@ -3208,13 +3137,13 @@ export class Forge3DRuntime {
     return this.#inner.getVectorReport();
   }
   async readVectorPickMap(region?: VectorPickRegion): Promise<VectorPickMap> {
-    this.#assertNotDisposed();this.#assertNoOffline();
+    this.#assertNotDisposed();this.#operations.assertDisplay();
     if(!this.#inner.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support vector picking");
     if (region && ([region.x, region.y, region.width, region.height].some(v => !Number.isFinite(v)) || region.width < 0 || region.height < 0)) throw new Forge3DError("INVALID_INPUT", "Invalid vector pick readback region");
     return this.#offlineReadback(()=>this.#inner.readVectorPickMap!(region));
   }
   async readVectorProjection(): Promise<VectorProjectionReport> {
-    this.#assertNotDisposed();this.#assertNoOffline();
+    this.#assertNotDisposed();this.#operations.assertDisplay();
     if (!this.#inner.readVectorProjection) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not expose vector projection diagnostics");
     return this.#offlineReadback(() => this.#inner.readVectorProjection!());
   }
@@ -3236,7 +3165,7 @@ export class Forge3DRuntime {
   }
   async readPostFxIntermediate(name: string): Promise<PostFxFrame> {
     this.#assertNotDisposed();
-    this.#assertNoOffline();
+    this.#operations.assertDisplay();
     if (!this.#inner.readPostFxIntermediate) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not expose post-FX intermediates");
     return this.#offlineReadback(() => this.#inner.readPostFxIntermediate!(name));
   }
@@ -3613,14 +3542,13 @@ export class Forge3DRuntime {
           "Runtime was disposed during terrain source loading",
         );
       }
-      if (this.#screenshotPromise !== undefined) {
-        await this.#screenshotPromise.catch(() => undefined);
-        this.#assertNotDisposed();
-      }
-      this.#inner.setTerrain(decoded);
-      this.#geospatialVectorEpoch++;
-      this.#geospatialVectorAbort?.abort();
-      this.#geospatialTerrain=decoded;
+      await this.#operations.waitForCapture();
+      this.#runOrQueue(()=>{
+        this.#inner.setTerrain(decoded);
+        this.#geospatialVectorEpoch++;
+        this.#geospatialVectorAbort?.abort();
+        this.#geospatialTerrain=decoded;
+      });
     } catch (error) {
       throw Forge3DError.from(error);
     }
@@ -3680,7 +3608,7 @@ export class Forge3DRuntime {
 
   /** Whether an offline accumulation session is open. */
   get offlineActive(): boolean {
-    return this.#offlineActive;
+    return this.#operations.offline;
   }
 
   /**
@@ -3697,30 +3625,13 @@ export class Forge3DRuntime {
         "Runtime does not support offline capture",
       );
     }
-    if (this.#offlineActive) {
-      throw new Forge3DError(
-        "INVALID_INPUT",
-        "An offline accumulation session is already active.",
-      );
-    }
-    if (this.#captureInFlight()) {
-      throw new Forge3DError(
-        "INVALID_INPUT",
-        "Cannot begin offline accumulation while a readback is in flight",
-      );
-    }
     const native = nativeBeginOptions({
       ...options,
       ...(options.previousCamera === undefined
         ? {}
         : { previousCamera: normalizeCameraInput(options.previousCamera) }),
     });
-    try {
-      begin.call(this.#inner, native);
-    } catch (error) {
-      throw Forge3DError.from(error);
-    }
-    this.#offlineActive = true;
+    this.#operations.beginOffline(()=>begin.call(this.#inner,native));
   }
 
   async accumulateBatch(sampleCount: number): Promise<OfflineBatchResult> {
@@ -3764,19 +3675,7 @@ export class Forge3DRuntime {
 
   /** Ends the session; returns whether one was open. Idempotent. */
   endOfflineAccumulation(): boolean {
-    const wasActive = this.#offlineActive;
-    this.#offlineActive = false;
-    if (!this.#nativeDisposed) {
-      try {
-        this.#inner.endOffline?.call(this.#inner);
-      } catch (error) {
-        reportUnhandledRuntimeError(Forge3DError.from(error));
-      }
-    }
-    if (wasActive && !this.#captureInFlight() && !this.#disposeRequested) {
-      this.#flushPendingMutations();
-    }
-    return wasActive;
+    return this.#operations.endOffline(()=>this.#inner.endOffline?.call(this.#inner));
   }
 
   /** One-sample (or `samples`) HDR/AOV capture of the committed scene. */
@@ -3847,7 +3746,7 @@ export class Forge3DRuntime {
         "Runtime does not support offline capture",
       );
     }
-    if (!this.#offlineActive) {
+    if (!this.#operations.offline) {
       throw new Forge3DError(
         "INVALID_INPUT",
         "No offline accumulation session is active",
@@ -3856,37 +3755,7 @@ export class Forge3DRuntime {
     return method;
   }
 
-  #assertNoOffline(): void {
-    if (this.#offlineActive) {
-      throw new Forge3DError(
-        "INVALID_INPUT",
-        "An offline accumulation session is active; end it before reading the display frame",
-      );
-    }
-  }
-
-  async #exclusiveReadback<T>(operation: () => Promise<T>): Promise<T> {
-    while (this.#readbackPromise !== undefined || this.#screenshotPromise !== undefined) {
-      await (this.#readbackPromise ?? this.#screenshotPromise)!.catch(() => undefined);
-      this.#assertNotDisposed();
-    }
-    const result = operation().then(
-      (value) => {
-        this.#assertNotDisposed();
-        return value;
-      },
-      (error: unknown) => {
-        this.#assertNotDisposed();
-        throw Forge3DError.from(error);
-      },
-    );
-    this.#readbackPromise = result;
-    void result.then(
-      () => this.#completeCaptureSafely(result),
-      () => this.#completeCaptureSafely(result),
-    );
-    return result;
-  }
+  #exclusiveReadback<T>(operation:()=>Promise<T>):Promise<T>{return this.#operations.capture('exclusive',operation);}
 
   setCamera(camera: CameraInput): void {
     this.#assertNotDisposed();
@@ -3906,102 +3775,19 @@ export class Forge3DRuntime {
 
   dispose(): void {
     this.#geospatialVectorAbort?.abort();
-    if (this.#disposeRequested) {
+    if (this.#operations.disposed) {
       return;
     }
-    this.#disposeRequested = true;
     this.#deviceLostHandler = undefined;
     this.#pendingDeviceLoss = undefined;
     this.#detachDeviceLostRegistration?.();
     this.#detachDeviceLostRegistration = undefined;
-    this.#pendingMutations = [];
-    if (this.#captureInFlight()) {
-      this.#lastCapabilities = {
-        ...this.#lastCapabilities,
-        deviceState: "disposed",
-      };
-      return;
-    }
-    this.#finalizeDispose();
+    this.#operations.dispose();
   }
+  #captureInFlight():boolean{return this.#operations.capturing;}
+  #assertNotDisposed():void{this.#operations.assertLive();}
+  #runOrQueue(operation:()=>void):void{this.#operations.mutate(operation);}
 
-  #captureInFlight(): boolean {
-    return (
-      this.#screenshotPromise !== undefined ||
-      this.#readbackPromise !== undefined
-    );
-  }
-
-  #assertNotDisposed(): void {
-    if (this.#disposeRequested) {
-      throw new Forge3DError("RUNTIME_DISPOSED", "Runtime is disposed");
-    }
-  }
-
-  #runOrQueue(operation: () => void): void {
-    if (this.#captureInFlight() || this.#offlineActive) {
-      this.#pendingMutations.push(operation);
-      return;
-    }
-    try {
-      operation();
-    } catch (error) {
-      throw Forge3DError.from(error);
-    }
-  }
-
-  #completeCapture(promise: Promise<unknown>): void {
-    if (this.#screenshotPromise === promise) {
-      this.#screenshotPromise = undefined;
-    } else if (this.#readbackPromise === promise) {
-      this.#readbackPromise = undefined;
-    } else {
-      return;
-    }
-    if (this.#disposeRequested) {
-      this.#finalizeDispose();
-      return;
-    }
-    if (!this.#offlineActive) {
-      this.#flushPendingMutations();
-    }
-  }
-
-  #flushPendingMutations(): void {
-    const mutations = this.#pendingMutations.splice(0);
-    for (const mutation of mutations) {
-      try {
-        mutation();
-      } catch (error) {
-        const normalized = Forge3DError.from(error);
-        if (normalized.code === "DEVICE_LOST") {
-          this.#deviceLostHandler?.(normalized);
-        } else {
-          reportUnhandledRuntimeError(normalized);
-        }
-      }
-    }
-  }
-
-  #completeCaptureSafely(promise: Promise<unknown>): void {
-    try {
-      this.#completeCapture(promise);
-    } catch (error) {
-      reportUnhandledRuntimeError(Forge3DError.from(error));
-    }
-  }
-
-  #finalizeDispose(): void {
-    if (this.#nativeDisposed) {
-      return;
-    }
-    this.#nativeDisposed = true;
-    this.#inner.dispose();
-    this.#lastCapabilities = {
-      ...this.#lastCapabilities,
-      deviceState: "disposed",
-    };
-  }
 }
 
 function reportUnhandledRuntimeError(error: Forge3DError): void {
@@ -4015,178 +3801,6 @@ function reportUnhandledRuntimeError(error: Forge3DError): void {
     return;
   }
   console.error(error);
-}
-
-function loadWasmBridge(wasmUrl?: string | URL): Promise<WasmBridge> {
-  let selectedUrl: string;
-  try {
-    const canonicalUrl = new URL(
-      wasmUrl ?? "./forge3d_web_bg.wasm",
-      import.meta.url,
-    );
-    canonicalUrl.hash = "";
-    selectedUrl = canonicalUrl.href;
-  } catch (error) {
-    return Promise.reject(
-      new Forge3DError("INVALID_INPUT", "wasmUrl must be a valid URL", error),
-    );
-  }
-
-  let coordinator: WasmBridgeCoordinator;
-  try {
-    coordinator = getWasmBridgeCoordinator();
-  } catch (error) {
-    return Promise.reject(Forge3DError.from(error));
-  }
-  const existing = coordinator.record;
-  if (existing !== undefined) {
-    if (existing.selectedUrl !== selectedUrl) {
-      return Promise.reject(
-        new Forge3DError(
-          "INVALID_INPUT",
-          `This Window realm already selected a different Forge3D WASM URL`,
-          { requestedUrl: selectedUrl, selectedUrl: existing.selectedUrl },
-        ),
-      );
-    }
-    return existing.promise;
-  }
-
-  let resolveBridge!: (bridge: WasmBridge) => void;
-  let rejectBridge!: (reason: unknown) => void;
-  const promise = new Promise<WasmBridge>((resolve, reject) => {
-    resolveBridge = resolve;
-    rejectBridge = reject;
-  });
-  const record: WasmBridgeCoordinatorRecord = {
-    selectedUrl,
-    promise,
-    state: "pending",
-  };
-  coordinator.record = record;
-
-  void importWasmBridge(selectedUrl).then(
-    (bridge) => {
-      if (coordinator.record?.promise === promise) {
-        coordinator.record.state = "ready";
-      }
-      resolveBridge(bridge);
-    },
-    (error) => {
-      if (coordinator.record?.promise === promise) {
-        delete coordinator.record;
-      }
-      rejectBridge(
-        error instanceof Forge3DError
-          ? error
-          : new Forge3DError(
-              "WASM_LOAD_FAILED",
-              "Failed to load the Forge3D WASM bridge",
-              error,
-            ),
-      );
-    },
-  );
-  return promise;
-}
-
-function getWasmBridgeCoordinator(): WasmBridgeCoordinator {
-  const realm = globalThis as typeof globalThis & {
-    [WASM_COORDINATOR_KEY]?: unknown;
-  };
-  if (Object.prototype.hasOwnProperty.call(realm, WASM_COORDINATOR_KEY)) {
-    const value = realm[WASM_COORDINATOR_KEY];
-    if (!isWasmBridgeCoordinator(value)) {
-      throw new Forge3DError(
-        "INTERNAL_ERROR",
-        "The Forge3D WASM coordinator has an incompatible schema",
-      );
-    }
-    return value;
-  }
-
-  const coordinator: WasmBridgeCoordinator = { schemaVersion: 1 };
-  Object.defineProperty(realm, WASM_COORDINATOR_KEY, {
-    value: coordinator,
-    enumerable: false,
-    configurable: false,
-    writable: false,
-  });
-  return coordinator;
-}
-
-function isWasmBridgeCoordinator(value: unknown): value is WasmBridgeCoordinator {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    (value as { schemaVersion?: unknown }).schemaVersion !== 1
-  ) {
-    return false;
-  }
-  const record = (value as { record?: unknown }).record;
-  return (
-    record === undefined ||
-    (typeof record === "object" &&
-      record !== null &&
-      typeof (record as { selectedUrl?: unknown }).selectedUrl === "string" &&
-      (record as { promise?: unknown }).promise instanceof Promise &&
-      ((record as { state?: unknown }).state === "pending" ||
-        (record as { state?: unknown }).state === "ready"))
-  );
-}
-
-async function importWasmBridge(selectedUrl: string): Promise<WasmBridge> {
-  const modulePath = "../pkg/forge3d_web.js";
-  try {
-    const [module, response] = await Promise.all([
-      import(/* @vite-ignore */ modulePath),
-      fetchValidatedWasm(selectedUrl),
-    ]);
-    const bridge = module as WasmBridge;
-    await bridge.default?.({ module_or_path: response });
-    return bridge;
-  } catch (error) {
-    throw error instanceof Forge3DError
-      ? error
-      : new Forge3DError(
-          "WASM_LOAD_FAILED",
-          `Failed to initialize Forge3D WASM from ${selectedUrl}`,
-          error,
-        );
-  }
-}
-
-async function fetchValidatedWasm(selectedUrl: string): Promise<Response> {
-  let response: Response;
-  try {
-    response = await fetch(selectedUrl);
-  } catch (error) {
-    throw new Forge3DError(
-      "WASM_LOAD_FAILED",
-      `Failed to fetch Forge3D WASM from ${selectedUrl}`,
-      error,
-    );
-  }
-  if (!response.ok) {
-    throw new Forge3DError(
-      "WASM_LOAD_FAILED",
-      `Forge3D WASM request failed with HTTP ${response.status}`,
-      { status: response.status, url: selectedUrl },
-    );
-  }
-  const mediaType = response.headers
-    .get("content-type")
-    ?.split(";", 1)[0]
-    ?.trim()
-    .toLowerCase();
-  if (mediaType !== "application/wasm") {
-    throw new Forge3DError(
-      "WASM_LOAD_FAILED",
-      "Forge3D WASM must be served as application/wasm",
-      { mediaType: mediaType ?? null, url: selectedUrl },
-    );
-  }
-  return response;
 }
 
 function normalizeRuntimeOptions(
@@ -4649,8 +4263,7 @@ export {
 export { encodeVideo, muxEncodedVideo, probeVideoCodecs } from "./video.js";
 
 async function w08WasmBridge(): Promise<WasmBridge> {
-  const record = getWasmBridgeCoordinator().record;
-  return record !== undefined ? record.promise : loadWasmBridge();
+  return await selectedWasmBridge() as WasmBridge;
 }
 
 /**
@@ -4741,24 +4354,7 @@ export async function validateTerrainVtSupport(
   }
 }
 
-registerOfflineWasmLoader(async () => {
-  const record = getWasmBridgeCoordinator().record;
-  const bridge = await (record !== undefined ? record.promise : loadWasmBridge());
-  if (
-    bridge.encodeExr === undefined ||
-    bridge.decodeExr === undefined ||
-    bridge.exrChannelNames === undefined ||
-    bridge.tonemapHdr === undefined ||
-    bridge.atrousDenoise === undefined ||
-    bridge.compareImages === undefined
-  ) {
-    throw new Forge3DError(
-      "UNSUPPORTED_FEATURE",
-      "The Forge3D WASM bridge does not export the W06 frame helpers",
-    );
-  }
-  return bridge as unknown as OfflineWasmExports;
-});
+
 
 export { generateDensityVolume } from "./density-volume.js";
 export type { DensityVolumePresetInput, DensityVolumeGenerationOptions } from "./density-volume.js";
