@@ -32,12 +32,16 @@ async function writeOutput(bytes: Uint8Array, sink: BrowserByteSink, signal?: Ab
     let reject!: (error: unknown) => void;
     const aborted = new Promise<never>((_, r) => { reject = r; });
     const error = () => new Forge3DError('REQUEST_CANCELLED', 'Bundle output cancelled');
-    const abort = () => { void writer.abort(error()).catch(() => undefined); reject(error()); };
+    // A repeated abort can resolve before the first asynchronous rollback finishes.
+    // Share that first completion between the signal listener and the failure path.
+    let rollback: Promise<void> | undefined;
+    const abortWriter = (reason: unknown) => rollback ??= writer.abort(reason).catch(() => undefined);
+    const abort = () => { const reason = error(); void abortWriter(reason); reject(reason); };
     signal?.addEventListener('abort', abort, { once: true });
     try {
         bundleCancelled(signal);
         for (let i = 0; i < bytes.length; i += 64 * 1024) { bundleCancelled(signal); await Promise.race([writer.write(bytes.slice(i, i + 64 * 1024)), aborted]); }
         bundleCancelled(signal); await Promise.race([writer.close(), aborted]);
-    } catch (e) { const cleanup = writer.abort(e).catch(() => undefined); if (sink.kind !== 'stream') await cleanup; throw e; }
+    } catch (e) { const cleanup = abortWriter(e); if (sink.kind !== 'stream') await cleanup; throw e; }
     finally { signal?.removeEventListener('abort', abort); if ('releaseLock' in writer) writer.releaseLock(); }
 }

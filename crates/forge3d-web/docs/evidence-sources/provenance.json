@@ -239,7 +239,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
-      "sha256": "dd92f81fefabd1a46a9fe32dc5c4eb1a1ceed3a15caba6bf6c46d008876b3010",
+      "sha256": "b4c8fa94fa3236589f232202f95883deaaba9ed63daa5dd95cc1ad3f031a3e22",
       "snapshot": "evidence-sources/tests/unit/w19-style-bundle.test.ts.txt"
     },
     {
@@ -254,7 +254,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w19_style_bundle.spec.ts",
-      "sha256": "eba5438d16dbaaccc4c9b433ec3d049b257b34124887e295ff84569ea537b9b6",
+      "sha256": "e20d872c4cee12f70e63e206825e8a3dc51ddac912d20908d2b71a06e91fa293",
       "snapshot": "evidence-sources/tests/playwright/w19_style_bundle.spec.ts.txt"
     },
     {

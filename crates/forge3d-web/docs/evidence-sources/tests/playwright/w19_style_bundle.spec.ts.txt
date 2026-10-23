@@ -1,21 +1,26 @@
 import licenses from '../fixtures/w21/licenses.json' with { type: 'json' };
 import { test, expect } from "../browser/webgpu-fixture";
+import { installW19GpuTimings, attachW19GpuTimings } from '../browser/w19-gpu-timings';
 declare global { interface Window { __w19: any; } }
 const nativeLayerIds = ['native-base:raster:0', 'native-base:vector:0', 'native-base:vector:1', 'native-review-0:vector:0'];
 for (const dist of [false, true]) {
     const label = dist ? 'dist' : 'source';
     test.describe(label, () => {
-        test.beforeEach(async ({ page }) => {
+        test.beforeEach(async ({ page }, info) => {
             const errors: string[] = [];
             page.on('pageerror', error => errors.push(error.message));
             page.on('console', message => {
                 if (message.type() === 'error') errors.push(message.text());
                 if (message.text().startsWith('[W19-native-timing]')) console.info(`${label}: ${message.text()}`);
             });
+            if (info.title.includes('native-saver')) await installW19GpuTimings(page);
             await page.addInitScript(key => sessionStorage.setItem('forge3d-example-license',key), licenses.active);
             await page.goto('/examples/style-bundle.html' + (dist ? '?dist' : '?source'));
             try { await page.waitForFunction(() => window.__w19?.ready); }
             catch (error) { throw new Error(`W19 example startup failed: ${errors.join('\n') || await page.locator('#status').textContent()}`, { cause: error }); }
+        });
+        test.afterEach(async ({ page }, info) => {
+            if (info.title.includes('native-saver')) await attachW19GpuTimings(page, info);
         });
         test(`W19 ${label}: supported styles draw covered geometry and every style layer changes pixels`, async ({ page }, info) => {
             const r = await page.evaluate(async () => {
@@ -82,37 +87,42 @@ for (const dist of [false, true]) {
         test(`W19 ${label}: native-saver raster/vector assets prepare and resave offline`, async ({ page }) => {
             const r = await page.evaluate(async () => {
                 const { api, baseRecipe } = window.__w19;
-                const started = performance.now(), mark = (phase: string) => console.info('[W19-native-timing]', phase, Math.round(performance.now() - started));
-                mark('load-start');
-                const scene = await api.MapScene.loadBundle(location.origin + '/tests/fixtures/w19/native-renderable.forge3d', { nativeRecipe: baseRecipe() });
-                mark('loaded'); const validation = scene.validate(), prepared = await scene.prepare(); mark('prepared');
-                const original = await scene.render(); mark('original-rendered');
-                const layerIds = scene.recipe.value.layers.filter((l: any) => ['raster', 'vector'].includes(l.kind)).map((l: any) => l.layerId);
-                const blob = await scene.saveBundle(); scene.dispose(); mark('saved');
-                const fetcher = window.fetch; let network = 0; window.fetch = async (...args: any[]) => { if (String(args[0]).startsWith('blob:')) return fetcher(...args as [any]); network++; throw Error('offline native archive'); };
-                let same = false, coverage = 0, restoredValid = false;
-                try { const restored = await api.MapScene.loadBundle(blob); mark('restored'); restoredValid = !restored.validate().hasErrors; const output = await restored.render(); mark('restored-rendered'); same = original.frame.data.every((v: number, i: number) => v === output.frame.data[i]); coverage = output.metrics.coveragePixels; restored.dispose(); }
-                finally { window.fetch = fetcher; }
-                return { valid: !validation.hasErrors && !prepared.hasErrors, restoredValid, same, coverage, layerIds, network };
+                return api.MapScene.withRenderContext(async (renderContext: any) => {
+                    const started = performance.now(), mark = (phase: string) => console.info('[W19-native-timing]', phase, Math.round(performance.now() - started));
+                    mark('load-start');
+                    const scene = await api.MapScene.loadBundle(location.origin + '/tests/fixtures/w19/native-renderable.forge3d', { nativeRecipe: baseRecipe() });
+                    mark('loaded'); const validation = scene.validate(), prepared = await scene.prepare(); mark('prepared');
+                    const original = await scene.render({ renderContext }); mark('original-rendered');
+                    const layerIds = scene.recipe.value.layers.filter((l: any) => ['raster', 'vector'].includes(l.kind)).map((l: any) => l.layerId);
+                    const blob = await scene.saveBundle(); scene.dispose(); mark('saved');
+                    const fetcher = window.fetch; let network = 0; window.fetch = async (...args: any[]) => { if (String(args[0]).startsWith('blob:')) return fetcher(...args as [any]); network++; throw Error('offline native archive'); };
+                    let same = false, coverage = 0, restoredValid = false;
+                    try { const restored = await api.MapScene.loadBundle(blob); mark('restored'); restoredValid = !restored.validate().hasErrors; const output = await restored.render({ renderContext }); mark('restored-rendered'); same = original.frame.data.every((v: number, i: number) => v === output.frame.data[i]); coverage = output.metrics.coveragePixels; restored.dispose(); }
+                    finally { window.fetch = fetcher; }
+                    return { valid: !validation.hasErrors && !prepared.hasErrors, restoredValid, same, coverage, layerIds, network };
+                });
             });
             expect(r.valid).toBe(true); expect(r.restoredValid).toBe(true); expect(r.same).toBe(true); expect(r.coverage).toBeGreaterThan(500); expect(r.network).toBe(0);
             expect(r.layerIds).toEqual(nativeLayerIds);
         });
+        // Share device setup within each comparison; scenes and frame resources remain independent.
         // Keep each independent removal control within the same 30-second budget.
         for (const layerId of nativeLayerIds) test(`W19 ${label}: native-saver ${layerId} changes pixels`, async ({ page }) => {
             const r = await page.evaluate(async (removedId) => {
                 const { api, baseRecipe } = window.__w19;
-                const started = performance.now(), mark = (phase: string) => console.info('[W19-native-timing]', `${removedId}:${phase}`, Math.round(performance.now() - started));
-                mark('load-start');
-                const scene = await api.MapScene.loadBundle(location.origin + '/tests/fixtures/w19/native-renderable.forge3d', { nativeRecipe: baseRecipe() });
-                mark('loaded'); const original = await scene.render(); mark('original-rendered');
-                const recipe = scene.recipe.value, layers = recipe.layers.filter((l: any) => l.layerId !== removedId);
-                const candidate = new api.MapScene({ ...recipe, layers });
-                try {
-                    const output = await candidate.render(); mark('removed-rendered');
-                    return { removed: recipe.layers.length - layers.length, valid: !candidate.validate().hasErrors, coverage: original.metrics.coveragePixels,
-                        changed: original.frame.data.reduce((n: number, v: number, i: number) => n + Number(v !== output.frame.data[i]), 0) };
-                } finally { candidate.dispose(); scene.dispose(); }
+                return api.MapScene.withRenderContext(async (renderContext: any) => {
+                    const started = performance.now(), mark = (phase: string) => console.info('[W19-native-timing]', `${removedId}:${phase}`, Math.round(performance.now() - started));
+                    mark('load-start');
+                    const scene = await api.MapScene.loadBundle(location.origin + '/tests/fixtures/w19/native-renderable.forge3d', { nativeRecipe: baseRecipe() });
+                    mark('loaded'); const original = await scene.render({ renderContext }); mark('original-rendered');
+                    const recipe = scene.recipe.value, layers = recipe.layers.filter((l: any) => l.layerId !== removedId);
+                    const candidate = new api.MapScene({ ...recipe, layers });
+                    try {
+                        const output = await candidate.render({ renderContext }); mark('removed-rendered');
+                        return { removed: recipe.layers.length - layers.length, valid: !candidate.validate().hasErrors, coverage: original.metrics.coveragePixels,
+                            changed: original.frame.data.reduce((n: number, v: number, i: number) => n + Number(v !== output.frame.data[i]), 0) };
+                    } finally { candidate.dispose(); scene.dispose(); }
+                });
             }, layerId);
             expect(r.removed).toBe(1); expect(r.valid).toBe(true); expect(r.coverage).toBeGreaterThan(500); expect(r.changed).toBeGreaterThan(0);
         });
@@ -142,8 +152,7 @@ for (const dist of [false, true]) {
                 const abort = new AbortController(); let staged: FileSystemWritableFileStream | undefined, cancelled;
                 const wrapped = { createWritable: async () => { staged = await file.createWritable(); return { write: async (bytes: Uint8Array) => { await staged!.write(bytes); abort.abort(); }, close: () => staged!.close(), abort: (e: any) => staged!.abort(e) }; } };
                 try { await api.saveBundle(makeState(), { signal: abort.signal, sink: { kind: 'file-system', handle: wrapped } }); } catch (e: any) { cancelled = e.code; }
-                // Await the writer's abort before reading the committed file.
-                try { await staged?.abort(); } catch { /* already aborted */ }
+                // The API must finish rollback before callers read or remove the file.
                 const remaining = Array.from(new Uint8Array(await (await file.getFile()).arrayBuffer())); await directory.removeEntry(path);
                 return { quota, cancelled, remaining, phases: [...new Set(progress.map(p => p.phase))], bounded: progress.every(p => p.completed >= 0 && p.completed <= p.total), verify: progress.filter(p => p.phase === 'verify').map(p => p.completed) };
             });

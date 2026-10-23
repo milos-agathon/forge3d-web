@@ -5438,7 +5438,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w19_style_bundle.spec.ts",
-      "sha256": "eba5438d16dbaaccc4c9b433ec3d049b257b34124887e295ff84569ea537b9b6",
+      "sha256": "e20d872c4cee12f70e63e206825e8a3dc51ddac912d20908d2b71a06e91fa293",
       "declarations": [
         "W19 ${label}: supported styles draw covered geometry and every style layer changes pixels",
         "W19 ${label}: variant and visibility commits are atomic and bundles reproduce exact offline pixels",
@@ -6499,7 +6499,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
-      "sha256": "dd92f81fefabd1a46a9fe32dc5c4eb1a1ceed3a15caba6bf6c46d008876b3010",
+      "sha256": "b4c8fa94fa3236589f232202f95883deaaba9ed63daa5dd95cc1ad3f031a3e22",
       "declarations": [
         "short circuits unselected branches and bounds pathological inputs",
         "loads Blob and preserves layers, filters and metadata with defensive copies",
@@ -6516,6 +6516,7 @@
         "produces deterministic MapScene snapshots and keeps diagnostics without successful output claims",
         "rewrites plain glTF dependencies to embedded data and updates the packaged checksum",
         "cancels before reads and aborts a blocked output stream promptly",
+        "waits for the original filesystem rollback before reporting cancellation",
         "rejects duplicate local/central names and admits declared compressed data within explicit limits",
         "leaves active recipe and variant unchanged after candidate validation or cancellation failure",
         "prepares and round-trips fill/line styles with an unused glyph header without acquiring fonts",

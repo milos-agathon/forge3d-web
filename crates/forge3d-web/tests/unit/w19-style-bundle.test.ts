@@ -140,6 +140,33 @@ describe('W19 bundles, review registry and migration', () => {
         const abort = new AbortController(), stream = new WritableStream<Uint8Array>({ write() { abort.abort(); return new Promise(() => undefined); } });
         await expect(saveBundle(state(), { signal: abort.signal, sink: { kind: 'stream', stream } })).rejects.toMatchObject({ code: 'REQUEST_CANCELLED' });
     });
+    it('waits for the original filesystem rollback before reporting cancellation', async () => {
+        const controller = new AbortController();
+        let release!: () => void, started!: () => void;
+        const rollback = new Promise<void>(resolve => { release = resolve; });
+        const abortStarted = new Promise<void>(resolve => { started = resolve; });
+        const writer = new WritableStream<Uint8Array>({
+            abort() { started(); return rollback; },
+        }).getWriter();
+        void writer.closed.catch(() => undefined);
+        const handle = { createWritable: async () => ({
+            write: async (bytes: Uint8Array) => { await writer.write(bytes); controller.abort(); },
+            close: () => writer.close(),
+            abort: (reason: unknown) => writer.abort(reason),
+        }) } as unknown as FileSystemFileHandle;
+        let settled = false, failure: unknown;
+        const saving = saveBundle(state(), { signal: controller.signal, sink: { kind: 'file-system', handle } })
+            .catch(error => { failure = error; }).finally(() => { settled = true; });
+        try {
+            await abortStarted;
+            // Drain reactions while the real stream's asynchronous rollback stays blocked.
+            await new Promise<void>(resolve => setImmediate(resolve));
+            expect(settled).toBe(false);
+        } finally {
+            release(); await saving; writer.releaseLock();
+        }
+        expect(failure).toMatchObject({ code: 'REQUEST_CANCELLED' });
+    });
     it('rejects duplicate local/central names and admits declared compressed data within explicit limits', () => {
         const duplicate = zipSync({ abc: new Uint8Array([1]), def: new Uint8Array([2]) }, { level: 0 }), view = new DataView(duplicate.buffer); let records = 0;
         for (let i = 0; i < duplicate.length - 46; i++) if (view.getUint32(i, true) === 0x02014b50) { if (records++ === 1) { duplicate.set(new TextEncoder().encode('abc'), i + 46); const local = view.getUint32(i + 42, true); duplicate.set(new TextEncoder().encode('abc'), local + 30); break; } }
