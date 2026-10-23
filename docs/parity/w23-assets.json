@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "3d59b395cce3c685e4e9dfa50fd8ceb4f6b2b4951d89d8b5f600064105582526",
+      "sha256": "e9bcdb116820f1a63f44ccdd7d8b749ba53985dd6217bf3899910ef695def6c4",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -2712,8 +2712,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w19_style_bundle.spec.ts.txt",
-      "sha256": "eba5438d16dbaaccc4c9b433ec3d049b257b34124887e295ff84569ea537b9b6",
-      "bytes": 25243,
+      "sha256": "e20d872c4cee12f70e63e206825e8a3dc51ddac912d20908d2b71a06e91fa293",
+      "bytes": 25982,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2723,7 +2723,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w19_style_bundle.spec.ts",
-            "sha256": "eba5438d16dbaaccc4c9b433ec3d049b257b34124887e295ff84569ea537b9b6",
+            "sha256": "e20d872c4cee12f70e63e206825e8a3dc51ddac912d20908d2b71a06e91fa293",
             "hashMode": "utf8-lf"
           }
         ],
@@ -3937,8 +3937,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w19-style-bundle.test.ts.txt",
-      "sha256": "dd92f81fefabd1a46a9fe32dc5c4eb1a1ceed3a15caba6bf6c46d008876b3010",
-      "bytes": 30928,
+      "sha256": "b4c8fa94fa3236589f232202f95883deaaba9ed63daa5dd95cc1ad3f031a3e22",
+      "bytes": 32448,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -3948,7 +3948,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
-            "sha256": "dd92f81fefabd1a46a9fe32dc5c4eb1a1ceed3a15caba6bf6c46d008876b3010",
+            "sha256": "b4c8fa94fa3236589f232202f95883deaaba9ed63daa5dd95cc1ad3f031a3e22",
             "hashMode": "utf8-lf"
           }
         ],

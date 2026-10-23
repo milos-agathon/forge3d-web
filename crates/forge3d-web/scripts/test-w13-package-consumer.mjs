@@ -1,3 +1,5 @@
+import { installedFixtureHandler } from "./fixture-http.mjs";
+import { attachInstalledSuite } from "./installed-artifact.mjs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
@@ -24,8 +26,7 @@ import { chromium } from "@playwright/test";
 import { resolveCommandInvocation } from "./command-executable.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const temp = mkdtempSync(join(tmpdir(), "forge3d-w13-consumer-")),
-  consumer = join(temp, "consumer"),
-  pack = join(temp, "pack");
+  consumer = join(temp, "consumer");
 let browser, server;
 function run(command, args, cwd = root) {
   const invocation = resolveCommandInvocation(command, args),
@@ -42,26 +43,8 @@ function assert(ok, message) {
   if (!ok) throw Error(message);
 }
 try {
-  run("npm", ["run", "build:ts"]);
-  run("npm", ["run", "prepare-dist"]);
+  const { metadata, tarball, packageSha256: sha256 } = attachInstalledSuite({ packageRoot: root, consumer, suite: "w13" });
   run("npm", ["run", "test:api"]);
-  mkdirSync(pack);
-  mkdirSync(consumer);
-  const packed = JSON.parse(
-    run("npm", ["pack", "--json", "--pack-destination", pack]),
-  );
-  assert(packed.length === 1, "Exactly one tarball expected");
-  const tarball = join(pack, packed[0].filename),
-    sha256 = createHash("sha256").update(readFileSync(tarball)).digest("hex");
-  writeFileSync(
-    join(consumer, "package.json"),
-    JSON.stringify({ private: true, type: "module" }),
-  );
-  run(
-    "npm",
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball],
-    consumer,
-  );
   const installed = join(consumer, "node_modules", "@forge3d", "web");
   for (const file of [
     "dist/typography.js",
@@ -119,40 +102,7 @@ try {
   );
   const csp =
     "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'self'; style-src 'self'; img-src 'self' blob:; object-src 'none'";
-  server = createServer((req, res) => {
-    try {
-      const path = resolve(
-          consumer,
-          "." +
-            decodeURIComponent(new URL(req.url, "http://localhost").pathname),
-        ),
-        rel = relative(consumer, path);
-      if (rel.startsWith("..") || isAbsolute(rel))
-        throw Error("Path traversal");
-      const file = statSync(path).isDirectory()
-          ? join(path, "index.html")
-          : path,
-        data = readFileSync(file),
-        mime =
-          {
-            ".html": "text/html",
-            ".mjs": "text/javascript",
-            ".js": "text/javascript",
-            ".wasm": "application/wasm",
-            ".json": "application/json",
-            ".ttf": "font/ttf",
-          }[extname(file)] ?? "application/octet-stream";
-      res.writeHead(200, {
-        "content-type": mime,
-        "content-security-policy": csp,
-        "cache-control": "no-store",
-      });
-      res.end(data);
-    } catch {
-      res.writeHead(404);
-      res.end("Missing");
-    }
-  });
+  server = createServer(installedFixtureHandler({route:pathname=>({root:consumer,file:pathname.endsWith("/") ? "."+pathname+"index.html" : "."+pathname}),headers:{"content-security-policy":csp,"cache-control":"no-store"}}));
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
   browser = await chromium.launch({

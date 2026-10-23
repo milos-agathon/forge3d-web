@@ -20,7 +20,6 @@ jobs:
     # The full corpus and bounded live-download retries exceed 40m on slower runners.
     # Only the outer job budget changes; per-test deadlines and runtime budgets stay fixed.
     timeout-minutes: 60
-
     steps:
       - name: Check out the protected source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -98,9 +97,14 @@ jobs:
         working-directory: crates/forge3d-web
         run: npm run test:api
 
+      - name: Configure installed acceptance artifact
+        shell: pwsh
+        run: |
+          "FORGE3D_INSTALLED_ARTIFACT=$env:RUNNER_TEMP/forge3d-acceptance/manifest.json" >> $env:GITHUB_ENV
+
       - name: Build browser package
         working-directory: crates/forge3d-web
-        run: npm run build
+        run: npm run prepare:acceptance
 
       - name: Upload shared browser package build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -321,6 +325,7 @@ jobs:
           npm run test:browser:chromium -- --grep "reports browser WebGPU diagnostics"
 
       - name: Probe W19 native migration in Chromium before the full corpus
+        id: w19-source-probe
         if: matrix.shard == 1
         working-directory: crates/forge3d-web
         env:
@@ -345,7 +350,7 @@ jobs:
         run: npm run test:browser:chromium -- --shard=${{ matrix.shard }}/4 --workers=1
 
       - name: Upload Chromium preflight diagnostics
-        if: always() && (steps.chromium-preflight.outcome == 'success' || steps.chromium-preflight.outcome == 'failure' || steps.w23-source-probe.outcome == 'failure')
+        if: always() && (steps.chromium-preflight.outcome == 'success' || steps.chromium-preflight.outcome == 'failure' || steps.w23-source-probe.outcome == 'failure' || steps.w19-source-probe.outcome == 'failure')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: forge3d-web-chromium-preflight-diagnostics-${{ matrix.shard }}
@@ -412,6 +417,7 @@ jobs:
           npm run test:browser:firefox-preflight -- --grep "reports browser WebGPU diagnostics"
 
       - name: Probe W19 native migration in Firefox before the full corpus
+        id: w19-source-probe
         if: matrix.shard == 1
         working-directory: crates/forge3d-web
         env:
@@ -437,7 +443,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Firefox preflight diagnostics
-        if: always() && (steps.firefox-preflight.outcome == 'success' || steps.firefox-preflight.outcome == 'failure')
+        if: always() && (steps.firefox-preflight.outcome == 'success' || steps.firefox-preflight.outcome == 'failure' || steps.w19-source-probe.outcome == 'failure')
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: forge3d-web-firefox-preflight-diagnostics-${{ matrix.shard }}

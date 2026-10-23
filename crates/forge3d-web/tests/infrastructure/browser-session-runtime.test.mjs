@@ -168,3 +168,35 @@ function firefoxRequest() {
       classification: "required", version: "147.0", executable: "/Applications/Firefox.app/Contents/MacOS/firefox" }] },
   };
 }
+
+import { DriverLifetime } from "../../scripts/driver-lifetime.mjs";
+for (const phase of ["spawn", "registry", "readiness", "session", "close"]) {
+  test(`driver lifetime preserves acquisition and cleanup failures at ${phase}`, async () => {
+    const calls = [];
+    const primary = new Error(phase);
+    const cleanup = new Error("stop failed");
+    const life = new DriverLifetime("registry", {
+      registerProcess() { calls.push("register"); if (phase === "registry") throw primary; },
+      stopChild: async () => { calls.push("stop"); throw cleanup; },
+      markProcessStopped() { calls.push("mark"); },
+    });
+    try {
+      if (phase === "spawn") throw primary;
+      life.process({pid:42}, "driver");
+      if (phase === "readiness" || phase === "session") throw primary;
+      life.session({ delete: async () => { calls.push("delete"); throw primary; } });
+      await life.close();
+    } catch (error) {
+      if (phase === "spawn") await assert.rejects(() => life.fail(error), e => e === primary);
+      else await assert.rejects(() => life.fail(error), e => e instanceof AggregateError && e.errors[0] === error && e.errors[1].errors.includes(cleanup));
+    }
+    assert.deepEqual(calls, phase === "spawn" ? [] : phase === "close" ? ["register","delete","stop"] : ["register","stop"]);
+  });
+}
+test("driver close is idempotent and publishes only observed cleanup", async () => {
+  const calls=[];
+  const life=new DriverLifetime("registry", {registerProcess(){calls.push("register");}, stopChild:async()=>{calls.push("absent");},markProcessStopped(){calls.push("mark");}});
+  life.process({pid:42},"driver"); life.session({delete:async()=>{calls.push("delete");}});
+  await Promise.all([life.close(),life.close()]);
+  assert.deepEqual(calls,["register","delete","absent","mark"]);
+});

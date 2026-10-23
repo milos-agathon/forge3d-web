@@ -7,17 +7,18 @@ import {
 import { dirname, resolve } from "node:path";
 
 export async function stopChild(child) {
-  if (!child || child.exitCode !== null) return;
-  const exited = new Promise((resolve) => child.once("exit", resolve));
+  if (!child || !Number.isInteger(child.pid)) return; // spawn failed before acquisition
+  const absent = () => {
+    try { process.kill(child.pid, 0); return false; }
+    catch (error) { if (error.code === "ESRCH") return true; throw error; }
+  };
+  if (absent()) return;
   child.kill("SIGTERM");
-  const graceful = await Promise.race([
-    exited.then(() => true),
-    delay(10_000).then(() => false),
-  ]);
-  if (!graceful) {
-    child.kill("SIGKILL");
-    await exited;
-  }
+  for (let i = 0; i < 100 && !absent(); i++) await delay(100);
+  if (absent()) return;
+  child.kill("SIGKILL");
+  for (let i = 0; i < 50 && !absent(); i++) await delay(100);
+  if (!absent()) throw new Error("INFRA_ERROR DRIVER_PROCESS_ABSENCE_UNPROVEN");
 }
 
 function delay(milliseconds) {

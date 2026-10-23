@@ -1,3 +1,5 @@
+import { installedFixtureHandler } from "./fixture-http.mjs";
+import { attachInstalledSuite } from "./installed-artifact.mjs";
 // W12's installed-tarball acceptance. The full release gate remains separate.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
@@ -43,22 +45,14 @@ function run(command,args,cwd=root,capture=false){
  if(result.status!==0)throw new Error(`${command} ${args.join(" ")} exited ${result.status}`);
  return result.stdout??"";
 }
-const status=run("git",["status","--porcelain=v1","--untracked-files=all"],resolve(root,"../.."),true).trim();
-assert.equal(status,"","Installed-tarball evidence requires a clean committed worktree");
 const revision=run("git",["rev-parse","HEAD"],root,true).trim();
 const temporary=mkdtempSync(join(tmpdir(),"forge3d-w12-consumer-"));
 let browser,server;
 try{
- run("npm",["run","build"]);
+ const consumer=join(temporary,"consumer");
+ const {metadata,tarball,packageSha256:digest}=attachInstalledSuite({packageRoot:root,consumer,suite:"w12"});
  run("npm",["run","test:api"]);
  run(process.execPath,["tests/api/package-contract.mjs"]);
- const pack=join(temporary,"pack");mkdirSync(pack);
- const [metadata]=JSON.parse(run("npm",["pack","--json","--pack-destination",pack],root,true));
- const tarball=join(pack,metadata.filename);
- const digest=createHash("sha256").update(readFileSync(tarball)).digest("hex");
- const consumer=join(temporary,"consumer");mkdirSync(consumer);
- writeFileSync(join(consumer,"package.json"),JSON.stringify({name:"w12-consumer",private:true,type:"module"}));
- run("npm",["install","--no-save","--ignore-scripts",tarball],consumer);
  run(process.execPath,["--input-type=module","--eval",'import {VectorLayers,VectorLayer,VectorPicker,pickVectorTerrain} from "@forge3d/web"; if ([VectorLayers,VectorLayer,VectorPicker,pickVectorTerrain].some(x=>typeof x!=="function")) throw new Error("missing vector exports");'],consumer);
  const examples=join(consumer,"examples");mkdirSync(examples);
  for(const name of ["test-w12-vector.html","test-w12-camera.html","luxembourg-vector.html","vector-picking.html","w12-worker.js"]){
@@ -67,13 +61,7 @@ try{
   assert.ok(!built.includes("src-ts/"),`${name} still imports source`);
   writeFileSync(join(examples,name),built);
  }
- server=createServer((request,response)=>{
-  let path=new URL(request.url??"/","http://localhost").pathname;
-  if(path.startsWith("/assets/"))path=`/node_modules/@forge3d/web${path}`;
-  const file=resolve(consumer,`.${decodeURIComponent(path)}`),rel=relative(consumer,file);
-  if(isAbsolute(rel)||rel===".."||rel.startsWith(`..${process.platform==="win32"?"\\":"/"}`)){response.writeHead(403).end();return;}
-  try{const bytes=readFileSync(file);response.writeHead(200,{"content-type":({".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".wasm":"application/wasm",".json":"application/json"})[extname(file)]??"application/octet-stream","cache-control":"no-store"});response.end(bytes);}catch{response.writeHead(404).end();}
- });
+ server=createServer(installedFixtureHandler({route:pathname=>({root:consumer,file:pathname.startsWith("/assets/")?"./node_modules/@forge3d/web"+pathname:"."+pathname}),headers:{"cache-control":"no-store"}}));
  await new Promise(r=>server.listen(0,"127.0.0.1",r));
  const origin=`http://127.0.0.1:${server.address().port}`;
  browser=await chromium.launch({headless:true,...(browserProfile.playwrightChannel?{channel:browserProfile.playwrightChannel}:{}),args:browserProfile.launchArguments});

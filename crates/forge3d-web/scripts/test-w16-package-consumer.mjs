@@ -1,3 +1,5 @@
+import { installedFixtureHandler } from "./fixture-http.mjs";
+import { attachInstalledSuite } from "./installed-artifact.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
@@ -25,8 +27,7 @@ import { resolveCommandInvocation } from "./command-executable.mjs";
 import { captureW16Soak, validateW16HostState } from './w16-host-state.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const temp = mkdtempSync(join(tmpdir(), "forge3d-w16-consumer-")),
-  consumer = join(temp, "consumer"),
-  pack = join(temp, "pack");
+  consumer = join(temp, "consumer");
 let browser, server;
 function run(command, args, cwd = root) {
   const call = resolveCommandInvocation(command, args),
@@ -40,25 +41,8 @@ function run(command, args, cwd = root) {
   return r.stdout;
 }
 try {
-  run("npm", ["run", "build:ts"]);
-  run("npm", ["run", "prepare-dist"]);
+  const { metadata, tarball, packageSha256: sha256 } = attachInstalledSuite({ packageRoot: root, consumer, suite: "w16" });
   run("npm", ["run", "test:api"]);
-  mkdirSync(consumer);
-  mkdirSync(pack);
-  const metadata = JSON.parse(
-      run("npm", ["pack", "--json", "--pack-destination", pack]),
-    )[0],
-    tarball = join(pack, metadata.filename),
-    sha256 = createHash("sha256").update(readFileSync(tarball)).digest("hex");
-  writeFileSync(
-    join(consumer, "package.json"),
-    JSON.stringify({ private: true, type: "module" }),
-  );
-  run(
-    "npm",
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball],
-    consumer,
-  );
   const installed = join(consumer, "node_modules/@forge3d/web");
   for (const path of [
     "types/pointcloud.d.ts",
@@ -117,57 +101,7 @@ const view:PointView={position:[0,0,10],viewportHeight:1080,fovY:Math.PI/4};cons
         ),
     );
   // Installed modules only. Real COPC range support is part of the consumer contract.
-  server = createServer((req, res) => {
-    try {
-      const path = resolve(
-          consumer,
-          "." + new URL(req.url, "http://localhost").pathname,
-        ),
-        rel = relative(consumer, path);
-      if (rel.startsWith("..") || isAbsolute(rel))
-        throw Error("outside consumer");
-      const bytes = readFileSync(path),
-        headers = {
-          "content-type":
-            {
-              ".html": "text/html",
-              ".js": "text/javascript",
-              ".json": "application/json",
-              ".wasm": "application/wasm",
-            }[extname(path)] ?? "application/octet-stream",
-          "content-security-policy":
-            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:",
-          "accept-ranges": "bytes",
-        };
-      if (req.headers.range) {
-        const match = /^bytes=(\d+)-(\d+)$/u.exec(req.headers.range);
-        if (!match) {
-          res.writeHead(416);
-          res.end();
-          return;
-        }
-        const first = Number(match[1]),
-          last = Math.min(Number(match[2]), bytes.length - 1);
-        if (first > last) {
-          res.writeHead(416, { "content-range": `bytes */${bytes.length}` });
-          res.end();
-          return;
-        }
-        res.writeHead(206, {
-          ...headers,
-          "content-range": `bytes ${first}-${last}/${bytes.length}`,
-          "content-length": last - first + 1,
-        });
-        res.end(bytes.subarray(first, last + 1));
-      } else {
-        res.writeHead(200, { ...headers, "content-length": bytes.length });
-        res.end(bytes);
-      }
-    } catch {
-      res.writeHead(404);
-      res.end("Missing");
-    }
-  });
+  server = createServer(installedFixtureHandler({route:()=>({root:consumer}),headers:{"content-security-policy":"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"}}));
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const origin = `http://127.0.0.1:${server.address().port}`;
   browser = await chromium.launch({

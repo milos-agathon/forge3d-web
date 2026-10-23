@@ -1,3 +1,5 @@
+import { installedFixtureHandler } from "./fixture-http.mjs";
+import { attachInstalledSuite } from "./installed-artifact.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
@@ -26,8 +28,7 @@ import { chromium } from "@playwright/test";
 import { resolveCommandInvocation } from "./command-executable.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const temp = mkdtempSync(join(tmpdir(), "forge3d-w14-consumer-")),
-  consumer = join(temp, "consumer"),
-  pack = join(temp, "pack");
+  consumer = join(temp, "consumer");
 let browser, server;
 const projScriptRequests = [];
 let hostileModuleExecutions = 0;
@@ -43,25 +44,8 @@ function run(command, args, cwd = root) {
   return r.stdout;
 }
 try {
-  run("npm", ["run", "build:ts"]);
-  run("npm", ["run", "prepare-dist"]);
+  const { metadata, tarball, packageSha256: sha256 } = attachInstalledSuite({ packageRoot: root, consumer, suite: "w14" });
   run("npm", ["run", "test:api"]);
-  mkdirSync(consumer);
-  mkdirSync(pack);
-  const metadata = JSON.parse(
-    run("npm", ["pack", "--json", "--pack-destination", pack]),
-  )[0];
-  const tarball = join(pack, metadata.filename),
-    sha256 = createHash("sha256").update(readFileSync(tarball)).digest("hex");
-  writeFileSync(
-    join(consumer, "package.json"),
-    JSON.stringify({ private: true, type: "module" }),
-  );
-  run(
-    "npm",
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund", tarball],
-    consumer,
-  );
   const installed = join(consumer, "node_modules/@forge3d/web");
   assert(!statSync(join(installed, "dist/crs-worker.js")).isDirectory());
   for (const path of [
@@ -137,49 +121,20 @@ async function use(runtime:Forge3DRuntime){const crs=await CrsTransformer.create
   );
   const csp =
     "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:";
-  server = createServer((req, res) => {
-    try {
-      const pathname = decodeURIComponent(
-        new URL(req.url, "http://localhost").pathname,
-      );
-      if (pathname === '/w14-module-executed') {
-        hostileModuleExecutions++;
-        res.end('executed');
-        return;
+  const serveInstalled=installedFixtureHandler({
+    route:pathname=>({root:consumer,file:pathname.endsWith("/") ? "."+pathname+"index.html" : "."+pathname}),
+    headers:{"content-security-policy":csp,"cache-control":"public, max-age=31536000, immutable"},
+    transform(data,path,request) {
+      if(path.replaceAll("\\","/").endsWith('/assets/proj/proj-emscripten.js') && request.headers['sec-fetch-dest']==='script') {
+        projScriptRequests.push(new URL(request.url,"http://localhost").pathname);
+        return Buffer.concat([Buffer.from("fetch('/w14-module-executed');throw Error('hostile module executed');\n"),data]);
       }
-      let path = resolve(consumer, "." + pathname);
-      const rel = relative(consumer, path);
-      if (rel.startsWith("..") || isAbsolute(rel))
-        throw Error("outside consumer");
-      if (statSync(path).isDirectory()) path = join(path, "index.html");
-      let data = readFileSync(path);
-      // Byte fetches get the pinned reference. Any executable import gets a
-      // hostile top-level response, reproducing the former second-fetch flaw.
-      if (pathname.endsWith('/assets/proj/proj-emscripten.js') && req.headers['sec-fetch-dest'] === 'script') {
-        projScriptRequests.push(pathname);
-        data = Buffer.concat([Buffer.from("fetch('/w14-module-executed');throw Error('hostile module executed');\n"), data]);
-      }
-      const mime =
-          {
-            ".html": "text/html",
-            ".js": "text/javascript",
-            ".mjs": "text/javascript",
-            ".json": "application/json",
-            ".wasm": "application/wasm",
-            ".geojson": "application/geo+json",
-          }[extname(path)] ?? "application/octet-stream";
-      // Immutable module URLs also allow a fresh worker when the network is offline.
-      res.writeHead(200, {
-        "content-type": mime,
-        "content-length": data.length,
-        "content-security-policy": csp,
-        "cache-control": "public, max-age=31536000, immutable",
-      });
-      res.end(data);
-    } catch {
-      res.writeHead(404);
-      res.end("Missing");
-    }
+      return data;
+    },
+  });
+  server=createServer((req,res)=>{
+    if(req.url==='/w14-module-executed'){hostileModuleExecutions++;res.end('executed');return;}
+    serveInstalled(req,res);
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const origin = `http://127.0.0.1:${server.address().port}`;

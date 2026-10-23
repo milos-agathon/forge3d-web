@@ -304,3 +304,15 @@ function restoreEnvironment(name, value) {
   if (value === undefined) delete process.env[name];
   else process.env[name] = value;
 }
+
+test("Safari registry failure retains primary and failed cleanup", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "safari-registry-"));
+  try {
+    const request=stableRequest(directory);
+    request.processRegistryPath=directory; // writing a file over a directory fails after acquisition
+    const stable=stableSession(92001);
+    stable.close=async()=>{throw new Error("forced cleanup failure");};
+    await assert.rejects(()=>openProductionSession(request,dependencies(stable)), error =>
+      error instanceof AggregateError && error.errors.length===2 && error.errors[1].errors[0].message==="forced cleanup failure");
+  } finally { rmSync(directory,{recursive:true,force:true}); }
+});

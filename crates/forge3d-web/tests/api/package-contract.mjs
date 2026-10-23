@@ -101,7 +101,7 @@ for (const expected of [
   "runViewerInteractionObservation",
   "interactionObservation",
   "validateBrowserEvidence(evidence)",
-  "--porcelain=v1",
+  "attachInstalledSuite",
   "FORGE3D_EVIDENCE_DIR",
   "copyFileSync(tarball",
 ]) {

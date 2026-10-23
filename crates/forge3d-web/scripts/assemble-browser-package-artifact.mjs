@@ -123,6 +123,7 @@ export function assembleBrowserPackageArtifact({
     "ffx04-lifecycle-proof-validator.mjs",
     "ffx04-lanes.mjs",
     "browser-process-registry.mjs",
+    "driver-lifetime.mjs",
     "webdriver-client.mjs",
     "cleanup-browser-hardware.mjs",
   ]) {
