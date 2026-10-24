@@ -1322,18 +1322,9 @@ pub(super) fn scene_footprint(
         selection.map_or(0, |s| s.transient_bytes),
     ))
 }
-struct IblReadbackRegion {
-    offset: u64,
-    row_bytes: usize,
-    padded_row_bytes: usize,
-    rows: usize,
-    layers: usize,
-}
-
-struct IblReadbackJob {
-    buffer: wgpu::Buffer,
-    regions: Vec<IblReadbackRegion>,
-}
+use super::texture_readback::{
+    Job as IblReadbackJob, Region as ReadbackRegion, Request as ReadbackRequest,
+};
 
 /// The split-sum BRDF LUT depends only on its size and sample count, yet it
 /// is the dominant precompute cost (512^2 texels x 1024 samples). IBL builds
@@ -1846,152 +1837,26 @@ fn run_ibl_compute(
     }
 
     if readback {
-        let copy_cube_mip = |encoder: &mut wgpu::CommandEncoder,
-                             jobs: &mut Vec<IblReadbackJob>,
-                             texture: &wgpu::Texture,
-                             mip: u32,
-                             face_size: u32,
-                             label: &str| {
-            let row_bytes = face_size * RGBA16F_TEXEL_BYTES as u32;
-            let padded_row = aligned_row_bytes(row_bytes);
-            let buffer_size = u64::from(padded_row) * u64::from(face_size) * 6;
-            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size: buffer_size,
-                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            });
-            encoder.copy_texture_to_buffer(
-                wgpu::TexelCopyTextureInfo {
-                    texture,
-                    mip_level: mip,
-                    origin: wgpu::Origin3d::ZERO,
-                    aspect: wgpu::TextureAspect::All,
-                },
-                wgpu::TexelCopyBufferInfo {
-                    buffer: &buffer,
-                    layout: wgpu::TexelCopyBufferLayout {
-                        offset: 0,
-                        bytes_per_row: Some(padded_row),
-                        rows_per_image: Some(face_size),
-                    },
-                },
-                wgpu::Extent3d {
-                    width: face_size,
-                    height: face_size,
-                    depth_or_array_layers: 6,
-                },
-            );
-            jobs.push(IblReadbackJob {
-                buffer,
-                regions: vec![IblReadbackRegion {
-                    offset: 0,
-                    row_bytes: row_bytes as usize,
-                    padded_row_bytes: padded_row as usize,
-                    rows: face_size as usize,
-                    layers: 6,
-                }],
-            });
-        };
-        copy_cube_mip(
-            &mut encoder,
-            &mut jobs,
-            &irradiance,
-            0,
-            spec.irradiance,
-            "forge3d-ibl-irradiance-readback",
-        );
-        let mut specular_offset = 0u64;
-        let mut specular_regions = Vec::with_capacity(spec.specular_mips as usize);
-        let mut specular_total = 0u64;
-        for mip in 0..spec.specular_mips {
-            let size = mip_size(spec.specular, mip);
-            let row_bytes = size * RGBA16F_TEXEL_BYTES as u32;
-            let padded_row = aligned_row_bytes(row_bytes);
-            specular_regions.push(IblReadbackRegion {
-                offset: specular_offset,
-                row_bytes: row_bytes as usize,
-                padded_row_bytes: padded_row as usize,
-                rows: size as usize,
-                layers: 6,
-            });
-            specular_offset += u64::from(padded_row) * u64::from(size) * 6;
-            specular_total = specular_offset;
+        for (texture, size, mips, layers) in [
+            (&irradiance, spec.irradiance, 1, 6),
+            (&specular, spec.specular, spec.specular_mips, 6),
+            (&brdf_lut, spec.brdf_lut, 1, 1),
+        ] {
+            let requests: Vec<_> = (0..mips)
+                .map(|mip| {
+                    let edge = mip_size(size, mip);
+                    let mut region = ReadbackRegion::image(
+                        edge,
+                        edge,
+                        mip,
+                        forge3d_core::readback::ReadbackFormat::Rgba16Float,
+                    );
+                    region.extent.depth_or_array_layers = layers;
+                    ReadbackRequest { texture, region }
+                })
+                .collect();
+            jobs.push(IblReadbackJob::encode(context, &mut encoder, &requests)?);
         }
-        let specular_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("forge3d-ibl-specular-readback"),
-            size: specular_total,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        for (mip, region) in specular_regions.iter().enumerate() {
-            let size = mip_size(spec.specular, mip as u32);
-            encoder.copy_texture_to_buffer(
-                wgpu::TexelCopyTextureInfo {
-                    texture: &specular,
-                    mip_level: mip as u32,
-                    origin: wgpu::Origin3d::ZERO,
-                    aspect: wgpu::TextureAspect::All,
-                },
-                wgpu::TexelCopyBufferInfo {
-                    buffer: &specular_buffer,
-                    layout: wgpu::TexelCopyBufferLayout {
-                        offset: region.offset,
-                        bytes_per_row: Some(region.padded_row_bytes as u32),
-                        rows_per_image: Some(size),
-                    },
-                },
-                wgpu::Extent3d {
-                    width: size,
-                    height: size,
-                    depth_or_array_layers: 6,
-                },
-            );
-        }
-        jobs.push(IblReadbackJob {
-            buffer: specular_buffer,
-            regions: specular_regions,
-        });
-        let lut_row = spec.brdf_lut * RGBA16F_TEXEL_BYTES as u32;
-        let lut_padded = aligned_row_bytes(lut_row);
-        let lut_size = u64::from(lut_padded) * u64::from(spec.brdf_lut);
-        let lut_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("forge3d-ibl-lut-readback"),
-            size: lut_size,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        encoder.copy_texture_to_buffer(
-            wgpu::TexelCopyTextureInfo {
-                texture: &brdf_lut,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            wgpu::TexelCopyBufferInfo {
-                buffer: &lut_buffer,
-                layout: wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(lut_padded),
-                    rows_per_image: Some(spec.brdf_lut),
-                },
-            },
-            wgpu::Extent3d {
-                width: spec.brdf_lut,
-                height: spec.brdf_lut,
-                depth_or_array_layers: 1,
-            },
-        );
-        jobs.push(IblReadbackJob {
-            buffer: lut_buffer,
-            regions: vec![IblReadbackRegion {
-                offset: 0,
-                row_bytes: lut_row as usize,
-                padded_row_bytes: lut_padded as usize,
-                rows: spec.brdf_lut as usize,
-                layers: 1,
-            }],
-        });
     }
     queue.submit(std::iter::once(encoder.finish()));
 
@@ -2001,23 +1866,6 @@ fn run_ibl_compute(
         brdf_lut,
         jobs,
     })
-}
-
-fn strip_readback(mapped: &[u8], job: &IblReadbackJob) -> Vec<u8> {
-    let mut out = Vec::new();
-    for region in &job.regions {
-        let tight = region.row_bytes * region.rows * region.layers;
-        out.reserve(tight);
-        for layer in 0..region.layers {
-            for row in 0..region.rows {
-                let start = region.offset as usize
-                    + layer * region.padded_row_bytes * region.rows
-                    + row * region.padded_row_bytes;
-                out.extend_from_slice(&mapped[start..start + region.row_bytes]);
-            }
-        }
-    }
-    out
 }
 
 pub(super) fn build_ibl_resources(
@@ -2372,16 +2220,8 @@ pub(super) async fn precompute_ibl_runtime(
     };
     let mut payloads = Vec::with_capacity(computed.jobs.len());
     for job in &computed.jobs {
-        let size = job
-            .regions
-            .iter()
-            .map(|region| {
-                region.offset + (region.padded_row_bytes * region.rows * region.layers) as u64
-            })
-            .max()
-            .unwrap_or(0);
-        match super::readback::map_readback_buffer(&context, &job.buffer, size).await {
-            Ok(mapped) => payloads.push(strip_readback(&mapped, job)),
+        match job.tight(&context).await {
+            Ok(payload) => payloads.push(payload),
             Err(error) => {
                 runtime.memory.release(IBL_TRANSIENT_LEDGER_KEY);
                 return Err(error);

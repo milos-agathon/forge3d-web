@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use super::gpu_completion::Completion;
 
 use forge3d_core::timing::{RenderStats, TimingSource};
 use wasm_bindgen::JsValue;
@@ -16,17 +16,10 @@ pub(super) struct GpuPassTiming {
     pub overlay_ms: f64,
 }
 
-#[derive(Debug, Default)]
-struct SlotState {
-    pending: bool,
-    ready: bool,
-    failed: bool,
-}
-
 struct TimestampSlot {
     resolve_buffer: wgpu::Buffer,
     map_buffer: wgpu::Buffer,
-    shared: Arc<Mutex<SlotState>>,
+    completion: Completion,
 }
 
 pub(super) struct TimestampRing {
@@ -58,11 +51,7 @@ impl TimestampRing {
                     usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
                     mapped_at_creation: false,
                 }),
-                shared: Arc::new(Mutex::new(SlotState {
-                    pending: false,
-                    ready: false,
-                    failed: false,
-                })),
+                completion: Completion::default(),
             })
             .collect();
         Self {
@@ -74,13 +63,7 @@ impl TimestampRing {
     }
 
     pub(super) fn acquire(&mut self) -> Option<usize> {
-        self.slots.iter().position(|slot| {
-            !slot
-                .shared
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner())
-                .pending
-        })
+        self.slots.iter().position(|slot| slot.completion.idle())
     }
 
     pub(super) fn pass_writes(
@@ -97,14 +80,8 @@ impl TimestampRing {
     }
 
     pub(super) fn resolve_into(&mut self, encoder: &mut wgpu::CommandEncoder, slot: usize) {
-        {
-            let mut state = self.slots[slot]
-                .shared
-                .lock()
-                .unwrap_or_else(|poisoned| poisoned.into_inner());
-            state.pending = true;
-            state.ready = false;
-            state.failed = false;
+        if !self.slots[slot].completion.submit() {
+            return;
         }
         let first = slot as u32 * TIMESTAMP_QUERIES_PER_SLOT;
         encoder.resolve_query_set(
@@ -123,63 +100,32 @@ impl TimestampRing {
     }
 
     pub(super) fn begin_map(&mut self, slot: usize) {
-        let shared = self.slots[slot].shared.clone();
-        self.slots[slot]
-            .map_buffer
-            .slice(..QUERY_RESULT_BYTES)
-            .map_async(wgpu::MapMode::Read, move |result| {
-                let mut state = shared
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
-                state.ready = result.is_ok();
-                state.failed = result.is_err();
-            });
+        let slot = &self.slots[slot];
+        slot.completion
+            .begin_map(&slot.map_buffer, QUERY_RESULT_BYTES);
     }
-
     pub(super) fn harvest(&mut self) {
-        for index in 0..self.slots.len() {
-            let (ready, failed) = {
-                let state = self.slots[index]
-                    .shared
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
-                (state.ready, state.failed)
-            };
-            if !ready && !failed {
-                continue;
-            }
-            if ready {
-                let values = {
-                    let view = self.slots[index]
-                        .map_buffer
-                        .slice(..QUERY_RESULT_BYTES)
-                        .get_mapped_range();
-                    let mut values = [0u64; TIMESTAMP_QUERIES_PER_SLOT as usize];
-                    for (index, chunk) in view.chunks_exact(8).take(4).enumerate() {
-                        values[index] = u64::from_le_bytes(chunk.try_into().unwrap_or([0; 8]));
-                    }
-                    values
-                };
-                self.slots[index].map_buffer.unmap();
-                let world_ticks = values[1].saturating_sub(values[0]);
-                let overlay_ticks = values[3].saturating_sub(values[2]);
-                let world_ms = world_ticks as f64 * self.period_ns / 1_000_000.0;
-                let overlay_ms = overlay_ticks as f64 * self.period_ns / 1_000_000.0;
+        for slot in &self.slots {
+            if let Some(Ok(values)) =
+                slot.completion
+                    .harvest(&slot.map_buffer, QUERY_RESULT_BYTES, |view| {
+                        let mut values = [0u64; TIMESTAMP_QUERIES_PER_SLOT as usize];
+                        for (i, chunk) in view.chunks_exact(8).take(4).enumerate() {
+                            values[i] = u64::from_le_bytes(chunk.try_into().unwrap_or([0; 8]));
+                        }
+                        values
+                    })
+            {
+                let world_ms =
+                    values[1].saturating_sub(values[0]) as f64 * self.period_ns / 1_000_000.;
+                let overlay_ms =
+                    values[3].saturating_sub(values[2]) as f64 * self.period_ns / 1_000_000.;
                 if world_ms.is_finite() && overlay_ms.is_finite() {
                     self.latest = Some(GpuPassTiming {
-                        world_ms: world_ms.max(0.0),
-                        overlay_ms: overlay_ms.max(0.0),
+                        world_ms: world_ms.max(0.),
+                        overlay_ms: overlay_ms.max(0.),
                     });
                 }
-            }
-            {
-                let mut state = self.slots[index]
-                    .shared
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
-                state.pending = false;
-                state.ready = false;
-                state.failed = false;
             }
         }
     }

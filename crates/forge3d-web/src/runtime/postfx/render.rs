@@ -1,9 +1,6 @@
-use super::super::offline::gpu::{copy_texture, read_texture_mip};
+use super::super::offline::gpu::copy_texture;
 use super::*;
-use forge3d_core::{
-    offline::jitter::JitterSequence,
-    readback::{decode_float_rows, ReadbackFormat},
-};
+use forge3d_core::{offline::jitter::JitterSequence, readback::ReadbackFormat};
 use wgpu::BindingResource as B;
 
 /// Display frames advance history; screenshots reuse the latest unchanged frame.
@@ -373,16 +370,17 @@ pub(crate) async fn read_intermediate(
     } else {
         format
     };
-    let layout = format.layout(width, height).map_err(map_core_error)?;
-    runtime.memory.replace(
+    let data = super::super::texture_readback::read(
+        &context,
+        &mut runtime.memory,
         "postfx:readback",
-        MemoryCategory::Readback,
-        layout.buffer_size,
-    )?;
-    let result = read_texture_mip(&context, &target.texture, format, width, height, mip).await;
-    runtime.memory.release("postfx:readback");
-    let (bytes, layout) = result?;
-    let floats = decode_float_rows(&bytes, layout, format).map_err(map_core_error)?;
+        &[super::super::texture_readback::Request {
+            texture: &target.texture,
+            region: super::super::texture_readback::Region::image(width, height, mip, format),
+        }],
+    )
+    .await?;
+    let floats = data[0].floats()?;
     let value = js_sys::Object::new();
     super::super::device_health::set_js_property(&value, "width", &JsValue::from_f64(width as f64));
     super::super::device_health::set_js_property(

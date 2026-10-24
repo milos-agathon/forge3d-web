@@ -5226,12 +5226,13 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w08_vt.spec.ts",
-      "sha256": "f459c096bceb4f85a6611b339b336ea00d5e51993003b6d523f538abb7f274c6",
+      "sha256": "24de98dff74128b6b2c170a28a32657f02d246b4adde8bbf4e12e8f1edb4123a",
       "declarations": [
         "disabled VT is byte-identical to baseline with zero stats",
         "enabled VT changes albedo and reports residency/streaming stats",
         "residency budget is enforced under camera motion (evictions)",
         "shader feedback requests land without blocking and count each page once",
+        "VT feedback retries after a rejected map without stalling frames",
         "a normal-family commit is rejected with vt_unsupported_family",
         "native vt-on/vt-off golden parity (SSIM >= 0.98)",
         "TS validateTerrainVtSupport matches the wasm free fn",
@@ -5311,7 +5312,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
-      "sha256": "968cae780a802f1fc1806e9428255985ac73abd3efae6964ef9c6f5ba5d921f3",
+      "sha256": "89c3b45b9f95729573a9f18f26f34c759bd745f5d39b4f632720405c06548b9b",
       "declarations": [
         "W12 visible point/AA line/polygon pixels have exact stable pick IDs and CPU/GPU parity",
         "W12 WBOIT is order independent and dual-source fallback is observable",
@@ -5336,7 +5337,8 @@
         "M6 2000 selected IDs with recomputed 32px outline/glow cost at most twice the unselected frame and exceed old cap",
         "M7 point picking uses at most three padded rows at 1920x1080 and clean picks do not render",
         "M8 selection hover and time commits create no pipelines or vertex buffers",
-        "M8 Luxembourg selection commits in less than 50ms without geometry or pipeline creation"
+        "M8 Luxembourg selection commits in less than 50ms without geometry or pipeline creation",
+        "bounded readback map rejection releases staging and permits retry"
       ]
     },
     {

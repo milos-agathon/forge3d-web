@@ -12,7 +12,7 @@
 //! buffer afterwards; `map_async` runs without blocking and the completed
 //! readback feeds `apply_feedback` on a later frame.
 
-use std::sync::{Arc, Mutex};
+use super::gpu_completion::Completion;
 
 use forge3d_core::terrain_vt::{
     FeedbackEntry, TerrainVtSettings, VtLayerFamily, VtRuntimeState, VtSourceRegistry, VtStats,
@@ -47,14 +47,6 @@ struct VtFeedbackEntryGpu {
     /// untouched slot reads `0` (and `0xFFFFFFFF` before the first clear);
     /// `decode_feedback` drops both.
     frame_number: u32,
-}
-
-#[derive(Debug, Default)]
-enum FeedbackMapState {
-    #[default]
-    Idle,
-    /// The map callback completed; the staging buffer can be read.
-    Mapped,
 }
 
 /// Sub-millisecond clock for upload timing (`performance.now` in browsers,
@@ -117,8 +109,7 @@ pub(super) struct TerrainVtState {
     pub feedback_buffer: wgpu::Buffer,
     feedback_staging: wgpu::Buffer,
     feedback_bytes: u64,
-    map_state: Arc<Mutex<FeedbackMapState>>,
-    map_pending: bool,
+    completion: Completion,
     /// Owned GPU bytes (ledger `terrain:vt`).
     gpu_bytes: u64,
 }
@@ -270,8 +261,7 @@ impl TerrainVtState {
             feedback_buffer,
             feedback_staging,
             feedback_bytes,
-            map_state: Arc::new(Mutex::new(FeedbackMapState::Idle)),
-            map_pending: false,
+            completion: Completion::default(),
             gpu_bytes,
         })
     }
@@ -425,7 +415,7 @@ impl TerrainVtState {
     /// render pass. Skipped while a map is in flight — the newest completed
     /// copy always wins.
     pub(super) fn encode_frame_end(&self, encoder: &mut wgpu::CommandEncoder) {
-        if self.use_feedback && !self.map_pending {
+        if self.use_feedback && self.completion.submit() {
             encoder.copy_buffer_to_buffer(
                 &self.feedback_buffer,
                 0,
@@ -439,42 +429,21 @@ impl TerrainVtState {
     /// Start a non-blocking map of the staging buffer when a completed copy
     /// is waiting. `frame` harvests the result on a later pass.
     pub(super) fn begin_feedback_map(&mut self) {
-        if !self.use_feedback || self.map_pending {
-            return;
+        if self.use_feedback {
+            self.completion
+                .begin_map(&self.feedback_staging, self.feedback_bytes);
         }
-        self.map_pending = true;
-        let state = Arc::clone(&self.map_state);
-        self.feedback_staging
-            .slice(..)
-            .map_async(wgpu::MapMode::Read, move |result| {
-                if let Ok(mut guard) = state.lock() {
-                    if result.is_ok() {
-                        *guard = FeedbackMapState::Mapped;
-                    }
-                }
-            });
     }
-
-    /// Poll the device and apply a completed feedback readback without
-    /// blocking (same shape as the LOD-select harvest).
+    /// Harvest either success or failure so a failed map never pins the slot.
     fn harvest_feedback(&mut self, context: &forge3d_core::gpu::GpuContext) {
-        if !self.use_feedback || !self.map_pending {
+        if !self.use_feedback {
             return;
         }
         let _ = context.device.poll(wgpu::PollType::Poll);
-        let mut bytes = None;
-        if let Ok(mut guard) = self.map_state.lock() {
-            if matches!(*guard, FeedbackMapState::Mapped) {
-                let view = self.feedback_staging.slice(..).get_mapped_range();
-                bytes = Some(view.to_vec());
-                drop(view);
-                *guard = FeedbackMapState::Idle;
-            }
-        }
-        if let Some(bytes) = bytes {
-            self.feedback_staging.unmap();
-            self.map_pending = false;
-            let entries = decode_feedback(&bytes);
+        if let Some(Ok(entries)) =
+            self.completion
+                .harvest(&self.feedback_staging, self.feedback_bytes, decode_feedback)
+        {
             self.state.apply_feedback(&entries);
         }
     }
