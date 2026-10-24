@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "5df73332c3e4c1dc4f0810cbed250135a733282253a38d8dbfd2ce23f4237832",
+      "sha256": "043b6c366b0f861ddb5544afde861a97b362688351dcbf2e1e230c4f8e1699eb",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -4012,8 +4012,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w20-vector-export.test.ts.txt",
-      "sha256": "740fa04d16f9dc19318e24e572cf95496f7e9c2373b1983d3b8eb864bee67854",
-      "bytes": 15204,
+      "sha256": "436e6202aefdd95b6a0038fb26c0acbe22daddb431964b8fc443a69ae79a5274",
+      "bytes": 15340,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -4023,7 +4023,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/unit/w20-vector-export.test.ts",
-            "sha256": "740fa04d16f9dc19318e24e572cf95496f7e9c2373b1983d3b8eb864bee67854",
+            "sha256": "436e6202aefdd95b6a0038fb26c0acbe22daddb431964b8fc443a69ae79a5274",
             "hashMode": "utf8-lf"
           }
         ],
