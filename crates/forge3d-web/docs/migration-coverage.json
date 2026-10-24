@@ -5732,7 +5732,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/labels.test.ts",
-      "sha256": "b87beb78110eda484fd1c55cfe1176a4321a461a3882aa7dbbab4b112991ffad",
+      "sha256": "ffbf60e53a46ab66f6467fc8c2ca4db78c9785dbea05fef9962d5db74d28885c",
       "declarations": [
         "shapes Latin ligatures, kerning, Arabic joins and Devanagari clusters deterministically",
         "metrics preserve tracking, word spacing, multiline and callout offsets",
@@ -5754,7 +5754,8 @@
         "uses only the exhaustive canonical case outcomes",
         "lays out tabs as whitespace while preserving original source clusters",
         "positions individual glyphs on both sides of a polyline bend",
-        "compiles a 200000-vertex polygon without spreading vertices into the JS stack"
+        "compiles a 200000-vertex polygon without spreading vertices into the JS stack",
+        "keeps committed hits on attachment failure and addresses views independently"
       ]
     },
     {
@@ -6561,7 +6562,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w20-vector-export.test.ts",
-      "sha256": "0cc415082a60436170c34b5ea4635da7c87b188065ace1b6fc439b38b3bcd7ac",
+      "sha256": "740fa04d16f9dc19318e24e572cf95496f7e9c2373b1983d3b8eb864bee67854",
       "declarations": [
         "test_export_svg.py::${cls}::${name}",
         "test_export_projection.py::${cls}::${name}",

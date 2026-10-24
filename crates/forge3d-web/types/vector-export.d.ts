@@ -18,16 +18,6 @@ export interface VectorExportOptions {
 export interface VectorSvgOptions extends VectorExportOptions {
     fonts?: readonly VectorExportFont[];
 }
-export declare function exportSnapshot(scene: VectorScene, options?: VectorExportOptions): {
-    width: number;
-    height: number;
-    precision: number;
-    bounds: Bounds;
-    polygons: import("./vector-export-scene.js").ExportPolygon[];
-    polylines: import("./vector-export-scene.js").ExportPolyline[];
-    labels: import("./vector-export-scene.js").ExportLabel[];
-    background: [number, number, number, number] | null;
-};
 export declare function generateSvg(scene: VectorScene, options?: VectorExportOptions): string;
 /** Standalone SVG Blob with embedded fonts; generateSvg remains a synchronous markup API. */
 export declare function exportSvg(scene: VectorScene, options?: VectorSvgOptions): Promise<Blob>;

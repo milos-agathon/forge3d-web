@@ -1,3 +1,4 @@
+import {VectorIdentity} from "./vector-identity.js";
 import { requirePro, PRO_FEATURES } from './license.js';
 import { type BrowserByteSource } from "./index.js";
 import { Forge3DError } from "./runtime-failure.js";
@@ -108,7 +109,7 @@ export function styleLabelRecords(layer: StyleLayer, features: readonly VectorFe
 /** Each feature uses its first matching native layer. Symbols retain their native diagnostic. */
 export function compileStyle(spec: StyleSpec, sources: Record<string, readonly VectorFeature[]>, options: { zoom?: number; crs?: string } = {}): { layers: MapSceneLayerInput[]; report: ValidationReport } {
     requirePro(PRO_FEATURES.styleApply);
-    const zoom = options.zoom ?? 10, layers: MapSceneLayerInput[] = [], report = spec.validate(), diagnostics: Diagnostic[] = [], assigned = new Map<string, Set<number>>(); let id = 1;
+    const zoom = options.zoom ?? 10, layers: MapSceneLayerInput[] = [], report = spec.validate(), diagnostics: Diagnostic[] = [], assigned = new Map<string, Set<number>>(), identity=new VectorIdentity();
     for (const [zOrder, layer] of spec.layers.entries()) {
         if (!styleLayerVisible(layer, zoom) || !['fill', 'line', 'circle'].includes(layer.type)) continue;
         const key = layer['source-layer'] ?? layer.source ?? '', source = sources[key];
@@ -118,7 +119,7 @@ export function compileStyle(spec: StyleSpec, sources: Record<string, readonly V
             const geometryType = feature.kind === 'point' ? 'Point' : feature.kind === 'line' ? 'LineString' : 'Polygon', ctx = { properties: feature.properties ?? {}, zoom, geometryType };
             if (assigned.get(key)?.has(feature.id) || feature.kind !== (layer.type === 'fill' ? 'polygon' : layer.type === 'line' ? 'line' : 'point') || !evaluateStyleFilter(layer.filter, ctx)) continue;
             if (!assigned.has(key)) assigned.set(key, new Set()); assigned.get(key)!.add(feature.id);
-            const copy = structuredClone(feature); copy.id = id++; copy.properties = { ...copy.properties, forge3d_source_id: feature.id, forge3d_style_layer: layer.id }; copy.style = { ...copy.style, ...styleToVectorStyle(layer) }; features.push(copy);
+            const copy = identity.imported(feature,`style:${key}`,feature.id); copy.properties = { ...copy.properties, forge3d_source_id: feature.id, forge3d_style_layer: layer.id }; copy.style = { ...copy.style, ...styleToVectorStyle(layer) }; features.push(copy);
             copy.style.lineWidth = Math.max(copy.style.lineWidth ?? 1, .1); copy.style.pointSize = Math.max(copy.style.pointSize ?? 4, .1);
         }
         if (features.length) layers.push({ kind: 'vector', layerId: layer.id, source: { id: `style:${layer.id}`, format: 'vector', ...(options.crs ? { crs: options.crs } : {}), data: { name: layer.id, features, zOrder } } });
@@ -129,17 +130,17 @@ export function compileStyle(spec: StyleSpec, sources: Record<string, readonly V
 export function styleFeaturesFromGeoJson(input: unknown): VectorFeature[] {
     const object = input as { type?: string; features?: unknown[] }, features = object?.type === 'FeatureCollection' ? object.features : object?.type === 'Feature' ? [object] : undefined;
     if (!Array.isArray(features)) throw new Forge3DError('INVALID_INPUT', 'Style data must be GeoJSON features');
-    const output: VectorFeature[] = []; let id = 1;
+    const output: VectorFeature[] = [],identity=new VectorIdentity();
     const position = (p: unknown): [number, number, number] => { if (!Array.isArray(p) || p.length < 2 || p.slice(0, 3).some(n => typeof n !== 'number' || !Number.isFinite(n))) throw new Forge3DError('INVALID_INPUT', 'Invalid GeoJSON coordinate'); return [p[0], p[2] ?? 0, p[1]]; };
     for (const item of features) {
         const f = item as { type?: string; id?: string | number; properties?: Record<string, unknown>; geometry?: { type: string; coordinates: unknown } | null };
         if (!f || f.type !== 'Feature') throw new Forge3DError('INVALID_INPUT', 'Invalid GeoJSON feature');
         if (!f.geometry) continue;
-        const properties = { ...f.properties, forge3d_geojson_id: f.id ?? null }, geometry = f.geometry;
+        const properties = { ...f.properties, forge3d_geojson_id: f.id ?? null, forge3d_identity: {source:"geojson",sourceId:f.id??features.indexOf(item)} }, geometry = f.geometry;
         const add = (type: string, coordinates: unknown) => {
-            if (type === 'Point') output.push({ id: id++, kind: 'point', position: position(coordinates), properties });
-            else if (type === 'LineString' && Array.isArray(coordinates)) output.push({ id: id++, kind: 'line', positions: coordinates.map(position), properties });
-            else if (type === 'Polygon' && Array.isArray(coordinates)) output.push({ id: id++, kind: 'polygon', rings: coordinates.map(r => { if (!Array.isArray(r)) throw new Forge3DError('INVALID_INPUT', 'Invalid polygon ring'); return r.map(position); }), properties });
+            if (type === 'Point') output.push({ id: identity.allocate(), kind: 'point', position: position(coordinates), properties });
+            else if (type === 'LineString' && Array.isArray(coordinates)) output.push({ id: identity.allocate(), kind: 'line', positions: coordinates.map(position), properties });
+            else if (type === 'Polygon' && Array.isArray(coordinates)) output.push({ id: identity.allocate(), kind: 'polygon', rings: coordinates.map(r => { if (!Array.isArray(r)) throw new Forge3DError('INVALID_INPUT', 'Invalid polygon ring'); return r.map(position); }), properties });
             else throw new Forge3DError('UNSUPPORTED_FEATURE', `Unsupported style geometry: ${type}`);
         };
         if (geometry.type.startsWith('Multi') && Array.isArray(geometry.coordinates)) for (const part of geometry.coordinates) add(geometry.type.slice(5), part); else add(geometry.type, geometry.coordinates);

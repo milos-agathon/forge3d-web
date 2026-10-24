@@ -1,8 +1,9 @@
+import { compileVectorExportPlan, captureExportOptions } from './vector-export-plan.js';
 import { Forge3DError } from "./runtime-failure.js";
 import { readByteSource } from './browser-io.js';
 import { cancelled, checkBytes, finite, cartographicError, validateExportFont, type CartographicColor } from './cartography-common.js';
-import { project2dToScreen, type ExportPoint, type VectorScene } from './vector-export-scene.js';
-import { exportSnapshot, type VectorExportOptions } from './vector-export.js';
+import { type ExportPoint, type VectorScene } from './vector-export-scene.js';
+import { type VectorExportOptions } from './vector-export.js';
 import type { BrowserByteSource } from './index.js';
 import { cartographicFontSources } from './cartography-fonts.js';
 export interface VectorPdfFont { family: string; source: BrowserByteSource }
@@ -19,17 +20,18 @@ export async function exportPdf(scene: VectorScene, options: VectorPdfOptions = 
   }
 }
 async function generatePdf(scene: VectorScene, options: VectorPdfOptions): Promise<Blob> {
-  const s = exportSnapshot(scene, options), dpi = finite(options.dpi ?? 300, 'dpi', Number.MIN_VALUE, 9600), scale = 72 / dpi, sceneBytes = scene.getMemoryReport().cpuBytes;
+  options=captureExportOptions(options);
+  const s = compileVectorExportPlan(scene, options), dpi = finite(options.dpi ?? 300, 'dpi', Number.MIN_VALUE, 9600), scale = 72 / dpi, sceneBytes = s.sceneBytes;
   const lib = await import('pdf-lib'); cancelled(options.signal);
   const doc = await lib.PDFDocument.create({ updateMetadata: false });
   doc.setCreationDate(new Date(0)); doc.setModificationDate(new Date(0)); doc.setCreator('Forge3D'); doc.setProducer('Forge3D W20');
   const page = doc.addPage([s.width * scale, s.height * scale]);
   const rgb = (c: CartographicColor) => lib.rgb(c[0], c[1], c[2]);
   const alpha = (fill: number, stroke: number) => lib.setGraphicsState(page.node.newExtGState('GS', doc.context.obj({ Type: 'ExtGState', ca: fill, CA: stroke })));
-  const project = (p: ExportPoint): [number, number] => { const [x, y] = project2dToScreen(p, s.bounds, [s.width, s.height]); return [x * scale, (s.height - y) * scale]; };
+  const project = (p: ExportPoint): [number, number] => { const [x, y] = p; return [x * scale, (s.height - y) * scale]; };
   if (s.background) page.drawRectangle({ x: 0, y: 0, width: s.width * scale, height: s.height * scale, color: rgb(s.background), opacity: s.background[3] });
   for (const p of s.polygons) {
-    cancelled(options.signal); const c = p.style, fill = c.fillColor[3] > .001, stroke = c.strokeWidth > 0 && c.strokeColor[3] > .001;
+    cancelled(options.signal); const c = p.style, fill = p.fillVisible, stroke = c.strokeWidth > 0 && p.strokeVisible;
     page.pushOperators(lib.pushGraphicsState(), alpha(c.fillColor[3], c.strokeColor[3]), lib.setFillingColor(rgb(c.fillColor)), lib.setStrokingColor(rgb(c.strokeColor)), lib.setLineWidth(c.strokeWidth * scale), lib.setLineJoin(lib.LineJoinStyle.Round));
     for (const ring of [p.exterior, ...p.holes]) { page.pushOperators(lib.moveTo(...project(ring[0]!))); for (const v of ring.slice(1)) page.pushOperators(lib.lineTo(...project(v))); page.pushOperators(lib.closePath()); }
     page.pushOperators(fill ? lib.PDFOperator.of(stroke ? lib.PDFOperatorNames.FillEvenOddAndStroke : lib.PDFOperatorNames.FillEvenOdd) : stroke ? lib.stroke() : lib.endPath(), lib.popGraphicsState());
@@ -56,15 +58,13 @@ async function generatePdf(scene: VectorScene, options: VectorPdfOptions): Promi
     };
     for (const label of s.labels) {
       cancelled(options.signal); const c = label.style;
-      let family = ['sans-serif', 'Arial', 'DejaVu Sans'].includes(c.fontFamily) ? 'DejaVu Sans' : c.fontFamily;
-      if (['NotoSans', 'DejaVu Sans'].includes(family) && /[\u0600-\u06ff]/u.test(label.text)) family = 'NotoSansArabic';
-      if (['NotoSans', 'DejaVu Sans'].includes(family) && /[\u0900-\u097f]/u.test(label.text)) family = 'NotoSansDevanagari';
+      const family = label.pdfFamily;
       const font = await getFont(family), charset = new Set(font.getCharacterSet());
       const missing = [...label.text].filter(c => !charset.has(c.codePointAt(0)!)); if (missing.length) cartographicError(`PDF font lacks glyphs: ${missing.join('')}`, 'missing-glyph');
       const size = c.fontSize * scale, [px, py] = project(label.position), x = px - font.widthOfTextAtSize(label.text, size) / 2, y = py - font.heightAtSize(size, { descender: false }) / 2;
       const bold = c.fontWeight === 'bold' || Number(c.fontWeight) >= 600;
       if (!['normal', 'bold', '400', '500', '600', '700', '800', '900'].includes(c.fontWeight)) cartographicError('Unsupported PDF font weight');
-      if (c.haloWidth && c.haloColor[3] > .001) {
+      if (label.haloVisible) {
         page.pushOperators(lib.pushGraphicsState(), alpha(c.haloColor[3], c.haloColor[3]), lib.setStrokingColor(rgb(c.haloColor)), lib.setLineWidth(c.haloWidth * 2 * scale), lib.setLineJoin(lib.LineJoinStyle.Round), lib.setTextRenderingMode(lib.TextRenderingMode.FillAndOutline));
         page.drawText(label.text, { x, y, size, font, color: rgb(c.haloColor) }); page.pushOperators(lib.popGraphicsState());
       }

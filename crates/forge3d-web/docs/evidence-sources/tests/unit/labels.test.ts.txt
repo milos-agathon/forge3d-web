@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import {
   LabelPlan,
   KeepoutRegion,
@@ -501,4 +501,14 @@ describe("W13 reversed path reading order", () => {
       expect(reversed).toEqual(forward);
     },
   );
+});
+
+it("keeps committed hits on attachment failure and addresses views independently",()=>{
+ const layer=new LabelLayer(atlas),a=Forge3DScene.create(),b=Forge3DScene.create();
+ layer.addLabel("A",[30,70,0],{haloWidth:0});
+ layer.attach(a,{viewport:{width:300,height:200}});expect(layer.pick(33,65,a)).toBe(1);
+ const old=a.getNodes();layer.updateLabel(1,{position:[130,70,0]});
+ const add=vi.spyOn(a,'addNode').mockImplementation(()=>{throw new Error('attachment failed');});
+ expect(()=>layer.attach(a,{viewport:{width:300,height:200}})).toThrow('attachment failed');expect(a.getNodes()).toEqual(old);expect(layer.pick(33,65,a)).toBe(1);expect(layer.pick(133,65,a)).toBeNull();add.mockRestore();
+ layer.attach(b,{viewport:{width:300,height:200}});expect(layer.pick(133,65,b)).toBe(1);expect(layer.pick(33,65,a)).toBe(1);layer.detach(b);expect(layer.pick(133,65,b)).toBeNull();expect(layer.pick(33,65)).toBe(1);layer.dispose();a.dispose();b.dispose();
 });

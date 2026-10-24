@@ -78,7 +78,7 @@ export declare class LabelLayer {
         ids: Record<string, number[]>;
         diagnostics: LabelDiagnostic[];
     };
-    pick(x: number, y: number): number | null;
+    pick(x: number, y: number, scene?: Forge3DScene): number | null;
     addLabels(labels: readonly {
         text: string;
         position: LabelPoint;

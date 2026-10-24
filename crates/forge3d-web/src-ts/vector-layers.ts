@@ -1,3 +1,4 @@
+import {VectorIdentity} from "./vector-identity.js";
 import { Forge3DError } from "./runtime-failure.js";
 import { reprojectVectorLayer, type GeospatialVectorLayerInput, type CrsLayerTarget } from './crs-layers.js';
 import type { CrsTransformer } from './crs.js';
@@ -139,13 +140,8 @@ export class VectorLayers {
             throw vectorInvalid("layer ID must be a positive safe integer");
         if (typeof input.name !== "string" || !input.name.trim())
             throw vectorInvalid("layer name must be nonempty");
-        const features = input.features.map(validateFeature);
-        const occupied = new Set([...this.#layers.values()].filter(l => l.layerId !== replace).flatMap(l => l.features.map(f => f.id)));
-        for (const f of features) {
-            if (occupied.has(f.id))
-                throw vectorInvalid(`duplicate feature ID ${f.id}`);
-            occupied.add(f.id);
-        }
+        const occupied=[...this.#layers.values()].filter(l=>l.layerId!==replace).flatMap(l=>l.features.map(f=>f.id));
+        const features=new VectorIdentity(occupied).compose(input.features.map(validateFeature),replace===undefined);
         const style = normalizeVectorStyle(input.style);
         const visible = input.visible ?? true, zOrder = input.zOrder ?? 0;
         if (typeof visible !== "boolean" || !Number.isSafeInteger(zOrder))

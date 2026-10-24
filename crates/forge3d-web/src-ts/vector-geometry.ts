@@ -1,5 +1,6 @@
-import { normalizeVectorStyle, vectorInvalid, VectorLayers } from "./vector-layers.js";
-import { Forge3DError } from "./runtime-failure.js";
+import {planVectorWork} from "./vector-work-plan.js";
+export {triangulateVectorPolygon} from "./vector-triangulation.js";
+import { vectorInvalid, VectorLayers } from "./vector-layers.js";
 import { TerrainDataset } from "./terrain-dataset.js";
 import type { TerrainHeightmapInput } from "./index.js";
 import type { VectorPosition, VectorSnapshot, VectorSelectionStyle } from "./vector-types.js";
@@ -16,7 +17,6 @@ export interface VectorPacket {
     highlights: number[][];
 }
 type P = VectorPosition;
-function resourceLimit(): Forge3DError { return new Forge3DError("RESOURCE_LIMIT_EXCEEDED", "Vector geometry or atlas exceeds the bounded vector budget"); }
 /** Highlight changes do not clone or tessellate geometry. IDs are sorted for GPU lookup. */
 export function compileVectorHighlights(source: VectorLayers | Pick<VectorSnapshot, "selections" | "hover" | "hoverStyle" | "timeSeconds">, timeSeconds?: number): number[][] {
     const snapshot = source instanceof VectorLayers ? source.highlightSnapshot() : source;
@@ -32,95 +32,23 @@ export function compileVectorHighlights(source: VectorLayers | Pick<VectorSnapsh
     if (snapshot.hover !== null) highlight(snapshot.hover, snapshot.hoverStyle);
     return [...highlights.values()].sort((a, b) => a[0]! - b[0]!);
 }
-const cross = (a: P, b: P, c: P) => (b[0] - a[0]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[0] - a[0]);
-function inside(p: P, a: P, b: P, c: P): boolean { return cross(a, b, p) >= -1e-10 && cross(b, c, p) >= -1e-10 && cross(c, a, p) >= -1e-10; }
-function area(r: P[]): number { return r.reduce((sum, p, i) => { const q = r[(i + 1) % r.length]!; return sum + p[0] * q[2] - q[0] * p[2]; }, 0) / 2; }
-function inRing(p: P, r: P[]): boolean { let hit = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
-    const a = r[i]!, b = r[j]!;
-    if ((a[2] > p[2]) !== (b[2] > p[2]) && p[0] < (b[0] - a[0]) * (p[2] - a[2]) / (b[2] - a[2]) + a[0])
-        hit = !hit;
-} return hit; }
-function same(a: P, b: P): boolean { return a[0] === b[0] && a[2] === b[2]; }
-function intersects(a: P, b: P, c: P, d: P): boolean { return cross(a, b, c) * cross(a, b, d) < -1e-12 && cross(c, d, a) * cross(c, d, b) < -1e-12; }
-/** Ear clipping with visible bridges for holes. Invalid/self-intersecting rings fail. */
-export function triangulateVectorPolygon(input: P[][]): P[][] {
-    const rings = input.map(r => { const out = r.map(p => [...p] as P); if (out.length > 3 && same(out[0]!, out.at(-1)!))
-        out.pop(); if (Math.abs(area(out)) < 1e-12)
-        throw vectorInvalid("degenerate polygon ring"); return out; });
-    let outer = rings[0]!;
-    if (area(outer) < 0)
-        outer.reverse();
-    for (const hole of rings.slice(1)) {
-        if (area(hole) > 0)
-            hole.reverse();
-        let hi = 0;
-        for (let i = 1; i < hole.length; i++)
-            if (hole[i]![0] > hole[hi]![0])
-                hi = i;
-        const h = hole[hi]!;
-        let best = -1, bestDistance = Infinity;
-        for (let i = 0; i < outer.length; i++) {
-            const v = outer[i]!, mid: P = [(v[0] + h[0]) / 2, 0, (v[2] + h[2]) / 2];
-            if (!inRing(mid, outer) || rings.slice(1).some(r => inRing(mid, r)))
-                continue;
-            if ([outer, ...rings.slice(1)].some(r => r.some((a, k) => { const b = r[(k + 1) % r.length]!; return !same(a, h) && !same(b, h) && !same(a, v) && !same(b, v) && intersects(h, v, a, b); })))
-                continue;
-            const d = (v[0] - h[0]) ** 2 + (v[2] - h[2]) ** 2;
-            if (d < bestDistance) {
-                best = i;
-                bestDistance = d;
-            }
-        }
-        if (best < 0)
-            throw vectorInvalid("polygon hole has no visible bridge");
-        const ordered = [...hole.slice(hi), ...hole.slice(0, hi)];
-        outer = [...outer.slice(0, best + 1), ...ordered, h, outer[best]!, ...outer.slice(best + 1)];
-    }
-    const triangles: P[][] = [], points = [...outer];
-    while (points.length > 3) {
-        let clipped = false;
-        for (let i = 0; i < points.length; i++) {
-            const a = points[(i + points.length - 1) % points.length]!, b = points[i]!, c = points[(i + 1) % points.length]!;
-            if (cross(a, b, c) <= 1e-12)
-                continue;
-            if (points.some((p, k) => k !== i && k !== (i + points.length - 1) % points.length && k !== (i + 1) % points.length && !same(p, a) && !same(p, b) && !same(p, c) && inside(p, a, b, c)))
-                continue;
-            triangles.push([a, b, c]);
-            points.splice(i, 1);
-            clipped = true;
-            break;
-        }
-        if (!clipped)
-            throw vectorInvalid("polygon is self-intersecting or degenerate");
-    }
-    if (points.length === 3 && Math.abs(cross(points[0]!, points[1]!, points[2]!)) > 1e-12)
-        triangles.push(points);
-    return triangles;
-}
 /** CPU topology; projection, billboard expansion, elevation and culling run on GPU. */
 export function compileVectorPacket(source: VectorLayers | VectorSnapshot, terrain?: TerrainHeightmapInput): VectorPacket {
     const snapshot = source instanceof VectorLayers ? source.snapshot() : VectorLayers.from(source).snapshot();
     const dataset = terrain ? TerrainDataset.fromArray(terrain) : undefined;
-    const layers = snapshot.layers.filter(l => l.visible);
-    const atlasWidth = Math.max(1, ...layers.map(l => l.atlas?.width ?? 0));
-    const atlasHeight = Math.max(1, layers.reduce((n, l) => n + (l.atlas?.height ?? 0), 0));
-    if (atlasHeight > 4096)
-        throw resourceLimit();
+    const plan=planVectorWork(snapshot,dataset?.spacing),{atlasWidth,atlasHeight}=plan;
     const rgba = new Uint8Array(atlasWidth * atlasHeight * 4);
     rgba.fill(255);
     const vertices: number[][] = [];
-    let atlasY = 0, featureCount = 0;
+    let featureCount = 0;
     const highlights = compileVectorHighlights(snapshot);
-    for (const layer of layers) {
+    for (const {layer,atlasY,features} of plan.layers) {
         const atlas = layer.atlas;
         if (atlas) {
             for (let y = 0; y < atlas.height; y++)
                 rgba.set(atlas.rgba.subarray(y * atlas.width * 4, (y + 1) * atlas.width * 4), ((atlasY + y) * atlasWidth) * 4);
         }
-        for (const feature of layer.features) {
-            const s = normalizeVectorStyle({ ...layer.style, ...feature.style });
-            if (s.opacity * s.color[3] === 0)
-                continue;
+        for (const {feature,style:s,segments,triangles,levels} of features) {
             featureCount++;
             const color = [s.color[0], s.color[1], s.color[2], s.color[3] * s.opacity];
             const drape = (p: P): P => { if (!s.drape)
@@ -139,9 +67,7 @@ export function compileVectorPacket(source: VectorLayers | VectorSnapshot, terra
                 const originals = feature.positions;
                 for (let i = 0; i < originals.length - 1; i++) {
                     const a = originals[i]!, b = originals[i + 1]!;
-                    const n = s.drape && dataset ? Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[2] - a[2]) / Math.min(...dataset.spacing))) : 1;
-                    if (n > 100000)
-                        throw resourceLimit();
+                    const n=segments[i]!;
                     for (let j = 0; j < n; j++) {
                         const t = j / n;
                         dense.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]);
@@ -194,12 +120,6 @@ export function compileVectorPacket(source: VectorLayers | VectorSnapshot, terra
                 }
             }
             if (feature.kind === "polygon") {
-                const triangles = triangulateVectorPolygon(feature.rings);
-                const edgeLength = (a: P, b: P) => Math.hypot(b[0] - a[0], b[2] - a[2]);
-                const longest = Math.max(...triangles.flatMap(t => t.map((p, i) => edgeLength(p, t[(i + 1) % 3]!))));
-                const levels = s.drape && dataset ? Math.max(0, Math.ceil(Math.log2(longest / Math.min(...dataset.spacing)))) : 0;
-                if (levels > 9 || triangles.length * 4 ** levels * 3 + vertices.length > 3000000)
-                    throw resourceLimit();
                 const midpoint = (a: P, b: P): P => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
                 const roof = (a: P, b: P, c: P, level: number): void => {
                     if (level === 0) {
@@ -237,10 +157,9 @@ export function compileVectorPacket(source: VectorLayers | VectorSnapshot, terra
                             }
                         }
             }
-            if (vertices.length > 3000000)
-                throw resourceLimit();
+
         }
-        atlasY += atlas?.height ?? 0;
+
     }
     return { vertices, oit: snapshot.oit, culling: snapshot.culling, featureCount, atlas: { width: atlasWidth, height: atlasHeight, rgba: [...rgba] }, highlights };
 }
