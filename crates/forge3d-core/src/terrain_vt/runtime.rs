@@ -4,6 +4,7 @@
 //! feedback, stats). Atlas/page-table uploads are represented by CPU
 //! side data (`TileUpload`, `page_table_texels`) — no GPU objects.
 
+use super::address::VtAddressPlan;
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 
 use crate::error::{Forge3dError, Result};
@@ -422,10 +423,7 @@ pub struct VtRuntimeState {
     tile_border: u32,
     slot_size: u32,
     atlas_size: u32,
-    material_count: u32,
-    max_mip_levels: u32,
-    pages_x0: u32,
-    pages_y0: u32,
+    address: VtAddressPlan,
     /// `[material_index * max_mip_levels + mip_level][y * pages_x + x]`.
     page_tables: Vec<Vec<PageTableEntry>>,
     sources: HashMap<u32, PreparedVtSource>,
@@ -450,21 +448,10 @@ impl VtRuntimeState {
         settings: &TerrainVtSettings,
         material_count: u32,
     ) -> Result<Self> {
-        let material_count = material_count.clamp(1, TERRAIN_VT_MATERIAL_CAPACITY as u32);
+        let address = VtAddressPlan::new(layer, settings, material_count);
+        let material_count = address.materials();
+        let max_mip_levels = address.runtime_levels();
         let slot_size = layer.slot_size();
-        let pages_x0 = layer.pages_x0();
-        let pages_y0 = layer.pages_y0();
-        // The runtime page pyramid always bottoms out at 1x1 pages
-        // (`page_table_mip_levels` = ceil(log2)+1) — matching the 1.38
-        // runtime (total_pages 480 / resident_pages 20 at the w08 golden
-        // params). It is intentionally NOT clamped by the public
-        // `full_pyramid_levels`, which keeps the 1f4084a/1.38
-        // floor(log2)+1 value.
-        let max_mip_levels = settings
-            .max_mip_levels
-            .min(page_table_mip_levels(pages_x0, pages_y0))
-            .max(1);
-
         let mut sources = HashMap::new();
         for ((material_index, family), source) in registry.sources() {
             if family != TERRAIN_VT_SUPPORTED_FAMILY || *material_index >= material_count {
@@ -491,8 +478,7 @@ impl VtRuntimeState {
         }
 
         let source_count = sources.len() as u32;
-        let total_pages = total_pages_for(layer.virtual_size_px, layer.tile_size, max_mip_levels)
-            .saturating_mul(source_count);
+        let total_pages = address.logical_pages().saturating_mul(source_count);
 
         let atlas_slots_total =
             (settings.atlas_size / slot_size) * (settings.atlas_size / slot_size);
@@ -504,7 +490,7 @@ impl VtRuntimeState {
         let mut page_tables = Vec::with_capacity((material_count * max_mip_levels) as usize);
         for _material_index in 0..material_count {
             for mip_level in 0..max_mip_levels {
-                let (pages_x, pages_y) = pages_for_mip_counts(pages_x0, pages_y0, mip_level);
+                let (pages_x, pages_y) = address.pages(mip_level);
                 page_tables.push(vec![
                     PageTableEntry::default();
                     (pages_x * pages_y) as usize
@@ -518,10 +504,7 @@ impl VtRuntimeState {
             tile_border: layer.tile_border,
             slot_size,
             atlas_size: settings.atlas_size,
-            material_count,
-            max_mip_levels,
-            pages_x0,
-            pages_y0,
+            address,
             page_tables,
             sources,
             cache: VtTileCache::new(budget_pages as usize, settings.atlas_size, slot_size),
@@ -597,7 +580,7 @@ impl VtRuntimeState {
             self.virtual_size.1 as f32 * uv_span_y / render_height.max(1) as f32;
         let texels_per_pixel = texels_per_pixel_x.max(texels_per_pixel_y).max(1.0);
         let desired = texels_per_pixel.log2().floor().max(0.0) as u32;
-        desired.min(self.max_mip_levels.saturating_sub(1))
+        desired.min(self.address.runtime_levels().saturating_sub(1))
     }
 
     /// Native `collect_requests`: tiles covering the visible uv rect at
@@ -700,7 +683,7 @@ impl VtRuntimeState {
             if !self.sources.contains_key(&material_index) {
                 continue;
             }
-            if entry.mip_level >= self.max_mip_levels {
+            if entry.mip_level >= self.address.runtime_levels() {
                 continue;
             }
             let (pages_x, pages_y) = self.pages_at_mip(entry.mip_level);
@@ -720,7 +703,8 @@ impl VtRuntimeState {
     /// Packed page-table texels `[atlas_u, atlas_v, resident, mip_bias]`
     /// for `(material_index, mip_level)`.
     pub fn page_table_texels(&self, material_index: u32, mip_level: u32) -> Vec<[f32; 4]> {
-        if material_index >= self.material_count || mip_level >= self.max_mip_levels {
+        if material_index >= self.address.materials() || mip_level >= self.address.runtime_levels()
+        {
             return Vec::new();
         }
         self.page_tables[self.layer_mip_index(material_index, mip_level)]
@@ -783,7 +767,7 @@ impl VtRuntimeState {
     /// Pages visible tile key at `key`'s position `mip + 1`, i.e. the
     /// native ancestor step (`x/2`, `y/2`, `mip+1`) capped at the top.
     pub fn ancestor(&self, key: TileKey) -> Option<TileKey> {
-        if key.mip_level + 1 >= self.max_mip_levels {
+        if key.mip_level + 1 >= self.address.runtime_levels() {
             return None;
         }
         Some(TileKey {
@@ -824,7 +808,7 @@ impl VtRuntimeState {
             if !requests.insert(key) {
                 break;
             }
-            if key.mip_level + 1 >= self.max_mip_levels {
+            if key.mip_level + 1 >= self.address.runtime_levels() {
                 break;
             }
             key = TileKey {
@@ -837,16 +821,16 @@ impl VtRuntimeState {
     }
 
     fn pages_at_mip(&self, mip_level: u32) -> (u32, u32) {
-        pages_for_mip_counts(self.pages_x0, self.pages_y0, mip_level)
+        self.address.pages(mip_level)
     }
 
     fn layer_mip_index(&self, material_index: u32, mip_level: u32) -> usize {
-        (material_index * self.max_mip_levels + mip_level) as usize
+        self.address.layer(material_index, mip_level) as usize
     }
 
     fn encode_cache_tile(&self, key: TileKey) -> CacheTile {
         CacheTile {
-            x: key.material_index * self.pages_x0.max(1) + key.x,
+            x: key.material_index * self.address.base_pages().0.max(1) + key.x,
             y: key.y,
             mip_level: key.mip_level,
         }
@@ -854,15 +838,17 @@ impl VtRuntimeState {
 
     fn decode_cache_tile(&self, tile: CacheTile) -> TileKey {
         TileKey {
-            material_index: tile.x / self.pages_x0.max(1),
-            x: tile.x % self.pages_x0.max(1),
+            material_index: tile.x / self.address.base_pages().0.max(1),
+            x: tile.x % self.address.base_pages().0.max(1),
             y: tile.y,
             mip_level: tile.mip_level,
         }
     }
 
     fn set_page_entry(&mut self, key: TileKey, slot: u32) {
-        if key.material_index >= self.material_count || key.mip_level >= self.max_mip_levels {
+        if key.material_index >= self.address.materials()
+            || key.mip_level >= self.address.runtime_levels()
+        {
             return;
         }
         let (pages_x, pages_y) = self.pages_at_mip(key.mip_level);
@@ -883,7 +869,9 @@ impl VtRuntimeState {
     }
 
     fn clear_page_entry(&mut self, key: TileKey) {
-        if key.material_index >= self.material_count || key.mip_level >= self.max_mip_levels {
+        if key.material_index >= self.address.materials()
+            || key.mip_level >= self.address.runtime_levels()
+        {
             return;
         }
         let layer_index = self.layer_mip_index(key.material_index, key.mip_level);
@@ -917,16 +905,19 @@ impl VtRuntimeState {
         self.atlas_size
     }
     pub fn material_count(&self) -> u32 {
-        self.material_count
+        self.address.materials()
+    }
+    pub fn address_plan(&self) -> &VtAddressPlan {
+        &self.address
     }
     pub fn max_mip_levels(&self) -> u32 {
-        self.max_mip_levels
+        self.address.runtime_levels()
     }
     pub fn pages_x0(&self) -> u32 {
-        self.pages_x0
+        self.address.base_pages().0
     }
     pub fn pages_y0(&self) -> u32 {
-        self.pages_y0
+        self.address.base_pages().1
     }
     pub fn budget_pages(&self) -> u32 {
         self.budget_pages

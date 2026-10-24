@@ -21,6 +21,8 @@ struct CameraUniform {
 };
 
 struct VertexInput {
+// @compose-begin instance-input
+// @compose-end instance-input
     @location(0) position: vec3<f32>,
     @location(1) color: vec4<f32>,
     @location(2) normal: vec3<f32>,
@@ -56,16 +58,28 @@ struct VertexOutput {
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
-    output.position = camera.view_projection * vec4<f32>(input.position, 1.0);
+    // @compose-begin vertex-position
+output.position = camera.view_projection * vec4<f32>(input.position, 1.0);
+// @compose-end vertex-position
     output.color = input.color;
-    output.normal = input.normal;
+    // @compose-begin vertex-normal
+output.normal = input.normal;
+// @compose-end vertex-normal
     output.uv = input.uv;
-    output.world_position = input.position;
+    // @compose-begin vertex-world
+output.world_position = input.position;
+// @compose-end vertex-world
     output.material_index = input.material_index;
-    output.tangent = input.tangent;
+    // @compose-begin vertex-tangent
+output.tangent = input.tangent;
+// @compose-end vertex-tangent
     // #if capture
-    output.object_id = input.object_id;
-    output.previous_position = input.previous_position;
+    // @compose-begin vertex-id
+output.object_id = input.object_id;
+// @compose-end vertex-id
+    // @compose-begin vertex-previous
+output.previous_position = input.previous_position;
+// @compose-end vertex-previous
     // #endif
     return output;
 }
@@ -99,7 +113,9 @@ fn world_shade(input: VertexOutput) -> vec4<f32> {
     );
     let alpha = input.color.a
         * forge3d_material_alpha(input.material_index, input.uv);
-    return vec4<f32>(lit, alpha);
+    // @compose-begin shade
+return vec4<f32>(lit, alpha);
+// @compose-end shade
 }
 
 // #if capture
@@ -140,7 +156,9 @@ fn fs_capture_primary(input: VertexOutput) -> CapturePrimaryOutput {
 
 @fragment
 fn fs_capture_surface(input: VertexOutput) -> CaptureSurfaceOutput {
-    var output: CaptureSurfaceOutput;
+    // @compose-begin surface-coverage
+var output: CaptureSurfaceOutput;
+// @compose-end surface-coverage
     output.albedo = vec4<f32>(
         forge3d_surface_albedo(input.color.rgb, input.material_index, input.uv),
         forge3d_material(input.material_index).surface.x,

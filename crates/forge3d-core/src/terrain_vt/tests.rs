@@ -847,3 +847,23 @@ fn test_vt_atlas_larger_than_the_device_dimension_is_resource_limit_exceeded() {
     }
     settings.validate_atlas_dimension(16384).unwrap();
 }
+
+#[test]
+fn address_plan_separates_public_and_runtime_pyramids_and_feedback_extents() {
+    let mut layer = VtLayerFamily::new("albedo").unwrap();
+    layer.tile_size = 16;
+    layer.virtual_size_px = (144, 80);
+    let plan = super::address::VtAddressPlan::new(&layer, &TerrainVtSettings::default(), 2);
+    assert_eq!(plan.public_levels(), 4);
+    assert_eq!(plan.runtime_levels(), 5);
+    assert_eq!(
+        (0..5).map(|m| plan.pages(m)).collect::<Vec<_>>(),
+        vec![(9, 5), (5, 3), (3, 2), (2, 1), (1, 1)]
+    );
+    assert_eq!(plan.logical_pages(), 69);
+    assert_eq!(plan.layers(), 10);
+    assert_eq!(plan.feedback_index(1, 4, 0, 0), Some(405));
+    assert_eq!(plan.feedback_bytes(), 7200);
+    assert_eq!(plan.feedback_index(1, 4, 1, 0), None);
+    assert_eq!(plan.feedback_index(2, 0, 0, 0), None);
+}

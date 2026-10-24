@@ -11,6 +11,7 @@
 //! compatibility and produce deterministic `vt_unsupported_family`
 //! diagnostics.
 
+pub mod address;
 pub mod runtime;
 
 #[cfg(test)]
@@ -136,8 +137,7 @@ impl VtLayerFamily {
     /// `actual_mip_count`); the runtime page pyramid bottoms out at 1x1
     /// (`page_table_mip_levels`, `ceil(log2)+1`) instead.
     pub fn full_pyramid_levels(&self) -> u32 {
-        let max_dim = self.pages_x0().max(self.pages_y0()).max(1);
-        u32::BITS - max_dim.leading_zeros()
+        address::public_levels(self.pages_x0(), self.pages_y0())
     }
 
     /// Page count at `mip` (ceil-div, min 1).
