@@ -264,3 +264,35 @@ test("M8 Luxembourg selection commits in less than 50ms without geometry or pipe
     expect(r.after.pipelineCreations).toBe(r.before.pipelineCreations);
     expect(r.after.vertexBufferCreations).toBe(r.before.vertexBufferCreations);
 });
+
+
+test("bounded readback map rejection releases staging and permits retry", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+        await (window as any).__w12Auto();
+        const runtime = (window as any).__w12Runtime;
+        runtime.render();
+        const before = runtime.getMemoryReport().currentBytes;
+        const original = GPUBuffer.prototype.mapAsync;
+        let failures = 0;
+        GPUBuffer.prototype.mapAsync = function (...args: Parameters<GPUBuffer["mapAsync"]>) {
+            if (this.label === "texture:bounded-readback" && failures++ === 0) {
+                return Promise.reject(new DOMException("injected mapping failure", "OperationError"));
+            }
+            return original.apply(this, args);
+        };
+        let code;
+        try { await runtime.readVectorPickMap({ x: 0, y: 0, width: 1, height: 1 }); }
+        catch (error) { code = (error as {code:string}).code; }
+        finally { GPUBuffer.prototype.mapAsync = original; }
+        const after = runtime.getMemoryReport().currentBytes;
+        const retry = await runtime.readVectorPickMap({x:0,y:0,width:1,height:1});
+        const empty = await runtime.readVectorPickMap({x:0,y:0,width:0,height:0});
+        return {before, after, final:runtime.getMemoryReport().currentBytes, code, failures, retry:retry.ids.length, empty:empty.ids.length};
+    });
+    expect(result.code).toBe("IO_ERROR");
+    expect(result.failures).toBe(1);
+    expect(result.after).toBe(result.before);
+    expect(result.final).toBe(result.before);
+    expect(result.retry).toBe(1);
+    expect(result.empty).toBe(0);
+});

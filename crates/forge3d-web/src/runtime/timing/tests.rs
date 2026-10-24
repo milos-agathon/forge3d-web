@@ -51,17 +51,11 @@ fn nonfinite_or_negative_group_times_are_rejected() {
 }
 
 #[test]
-fn slot_state_flags_drive_busy_fallback_semantics() {
-    let shared = Arc::new(Mutex::new(SlotState {
-        pending: true,
-        ready: false,
-        failed: false,
-    }));
-    let pending = shared.lock().unwrap().pending;
-    assert!(pending);
-    let mut state = shared.lock().unwrap();
-    state.pending = false;
-    state.ready = true;
-    drop(state);
-    assert!(shared.lock().unwrap().ready);
+fn ring_slots_keep_independent_submission_ownership() {
+    let slots = [Completion::default(), Completion::default()];
+    assert!(slots[0].submit());
+    assert!(!slots[0].idle());
+    assert!(slots[1].idle());
+    assert!(slots[1].submit());
+    assert!(!slots.iter().any(Completion::idle));
 }

@@ -339,6 +339,11 @@ async function runInstalledPackageBrowserGate(
   const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  const loadErrors = [];
+  page.on("requestfailed", (request) => loadErrors.push(`${request.url()}: ${request.failure()?.errorText}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") loadErrors.push(message.text());
+  });
   try {
     await page.goto(`${origin}/test-interactive-viewer.html`, {
       waitUntil: "networkidle",
@@ -908,6 +913,12 @@ async function runInstalledPackageBrowserGate(
         memory: terrainDataset.memory,
       },
     };
+  } catch (error) {
+    const diagnostics = [...pageErrors, ...loadErrors];
+    if (diagnostics.length > 0) {
+      throw new Error(`${error.message}; installed-package browser diagnostics: ${diagnostics.join("; ")}`, { cause: error });
+    }
+    throw error;
   } finally {
     await browser.close();
   }
