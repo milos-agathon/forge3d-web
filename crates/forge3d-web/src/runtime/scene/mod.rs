@@ -6,6 +6,7 @@ mod gpu;
 mod parse;
 pub(super) mod pipelines;
 mod plan;
+mod replacement;
 
 use std::collections::BTreeMap;
 
@@ -104,7 +105,6 @@ fn prepare_scene(
         .bind_group_layout
         .clone();
     let aspect = runtime.width as f32 / runtime.height.max(1) as f32;
-    let mut planned = runtime.memory.clone();
     let postfx_config = parsed
         .postfx
         .clone()
@@ -117,63 +117,10 @@ fn prepare_scene(
     let reuse_vectors = parsed.vectors.is_none()
         || vector_packet.is_some_and(|p| super::vector::same_geometry(runtime, p));
     let vector_bytes = if reuse_vectors {
-        super::vector::retained_bytes(runtime)
+        super::vector::retained_scene_bytes(runtime, vector_packet)?
     } else {
         super::vector::planned_bytes(vector_packet, runtime.width, runtime.height)
     };
-    // Reserve the replacement HDR graph before quality selection in dependent
-    // passes, so removing a large chain can fund an environment replacement.
-    planned.replace_all(&[
-        (
-            super::vector::KEY,
-            MemoryCategory::Textures,
-            super::vector::texture_bytes(vector_packet, runtime.width, runtime.height),
-        ),
-        (
-            super::vector::BUFFER_KEY,
-            MemoryCategory::Buffers,
-            vector_bytes
-                - super::vector::texture_bytes(vector_packet, runtime.width, runtime.height),
-        ),
-        (
-            super::postfx::KEY,
-            MemoryCategory::Textures,
-            postfx_config.as_ref().map_or(0, |config| {
-                super::postfx::planned_bytes(
-                    config,
-                    runtime.width,
-                    runtime.height,
-                    parsed.environment.is_some(),
-                    parsed
-                        .scatter
-                        .iter()
-                        .any(|s| s.color[3] < 1. || s.terrain_blend.enabled),
-                )
-            }),
-        ),
-        (super::environment::KEY, MemoryCategory::Textures, 0),
-    ])?;
-    // Admit the complete W09 replacement together, including swaps between
-    // scatter and probes, before allocating any new GPU resource.
-    let scatter_bytes = super::scatter::planned_bytes(&parsed.scatter)?;
-    let probe_bytes = super::probes::planned_bytes(parsed.probes.as_ref())?;
-    planned.replace_all(&[
-        (
-            super::scatter::KEY,
-            MemoryCategory::Buffers,
-            scatter_bytes.saturating_sub(8),
-        ),
-        (
-            super::scatter::TEXTURES_KEY,
-            MemoryCategory::Textures,
-            if scatter_bytes > 0 { 8 } else { 0 },
-        ),
-        (
-            super::probes::KEY,
-            MemoryCategory::Buffers,
-            probe_bytes.saturating_sub(64),
-        ),
-    ])?;
     if parsed.environment.as_ref().is_some_and(|e| {
         e.water
             .iter()
@@ -193,21 +140,6 @@ fn prepare_scene(
             ));
         }
     }
-    let mut environment =
-        super::environment::prepare(runtime, parsed.environment.as_ref(), &mut planned)?;
-    if let Some(e) = &mut environment {
-        e.original_lighting = Some((
-            parsed
-                .environment_lighting
-                .as_ref()
-                .unwrap_or(&parsed.lighting)
-                .clone(),
-            parsed.light_ids.clone(),
-        ));
-    }
-    let scatter = super::scatter::build(runtime, parsed.scatter.clone(), &mut planned)?;
-    let probes = super::probes::prepare(runtime, parsed.probes.as_ref(), &mut planned)?;
-
     let built = if parsed.nodes.is_empty() && parsed.passes.is_empty() {
         None
     } else {
@@ -228,64 +160,118 @@ fn prepare_scene(
         Some((geometry, plan.pass_names))
     };
 
+    let (vertices, bundles) = match &built {
+        Some((geometry, _)) => (
+            checked_scene_bytes(geometry)?,
+            bundle_estimate_bytes(geometry),
+        ),
+        None => (0, 0),
+    };
+    let scatter_bytes = super::scatter::planned_bytes(&parsed.scatter)?;
+    let probe_bytes = super::probes::planned_bytes(parsed.probes.as_ref())?;
+    let texture_bytes = super::vector::texture_bytes(vector_packet, runtime.width, runtime.height);
+    let texture_payload = parsed
+        .texture_sets
+        .values()
+        .map(|set| set.payload_bytes())
+        .sum();
+    let admission = replacement::admit(
+        &runtime.memory,
+        runtime.width,
+        runtime.height,
+        runtime.overflow_policy,
+        runtime.max_texture_dimension_2d,
+        parsed,
+        &[
+            (super::vector::KEY, MemoryCategory::Textures, texture_bytes),
+            (
+                super::vector::BUFFER_KEY,
+                MemoryCategory::Buffers,
+                vector_bytes - texture_bytes,
+            ),
+            (
+                super::postfx::KEY,
+                MemoryCategory::Textures,
+                postfx_config.as_ref().map_or(0, |config| {
+                    super::postfx::planned_bytes(
+                        config,
+                        runtime.width,
+                        runtime.height,
+                        parsed.environment.is_some(),
+                        parsed
+                            .scatter
+                            .iter()
+                            .any(|s| s.color[3] < 1. || s.terrain_blend.enabled),
+                    )
+                }),
+            ),
+            (
+                super::scatter::KEY,
+                MemoryCategory::Buffers,
+                scatter_bytes.saturating_sub(8),
+            ),
+            (
+                super::scatter::TEXTURES_KEY,
+                MemoryCategory::Textures,
+                if scatter_bytes > 0 { 8 } else { 0 },
+            ),
+            (
+                super::probes::KEY,
+                MemoryCategory::Buffers,
+                probe_bytes.saturating_sub(64),
+            ),
+            (
+                super::textures::TEXTURE_FALLBACK_KEY,
+                MemoryCategory::Textures,
+                super::textures::FALLBACK_BYTES,
+            ),
+            (
+                super::textures::TEXTURE_PAYLOAD_KEY,
+                MemoryCategory::Textures,
+                texture_payload,
+            ),
+            (SCENE_VERTEX_KEY, MemoryCategory::Buffers, vertices),
+            (
+                SCENE_UNIFORM_KEY,
+                MemoryCategory::Buffers,
+                if built.is_some() {
+                    SCENE_UNIFORM_BYTES
+                } else {
+                    0
+                },
+            ),
+            (SCENE_BUNDLE_KEY, MemoryCategory::RenderBundles, bundles),
+        ],
+    )?;
+    let mut planned = admission.memory;
+    let ibl_selection = admission.ibl;
+    let mut environment = super::environment::materialize(
+        runtime,
+        super::environment::plan(runtime, admission.environment.as_ref(), &mut planned)?,
+    )?;
+    if let Some(e) = &mut environment {
+        e.original_lighting = Some((
+            parsed
+                .environment_lighting
+                .as_ref()
+                .unwrap_or(&parsed.lighting)
+                .clone(),
+            parsed.light_ids.clone(),
+        ));
+    }
+    let scatter = super::scatter::build(runtime, parsed.scatter.clone(), &mut planned)?;
+    let probes = super::probes::prepare(runtime, parsed.probes.as_ref(), &mut planned)?;
+
     let textures = super::textures::build_texture_resources(
         &context,
         &planned,
         runtime.max_texture_dimension_2d,
         &parsed.texture_sets,
     )?;
-    planned.replace(
-        super::textures::TEXTURE_FALLBACK_KEY,
-        MemoryCategory::Textures,
-        super::textures::FALLBACK_BYTES,
-    )?;
-    planned.replace(
-        super::textures::TEXTURE_PAYLOAD_KEY,
-        MemoryCategory::Textures,
-        textures.payload_bytes,
-    )?;
-
-    let ibl_selection = match &parsed.ibl {
-        Some(ibl) if ibl.prepared.is_none() => Some(super::ibl::select_ibl_quality(
-            &planned,
-            runtime.overflow_policy,
-            runtime.max_texture_dimension_2d,
-            ibl,
-            false,
-        )?),
-        _ => None,
-    };
-    if let Some(selection) = &ibl_selection {
-        planned.replace(
-            super::ibl::IBL_TRANSIENT_LEDGER_KEY,
-            MemoryCategory::Textures,
-            selection.transient_bytes,
-        )?;
-    }
-
-    let shadow_resources = super::shadows::build_shadow_resources(
+    let shadow_resources = super::shadows::materialize_shadow_resources(
         &context,
-        &planned,
-        runtime.overflow_policy,
-        runtime.max_texture_dimension_2d,
         &parsed.shadows,
-    )?;
-    let (shadow_depth_bytes, shadow_moment_bytes, shadow_uniform_bytes) =
-        shadow_resources.ledger_bytes()?;
-    planned.replace(
-        super::shadows::SHADOW_DEPTH_KEY,
-        MemoryCategory::Textures,
-        shadow_depth_bytes,
-    )?;
-    planned.replace(
-        super::shadows::SHADOW_MOMENTS_KEY,
-        MemoryCategory::Textures,
-        shadow_moment_bytes,
-    )?;
-    planned.replace(
-        super::shadows::SHADOW_UNIFORMS_KEY,
-        MemoryCategory::Buffers,
-        shadow_uniform_bytes,
+        admission.shadow_size,
     )?;
     let shadow_state = super::shadows::prepare_shadow_state(
         &runtime.camera,
@@ -304,27 +290,13 @@ fn prepare_scene(
         &shadow_resources,
     )?;
     planned.release(super::ibl::IBL_TRANSIENT_LEDGER_KEY);
-    super::ibl::admit_ibl_retained(&mut planned, &ibl_resources)?;
+    debug_assert_eq!(
+        planned.admitted_bytes(super::ibl::IBL_TEXTURES_LEDGER_KEY),
+        Some(ibl_resources.retained_texture_bytes)
+    );
 
     let scene = match built {
         Some((geometry, pass_names)) => {
-            let vertex_estimate = checked_scene_bytes(&geometry)?;
-            let bundle_bytes = bundle_estimate_bytes(&geometry);
-            let total = vertex_estimate
-                .checked_add(SCENE_UNIFORM_BYTES)
-                .and_then(|value| value.checked_add(bundle_bytes))
-                .ok_or_else(|| {
-                    WebError::new(
-                        Forge3DErrorCode::ResourceLimitExceeded,
-                        "scene byte accounting overflowed",
-                    )
-                })?;
-            if !planned.fits_after_release(&scene_memory_keys(), total) {
-                return Err(WebError::new(
-                    Forge3DErrorCode::ResourceLimitExceeded,
-                    format!("scene requires {total} bytes beyond the memory budget"),
-                ));
-            }
             let format = runtime
                 .surface_state
                 .as_ref()
@@ -358,26 +330,10 @@ fn prepare_scene(
                 )
                 .with_probes(runtime.probe_count > 0),
             )?;
-            let vertex_bytes = scene
-                .world_vertex_bytes()
-                .checked_add(scene.overlay_vertex_bytes())
-                .ok_or_else(|| {
-                    WebError::new(
-                        Forge3DErrorCode::ResourceLimitExceeded,
-                        "scene vertex byte accounting overflowed",
-                    )
-                })?;
-            planned.replace(SCENE_VERTEX_KEY, MemoryCategory::Buffers, vertex_bytes)?;
-            planned.replace(
-                SCENE_UNIFORM_KEY,
-                MemoryCategory::Buffers,
-                SCENE_UNIFORM_BYTES,
-            )?;
-            planned.replace(
-                SCENE_BUNDLE_KEY,
-                MemoryCategory::RenderBundles,
-                bundle_bytes,
-            )?;
+            debug_assert_eq!(
+                scene.world_vertex_bytes() + scene.overlay_vertex_bytes(),
+                vertices
+            );
             Some(scene)
         }
         None => {
@@ -506,20 +462,19 @@ fn build_graph(parsed: &ParsedScene) -> Result<(SceneGraph, BTreeMap<u32, NodeId
             ParsedNodeKind::Custom => SceneNodeKind::Custom("generic".to_string()),
         };
         let id = graph.create_node(node.id.to_string(), kind);
-        {
-            let stored = graph.node_mut(id).ok_or_else(|| {
-                WebError::new(
-                    Forge3DErrorCode::InternalError,
-                    "scene node was not created",
-                )
-            })?;
-            stored.transform = Transform {
-                translation: node.transform.translation.into(),
-                rotation: geometry::normalize_quat(node.transform.rotation),
-                scale: node.transform.scale.into(),
-            };
-            stored.visible = node.visible;
-        }
+        graph
+            .set_transform(
+                id,
+                Transform {
+                    translation: node.transform.translation.into(),
+                    rotation: geometry::normalize_quat(node.transform.rotation),
+                    scale: node.transform.scale.into(),
+                },
+            )
+            .map_err(map_core_error)?;
+        graph
+            .set_visible(id, node.visible)
+            .map_err(map_core_error)?;
         if let Some(parent) = node.parent {
             let native_parent = node_map.get(&parent).copied().ok_or_else(|| {
                 WebError::new(

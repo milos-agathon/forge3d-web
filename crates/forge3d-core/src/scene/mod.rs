@@ -1,5 +1,5 @@
 use crate::error::{Forge3dError, Result};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct NodeId(pub u64);
@@ -39,13 +39,46 @@ impl Transform {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SceneNode {
+    id: NodeId,
+    name: String,
+    kind: SceneNodeKind,
+    transform: Transform,
+    world_transform: glam::Mat4,
+    parent: Option<NodeId>,
+    children: Vec<NodeId>,
+    visible: bool,
+}
+
+impl SceneNode {
+    pub fn id(&self) -> NodeId {
+        self.id
+    }
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    pub fn kind(&self) -> &SceneNodeKind {
+        &self.kind
+    }
+    pub fn transform(&self) -> Transform {
+        self.transform
+    }
+    pub fn parent(&self) -> Option<NodeId> {
+        self.parent
+    }
+    pub fn children(&self) -> &[NodeId] {
+        &self.children
+    }
+    pub fn visible(&self) -> bool {
+        self.visible
+    }
+    pub fn world_transform(&self) -> glam::Mat4 {
+        self.world_transform
+    }
+}
+#[derive(Debug, Clone, Copy)]
+pub struct TraversedNode {
     pub id: NodeId,
-    pub name: String,
-    pub kind: SceneNodeKind,
-    pub transform: Transform,
     pub world_transform: glam::Mat4,
-    pub parent: Option<NodeId>,
-    pub children: Vec<NodeId>,
     pub visible: bool,
 }
 
@@ -89,8 +122,46 @@ impl SceneGraph {
         self.nodes.get(&id)
     }
 
-    pub fn node_mut(&mut self, id: NodeId) -> Option<&mut SceneNode> {
-        self.nodes.get_mut(&id)
+    pub fn set_transform(&mut self, id: NodeId, transform: Transform) -> Result<()> {
+        if !transform.matrix().is_finite() {
+            return invalid("transform", "transform must be finite");
+        }
+        let Some(node) = self.nodes.get_mut(&id) else {
+            return invalid("id", "node does not exist");
+        };
+        node.transform = transform;
+        Ok(())
+    }
+    pub fn set_visible(&mut self, id: NodeId, visible: bool) -> Result<()> {
+        let Some(node) = self.nodes.get_mut(&id) else {
+            return invalid("id", "node does not exist");
+        };
+        node.visible = visible;
+        Ok(())
+    }
+    /// Parent-first traversal owns hierarchical visibility and current world transforms.
+    pub fn traversal(&self) -> Vec<TraversedNode> {
+        let mut result = Vec::with_capacity(self.nodes.len());
+        let mut stack: Vec<_> = self
+            .roots
+            .iter()
+            .rev()
+            .map(|id| (*id, glam::Mat4::IDENTITY, true))
+            .collect();
+        while let Some((id, parent_world, parent_visible)) = stack.pop() {
+            let node = &self.nodes[&id];
+            let world = parent_world * node.transform.matrix();
+            let visible = parent_visible && node.visible;
+            result.push(TraversedNode {
+                id,
+                world_transform: world,
+                visible,
+            });
+            for child in node.children.iter().rev() {
+                stack.push((*child, world, visible));
+            }
+        }
+        result
     }
 
     pub fn roots(&self) -> &[NodeId] {
@@ -184,66 +255,26 @@ impl SceneGraph {
     }
 
     pub fn update_world_transforms(&mut self) -> Result<()> {
-        let roots = self.roots.clone();
-        let mut visited = BTreeSet::new();
-        for root in roots {
-            self.update_world_recursive(root, glam::Mat4::IDENTITY, &mut visited)?;
+        for node in self.traversal() {
+            self.nodes.get_mut(&node.id).unwrap().world_transform = node.world_transform;
         }
         Ok(())
     }
-
     pub fn visible_nodes(&mut self) -> Result<Vec<NodeId>> {
-        self.update_world_transforms()?;
-        let mut visible = Vec::new();
-        let roots = self.roots.clone();
-        for root in roots {
-            self.collect_visible(root, true, &mut visible);
+        let traversal = self.traversal();
+        for node in &traversal {
+            self.nodes.get_mut(&node.id).unwrap().world_transform = node.world_transform;
         }
-        Ok(visible)
+        Ok(traversal
+            .into_iter()
+            .filter(|n| n.visible)
+            .map(|n| n.id)
+            .collect())
     }
 
     pub fn clear(&mut self) {
         self.nodes.clear();
         self.roots.clear();
-    }
-
-    fn update_world_recursive(
-        &mut self,
-        id: NodeId,
-        parent_world: glam::Mat4,
-        visited: &mut BTreeSet<NodeId>,
-    ) -> Result<()> {
-        if !visited.insert(id) {
-            return invalid("scene", "cycle detected in scene graph");
-        }
-        let node = match self.nodes.get(&id) {
-            Some(node) => node,
-            None => return invalid("scene", "node does not exist"),
-        };
-        let world = parent_world * node.transform.matrix();
-        let children = node.children.clone();
-        self.nodes
-            .get_mut(&id)
-            .expect("node existence checked above")
-            .world_transform = world;
-        for child in children {
-            self.update_world_recursive(child, world, visited)?;
-        }
-        Ok(())
-    }
-
-    fn collect_visible(&self, id: NodeId, parent_visible: bool, out: &mut Vec<NodeId>) {
-        let node = match self.nodes.get(&id) {
-            Some(node) => node,
-            None => return,
-        };
-        let visible = parent_visible && node.visible;
-        if visible {
-            out.push(id);
-        }
-        for &child in &node.children {
-            self.collect_visible(child, visible, out);
-        }
     }
 }
 

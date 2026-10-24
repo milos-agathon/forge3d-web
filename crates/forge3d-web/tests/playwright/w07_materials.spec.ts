@@ -168,3 +168,24 @@ test.describe("W07 terrain PBR/POM and layered materials", () => {
     }
   });
 });
+
+// Bypass the TypeScript material normalizer: exercise the live JsValue adapter.
+test("material snapshot envelope agrees with native JSON contract", async ({ page, webgpuAvailability }) => {
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  await page.goto("/examples/test-w07-materials.html");
+  const result = await page.evaluate(async () => {
+    const wasm = await import(/* @vite-ignore */ "/pkg/forge3d_web.js");
+    await wasm.default();
+    const runtime = await wasm.Forge3DRuntime.create(document.createElement("canvas"), { width: 2, height: 2, devicePixelRatio: 1 });
+    const image = () => ({width:2,height:2,format:"rgba8unorm-srgb",colorSpace:"srgb",levels:[{width:2,height:2,data:new Uint8Array(16)},{width:1,height:1,data:new Uint8Array(4)}]});
+    const snapshot = (textures: unknown) => ({ revision:1,maxMaterials:16,materials:[{slot:"default",index:0,material:{id:"mat",route:{requested:"lambert",model:"lambert",effectiveModel:"lambert",implementation:"exact"},brdf:"lambert",baseColor:[1,1,1,1],metallic:0,roughness:0.5,sheen:0,clearcoat:0,subsurface:0,anisotropy:0,textures}}] });
+    const cases: unknown[] = [{},{sampler:null,normal:null},{baseColor:image()}];
+    for (const [level,width] of [[0,1],[0,4294967298],[1,4294967297]]) {
+      const value=image(); value.levels[level]!.width=width; cases.push({baseColor:value});
+    }
+    cases.push({baseColor:{levels:null}},{sampler:{maxAnisotropy:4294967296}});
+    try { return cases.map(textures => { try { runtime.setMaterials(snapshot(textures)); return "accepted"; } catch (error) { return (error as {code:string}).code; } }); }
+    finally { runtime.dispose(); }
+  });
+  expect(result).toEqual(["accepted","accepted","accepted",...Array(5).fill("INVALID_INPUT")]);
+});

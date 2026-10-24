@@ -317,7 +317,7 @@ impl ShadowReportState {
     }
 }
 
-fn shadow_map_size_ladder(requested: u32, policy: OverflowPolicy) -> Vec<u32> {
+pub(super) fn shadow_map_size_ladder(requested: u32, policy: OverflowPolicy) -> Vec<u32> {
     match policy {
         OverflowPolicy::Reject => vec![requested],
         OverflowPolicy::Downscale => {
@@ -1354,6 +1354,29 @@ pub(super) fn build_shadow_resources(
     ))
 }
 
+pub(super) fn materialize_shadow_resources(
+    context: &forge3d_core::gpu::GpuContext,
+    parsed: &ParsedShadows,
+    map_size: u32,
+) -> Result<ShadowResources, WebError> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        Ok(ShadowResources::create(
+            context,
+            parsed.config,
+            parsed.csm,
+            map_size,
+        ))
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = (context, parsed, map_size);
+        Err(WebError::new(
+            Forge3DErrorCode::UnsupportedFeature,
+            "Shadow commits are only available in wasm32 browser builds",
+        ))
+    }
+}
 pub(super) fn commit_shadows(runtime: &mut Forge3DRuntime, resources: ShadowResources) {
     runtime.shadows = Some(resources);
 }

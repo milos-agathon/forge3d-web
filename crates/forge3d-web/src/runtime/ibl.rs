@@ -96,7 +96,7 @@ pub(super) fn ibl_quality_name(quality: IblQuality) -> &'static str {
     }
 }
 
-fn ibl_quality_ladder(requested: IblQuality) -> Vec<IblQuality> {
+pub(super) fn ibl_quality_ladder(requested: IblQuality) -> Vec<IblQuality> {
     let all = [
         IblQuality::Low,
         IblQuality::Medium,
@@ -1215,11 +1215,28 @@ pub(super) fn select_ibl_quality(
     parsed: &ParsedIbl,
     with_readback: bool,
 ) -> Result<IblSelection, WebError> {
+    select_ibl_quality_at(
+        memory,
+        overflow_policy,
+        max_texture_dimension_2d,
+        parsed,
+        with_readback,
+        parsed.requested_quality,
+    )
+}
+pub(super) fn select_ibl_quality_at(
+    memory: &super::memory::MemoryLedger,
+    overflow_policy: OverflowPolicy,
+    max_texture_dimension_2d: u32,
+    parsed: &ParsedIbl,
+    with_readback: bool,
+    requested: IblQuality,
+) -> Result<IblSelection, WebError> {
     let source =
         source_bytes(parsed).ok_or_else(|| resource_limit("ibl source size overflowed"))?;
     let candidates: Vec<IblQuality> = match overflow_policy {
-        OverflowPolicy::Reject => vec![parsed.requested_quality],
-        OverflowPolicy::Downscale => ibl_quality_ladder(parsed.requested_quality),
+        OverflowPolicy::Reject => vec![requested],
+        OverflowPolicy::Downscale => ibl_quality_ladder(requested),
     };
     let mut dimension_limited = false;
     for quality in candidates {
@@ -1286,6 +1303,25 @@ pub(super) fn select_ibl_quality(
     )))
 }
 
+pub(super) fn scene_footprint(
+    parsed: Option<&ParsedIbl>,
+    selection: Option<&IblSelection>,
+) -> Result<(u64, u64), WebError> {
+    let Some(parsed) = parsed else {
+        return Ok((IBL_FALLBACK_TEXTURE_BYTES, 0));
+    };
+    let spec = selection
+        .map(|s| s.spec)
+        .unwrap_or_else(|| ibl_quality_spec(parsed.effective_quality));
+    let (a, b, c) =
+        ibl_prepared_lengths(&spec).ok_or_else(|| resource_limit("ibl size overflowed"))?;
+    Ok((
+        a.checked_add(b)
+            .and_then(|v| v.checked_add(c))
+            .ok_or_else(|| resource_limit("ibl size overflowed"))?,
+        selection.map_or(0, |s| s.transient_bytes),
+    ))
+}
 struct IblReadbackRegion {
     offset: u64,
     row_bytes: usize,

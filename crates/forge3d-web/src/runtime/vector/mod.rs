@@ -382,8 +382,19 @@ pub(super) fn prepare_scene_highlights(
 ) -> Result<HighlightUpdate, WebError> {
     prepare_highlights(runtime, packet.highlights.clone(), memory)
 }
-pub(super) fn retained_bytes(runtime: &Forge3DRuntime) -> u64 {
-    runtime.vectors.as_ref().map_or(0, |v| v.bytes)
+pub(super) fn retained_scene_bytes(
+    runtime: &Forge3DRuntime,
+    packet: Option<&Packet>,
+) -> Result<u64, WebError> {
+    if let Some(packet) = packet {
+        validate_highlights(&packet.highlights)?;
+    }
+    Ok(runtime.vectors.as_ref().map_or(0, |v| {
+        let size = packet.map_or(v.highlights.size(), |p| {
+            (highlight_values(&p.highlights).len().max(1) * std::mem::size_of::<Highlight>()) as u64
+        });
+        v.bytes - v.highlights.size() + size.max(v.highlights.size())
+    }))
 }
 pub(super) fn apply_highlights(runtime: &mut Forge3DRuntime, update: HighlightUpdate) {
     let c = runtime.context.as_ref().expect("validated live context");

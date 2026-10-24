@@ -9,9 +9,9 @@ pub(super) const KEY: &str = "probes:buffers";
 const IRRADIANCE_PROBE_LIMIT: u64 = 4096;
 const REFLECTION_PROBE_LIMIT: u64 = 256;
 const HEADER_VECTORS: usize = 8;
-pub(super) fn planned_bytes(snapshot: Option<&Snapshot>) -> Result<u64, WebError> {
+pub(super) fn planned_bytes(snapshot: Option<&Compiled>) -> Result<u64, WebError> {
     Ok(match snapshot {
-        Some(s) => (pack(s)?.len() * 16) as u64,
+        Some(s) => s.bytes(),
         None => 64,
     })
 }
@@ -39,6 +39,47 @@ pub(super) struct Snapshot {
     reflection_strength: f32,
     debug: String,
 }
+#[derive(Clone, Debug)]
+pub(super) struct Compiled {
+    data: std::sync::Arc<[[f32; 4]]>,
+    count: u32,
+    reflection_count: u32,
+    position_bytes: u64,
+    coefficient_bytes: u64,
+    irradiance_position_bytes: u64,
+    reflection_position_bytes: u64,
+    reflection_bytes: u64,
+}
+impl Compiled {
+    fn new(snapshot: Snapshot) -> Result<Self, WebError> {
+        let data = pack(&snapshot)?.into();
+        let count = snapshot.grid.dims[0] * snapshot.grid.dims[1];
+        let reflection_count = snapshot
+            .reflection_grid
+            .as_ref()
+            .map_or(count, |grid| grid.dims[0] * grid.dims[1]);
+        Ok(Self {
+            data,
+            count,
+            reflection_count,
+            position_bytes: (snapshot.positions.len()
+                + snapshot.reflection_positions.as_ref().map_or(0, Vec::len))
+                as u64
+                * 4,
+            coefficient_bytes: u64::from(count) * 27 * 4,
+            irradiance_position_bytes: u64::from(count) * 3 * 4,
+            reflection_position_bytes: u64::from(reflection_count) * 3 * 4,
+            reflection_bytes: snapshot
+                .reflection_mips
+                .iter()
+                .map(|m| m.len() as u64 * 4)
+                .sum(),
+        })
+    }
+    fn bytes(&self) -> u64 {
+        self.data.len() as u64 * 16
+    }
+}
 pub(super) struct Prepared {
     pub buffer: wgpu::Buffer,
     pub layout: wgpu::BindGroupLayout,
@@ -53,14 +94,13 @@ pub(super) struct Prepared {
     pub reflection_bytes: u64,
     pub enabled: bool,
 }
-pub(super) fn parse(value: wasm_bindgen::JsValue) -> Result<Option<Snapshot>, WebError> {
+pub(super) fn parse(value: wasm_bindgen::JsValue) -> Result<Option<Compiled>, WebError> {
     if value.is_undefined() || value.is_null() {
         return Ok(None);
     }
     let snapshot: Snapshot = serde_wasm_bindgen::from_value(value)
         .map_err(|e| super::scatter::invalid(format!("probes: {e}")))?;
-    pack(&snapshot)?;
-    Ok(Some(snapshot))
+    Ok(Some(Compiled::new(snapshot)?))
 }
 fn pack(s: &Snapshot) -> Result<Vec<[f32; 4]>, WebError> {
     if let Some(bounds) = &s.scene_bounds {
@@ -228,7 +268,7 @@ fn pack(s: &Snapshot) -> Result<Vec<[f32; 4]>, WebError> {
 }
 pub(super) fn prepare(
     runtime: &Forge3DRuntime,
-    snapshot: Option<&Snapshot>,
+    snapshot: Option<&Compiled>,
     memory: &mut super::memory::MemoryLedger,
 ) -> Result<Prepared, WebError> {
     let context = runtime
@@ -256,10 +296,7 @@ pub(super) fn prepare(
             }
         }
     }
-    let data = match snapshot {
-        Some(s) => pack(s)?,
-        None => vec![[0.0; 4]; 4],
-    };
+    let data: &[[f32; 4]] = snapshot.map_or(&[[0.0; 4]; 4], |s| s.data.as_ref());
     let bytes = (data.len() * 16) as u64;
     if bytes > context.device.limits().max_storage_buffer_binding_size as u64
         || bytes > context.device.limits().max_buffer_size
@@ -286,46 +323,18 @@ pub(super) fn prepare(
         .as_ref()
         .unwrap()
         .bind_group_for_probes(context, snapshot.map(|_| &buffer));
-    let (
-        count,
-        reflection_count,
-        coefficient_bytes,
-        irradiance_position_bytes,
-        reflection_position_bytes,
-        reflection_bytes,
-    ) = snapshot.map_or((0, 0, 0, 0, 0, 0), |snapshot| {
-        let count = snapshot.grid.dims[0] * snapshot.grid.dims[1];
-        let reflection_count = snapshot
-            .reflection_grid
-            .as_ref()
-            .map_or(count, |grid| grid.dims[0] * grid.dims[1]);
-        (
-            count,
-            reflection_count,
-            u64::from(count) * 27 * 4,
-            u64::from(count) * 3 * 4,
-            u64::from(reflection_count) * 3 * 4,
-            snapshot
-                .reflection_mips
-                .iter()
-                .map(|mip| mip.len() as u64 * 4)
-                .sum(),
-        )
-    });
     Ok(Prepared {
         buffer,
         layout,
         group,
-        count,
-        reflection_count,
+        count: snapshot.map_or(0, |s| s.count),
+        reflection_count: snapshot.map_or(0, |s| s.reflection_count),
         bytes,
-        position_bytes: snapshot.map_or(0, |s| {
-            (s.positions.len() + s.reflection_positions.as_ref().map_or(0, Vec::len)) as u64 * 4
-        }),
-        coefficient_bytes,
-        irradiance_position_bytes,
-        reflection_position_bytes,
-        reflection_bytes,
+        position_bytes: snapshot.map_or(0, |s| s.position_bytes),
+        coefficient_bytes: snapshot.map_or(0, |s| s.coefficient_bytes),
+        irradiance_position_bytes: snapshot.map_or(0, |s| s.irradiance_position_bytes),
+        reflection_position_bytes: snapshot.map_or(0, |s| s.reflection_position_bytes),
+        reflection_bytes: snapshot.map_or(0, |s| s.reflection_bytes),
         enabled: snapshot.is_some(),
     })
 }
@@ -368,4 +377,54 @@ pub(super) fn set(
     commit(runtime, prepared);
     runtime.memory = memory;
     Ok(())
+}
+
+#[cfg(test)]
+mod compiled_tests {
+    use super::*;
+    fn snapshot() -> Snapshot {
+        Snapshot {
+            grid: Grid {
+                origin: [0., 0.],
+                spacing: [1., 1.],
+                dims: [1, 1],
+                height_offset: 1.,
+                edge_blend: [1., 1.],
+            },
+            scene_bounds: None,
+            positions: vec![0.; 3],
+            coefficients: vec![0.; 27],
+            reflection_grid: None,
+            reflection_positions: None,
+            reflection_resolution: 1,
+            reflection_mips: vec![vec![0.; 24]],
+            strength: 1.,
+            reflection_strength: 1.,
+            debug: "none".into(),
+        }
+    }
+    #[test]
+    fn compiled_payload_is_shared_by_clones_and_planning() {
+        let source = snapshot();
+        let expected = pack(&source).unwrap();
+        let prepared = Compiled::new(source).unwrap();
+        let copy = prepared.clone();
+        assert!(std::sync::Arc::ptr_eq(&copy.data, &prepared.data));
+        assert_eq!(&*prepared.data, expected.as_slice());
+        assert_eq!(
+            planned_bytes(Some(&prepared)).unwrap(),
+            expected.len() as u64 * 16
+        );
+        assert_eq!(prepared.reflection_count, 1);
+    }
+    #[test]
+    fn invalid_reflection_dimensions_never_produce_payload() {
+        let mut source = snapshot();
+        source.reflection_grid = Some(Grid {
+            dims: [257, 1],
+            ..source.grid.clone()
+        });
+        source.reflection_positions = Some(vec![0.; 771]);
+        assert!(Compiled::new(source).is_err());
+    }
 }

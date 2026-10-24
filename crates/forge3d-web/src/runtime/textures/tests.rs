@@ -191,3 +191,28 @@ fn textures_layout_has_six_entries_and_two_ledger_keys() {
     assert_eq!(texture_memory_keys().len(), 2);
     assert_eq!(FALLBACK_BYTES, 20);
 }
+
+#[test]
+fn envelope_matches_browser_defaults_and_relationships() {
+    for textures in [
+        serde_json::json!({}),
+        serde_json::json!({"sampler":null,"normal":null}),
+        serde_json::json!({"baseColor":rgba_image("srgb", "rgba8unorm-srgb")}),
+    ] {
+        assert!(materials_and_textures_from_json(&snapshot_json(textures)).is_ok());
+    }
+    for (level, dimension) in [(0, 1u64), (0, 4294967298), (1, 4294967297)] {
+        let mut image = rgba_image("srgb", "rgba8unorm-srgb");
+        image["levels"][level]["width"] = dimension.into();
+        assert!(materials_and_textures_from_json(&snapshot_json(
+            serde_json::json!({"baseColor":image})
+        ))
+        .is_err());
+    }
+    for textures in [
+        serde_json::json!({"baseColor":{"levels":null}}),
+        serde_json::json!({"sampler":{"maxAnisotropy":4294967296u64}}),
+    ] {
+        assert!(materials_and_textures_from_json(&snapshot_json(textures)).is_err());
+    }
+}

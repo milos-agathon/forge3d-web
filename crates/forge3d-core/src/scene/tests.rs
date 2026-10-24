@@ -34,12 +34,19 @@ fn world_transform_composes_parent_and_local() {
     let child = graph.create_node("child", SceneNodeKind::Terrain);
 
     graph.set_parent(child, Some(parent)).unwrap();
-    graph.node_mut(parent).unwrap().transform = Transform {
-        translation: glam::Vec3::new(10.0, 0.0, 0.0),
-        rotation: glam::Quat::IDENTITY,
-        scale: glam::Vec3::splat(2.0),
-    };
-    graph.node_mut(child).unwrap().transform = translated(1.0, 0.0, 0.0);
+    graph
+        .set_transform(
+            parent,
+            Transform {
+                translation: glam::Vec3::new(10.0, 0.0, 0.0),
+                rotation: glam::Quat::IDENTITY,
+                scale: glam::Vec3::splat(2.0),
+            },
+        )
+        .unwrap();
+    graph
+        .set_transform(child, translated(1.0, 0.0, 0.0))
+        .unwrap();
 
     graph.update_world_transforms().unwrap();
 
@@ -117,7 +124,7 @@ fn invisible_parent_suppresses_descendants() {
 
     graph.set_parent(child, Some(parent)).unwrap();
     graph.set_parent(grandchild, Some(child)).unwrap();
-    graph.node_mut(parent).unwrap().visible = false;
+    graph.set_visible(parent, false).unwrap();
 
     let visible = graph.visible_nodes().unwrap();
 
@@ -153,4 +160,36 @@ fn remove_deletes_subtree_child_before_parent() {
         graph.remove(NodeId(42)),
         Err(Forge3dError::InvalidInput { .. })
     ));
+}
+
+#[test]
+fn traversal_remains_coherent_after_reparent_visibility_and_remove() {
+    let mut graph = SceneGraph::new();
+    let a = graph.create_node("a", SceneNodeKind::Group);
+    let b = graph.create_node("b", SceneNodeKind::Group);
+    let c = graph.create_node("c", SceneNodeKind::TextMesh);
+    graph.set_transform(a, translated(10., 0., 0.)).unwrap();
+    graph.set_transform(b, translated(20., 0., 0.)).unwrap();
+    graph.set_parent(c, Some(a)).unwrap();
+    graph.set_visible(a, false).unwrap();
+    assert!(
+        !graph
+            .traversal()
+            .iter()
+            .find(|n| n.id == c)
+            .unwrap()
+            .visible
+    );
+    graph.set_parent(c, Some(b)).unwrap();
+    let current = graph.traversal();
+    let child = current.iter().find(|n| n.id == c).unwrap();
+    assert!(child.visible);
+    assert_eq!(
+        child.world_transform.transform_point3(glam::Vec3::ZERO).x,
+        20.
+    );
+    graph.remove(a).unwrap();
+    assert!(graph.node(c).is_some());
+    graph.remove(b).unwrap();
+    assert!(graph.traversal().is_empty());
 }
