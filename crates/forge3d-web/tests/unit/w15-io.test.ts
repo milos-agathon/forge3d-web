@@ -13,6 +13,21 @@ function triangle(m: f.MeshBuffers) {
     expect([...m[key]]).toEqual(expected[key]);
 }
 describe("W15 mesh IO", () => {
+  it("rejects malformed large accessor layouts before output admission", async () => {
+    const doc = {
+      asset: { version: "2.0" },
+      buffers: [{ byteLength: 4, uri: "data:application/octet-stream;base64,AAAAAA==" }],
+      bufferViews: [{ buffer: 0, byteLength: 4 }],
+      accessors: [{ componentType: 5126, type: "VEC3", count: 1000000, bufferView: 0 }],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+    };
+    const encode = () => new TextEncoder().encode(JSON.stringify(doc));
+    await expect(f.decodeGltf(encode(), { maxBytes: 4096 })).rejects.toThrow("accessor exceeds view");
+    Object.assign(doc.accessors[0]!, { bufferView: undefined, sparse: {
+      count: 1, indices: { bufferView: 0, componentType: 5121 }, values: { bufferView: 0 },
+    } });
+    await expect(f.decodeGltf(encode(), { maxBytes: 4096 })).rejects.toThrow("sparse accessor exceeds view");
+  });
   it("disposal cancels external resolvers that ignore signals and resolver errors stay typed", async () => {
     const io = new f.MeshIo();
     let started!: () => void;

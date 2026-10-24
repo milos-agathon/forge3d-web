@@ -1,10 +1,10 @@
+import { type TileMesh } from './tiles3d-view.js';
 import type { Forge3DScene } from "./index.js";
 import type { PointData, PointVec3, PointView } from "./pointcloud-types.js";
 import { Tileset, TilesetTraverser } from "./tiles3d.js";
 import type { TilesetTraversalOptions, VisibleTile } from "./tiles3d.js";
 import type { B3dmContent, PntsContent } from "./tiles3d-content.js";
 import { PointCache } from "./pointcloud-common.js";
-import type { MeshBuffers } from "./mesh.js";
 import { PointCloudLayer } from "./pointcloud-layer.js";
 export type TilePayload = PntsContent | B3dmContent;
 export interface Tiles3dLayerOptions extends TilesetTraversalOptions {
@@ -33,11 +33,7 @@ export declare class Tiles3dLayer {
     pointData(): PointData;
     /** Point tiles use the compact point renderer. Mesh tiles use W15 scene batches. */
     asPointCloudLayer(): PointCloudLayer;
-    meshes(): {
-        name: string;
-        mesh: MeshBuffers;
-        material: Readonly<Record<string, unknown>> | undefined;
-    }[];
+    meshes(): TileMesh[];
     addMeshesToScene(scene: Forge3DScene): void;
     stats(): {
         visibleTileCount: number;
@@ -57,3 +53,5 @@ export declare class Tiles3dLayer {
     };
     dispose(): void;
 }
+/** Internal count without cloning public mesh views. */
+export declare function preparedTileMeshCount(layer: Tiles3dLayer): number;

@@ -244,12 +244,10 @@ export class EptDataset implements PointCloudDataset {
     return this.#node(key).children.map((k) => this.#node(k));
   }
   async readPoints(key: string, signal?: AbortSignal): Promise<PointData> {
-    this.io.signal(signal);
+    return this.io.produceNode(key,async signal=>{
     await this.#resolve(key, signal);
     const n = this.hierarchy.get(key);
     if (n === undefined || n < 0) pointError("EPT data node missing");
-    const cached = this.io.cached(key);
-    if (cached) return cached;
     if (!n) return { positions: new Float64Array() };
     if (this.info.dataType === "zstandard")
       throw new (await import("./index.js")).Forge3DError(
@@ -285,8 +283,10 @@ export class EptDataset implements PointCloudDataset {
     );
     if (data.positions.length / 3 !== n)
       pointError("EPT point count differs from hierarchy");
-    return this.io.admit(key, data);
+    return data;
+    },signal);
   }
+
   stats() {
     return {
       ...this.io.stats(),

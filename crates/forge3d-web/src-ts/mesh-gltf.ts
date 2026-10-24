@@ -1,4 +1,5 @@
 import { Forge3DError } from "./runtime-failure.js";
+import { checkedAccessors } from "./mesh-gltf-accessors.js";
 import { readByteSource } from "./browser-io.js";
 import type { BrowserByteSource, ByteReadOptions } from "./index.js";
 import {
@@ -199,144 +200,10 @@ export async function decodeGltf(
       meshError("buffer byteLength mismatch");
     buffers.push(data.subarray(0, length));
   }
-  function readView(id: number): { data: Uint8Array; definition: RecordValue } {
-    const definition = views[id];
-    if (!definition) meshError("bufferView out of bounds");
-    const b = buffers[integer(definition.buffer, "bufferView.buffer")];
-    if (!b) meshError("bufferView buffer missing");
-    const offset = integer(definition.byteOffset ?? 0, "bufferView.byteOffset"),
-      length = integer(definition.byteLength, "bufferView.byteLength");
-    if (offset + length > b.length)
-      meshError("bufferView range exceeds buffer");
-    return { data: b.subarray(offset, offset + length), definition };
-  }
-  const widths: Record<string, number> = {
-      SCALAR: 1,
-      VEC2: 2,
-      VEC3: 3,
-      VEC4: 4,
-    },
-    sizes: Record<number, number> = {
-      5120: 1,
-      5121: 1,
-      5122: 2,
-      5123: 2,
-      5125: 4,
-      5126: 4,
-    };
-  function scalar(
-    v: DataView,
-    off: number,
-    type: number,
-    normalized: boolean,
-  ): number {
-    let x: number;
-    switch (type) {
-      case 5120:
-        x = v.getInt8(off);
-        return normalized ? Math.max(x / 127, -1) : x;
-      case 5121:
-        x = v.getUint8(off);
-        return normalized ? x / 255 : x;
-      case 5122:
-        x = v.getInt16(off, true);
-        return normalized ? Math.max(x / 32767, -1) : x;
-      case 5123:
-        x = v.getUint16(off, true);
-        return normalized ? x / 65535 : x;
-      case 5125:
-        return v.getUint32(off, true);
-      case 5126:
-        x = v.getFloat32(off, true);
-        if (!Number.isFinite(x)) meshError("non-finite accessor");
-        return x;
-      default:
-        meshError("unsupported componentType");
-    }
-  }
-  function accessor(
-    id: number,
-    shape: string,
-    indices = false,
-  ): Float32Array | Uint32Array {
-    const a = accessors[id];
-    if (!a) meshError("accessor out of bounds");
-    if (a.type !== shape) meshError(`accessor must be ${shape}`);
-    const type = integer(a.componentType, "componentType"),
-      size = sizes[type],
-      width = widths[shape]!,
-      count = integer(a.count, "accessor.count");
-    if (!size) meshError("unsupported componentType");
-    if (indices && ![5121, 5123, 5125].includes(type))
-      meshError("indices must be unsigned integers");
-    if (indices && a.normalized) meshError("indices cannot be normalized");
-    const normalized = a.normalized === true;
-    allocated += count * width * 4;
+  const accessor = checkedAccessors(views, accessors, buffers, (bytes) => {
+    allocated += bytes;
     meshLimit(used + allocated, budget);
-    const out = indices
-      ? new Uint32Array(count * width)
-      : new Float32Array(count * width);
-    if (a.bufferView !== undefined) {
-      const { data, definition } = readView(
-          integer(a.bufferView, "accessor.bufferView"),
-        ),
-        stride = integer(
-          definition.byteStride ?? width * size,
-          "byteStride",
-          width * size,
-          252,
-        ),
-        off = integer(a.byteOffset ?? 0, "accessor.byteOffset");
-      if (
-        off % size ||
-        stride % size ||
-        (count && off + (count - 1) * stride + width * size > data.length)
-      )
-        meshError("accessor exceeds view or has invalid alignment");
-      const v = new DataView(data.buffer, data.byteOffset, data.length);
-      for (let i = 0; i < count; i++)
-        for (let j = 0; j < width; j++)
-          out[i * width + j] = scalar(
-            v,
-            off + i * stride + j * size,
-            type,
-            normalized,
-          );
-    } else if (a.sparse === undefined) meshError("accessor has no data");
-    if (a.sparse !== undefined) {
-      const sparse = record(a.sparse, "sparse"),
-        n = integer(sparse.count, "sparse.count", 1, count),
-        ids = record(sparse.indices, "sparse.indices"),
-        values = record(sparse.values, "sparse.values"),
-        it = integer(ids.componentType, "sparse index type"),
-        is = sizes[it];
-      if (!is || ![5121, 5123, 5125].includes(it))
-        meshError("invalid sparse indices");
-      const iv = readView(integer(ids.bufferView, "sparse indices view")).data,
-        vv = readView(integer(values.bufferView, "sparse values view")).data,
-        io = integer(ids.byteOffset ?? 0, "sparse indices offset"),
-        vo = integer(values.byteOffset ?? 0, "sparse values offset");
-      if (io + n * is > iv.length || vo + n * width * size > vv.length)
-        meshError("sparse accessor exceeds view");
-      const idv = new DataView(iv.buffer, iv.byteOffset, iv.length),
-        valv = new DataView(vv.buffer, vv.byteOffset, vv.length);
-      let previous = -1;
-      for (let k = 0; k < n; k++) {
-        const i = scalar(idv, io + k * is, it, false);
-        if (i <= previous || i >= count)
-          meshError("sparse indices must increase within accessor");
-        previous = i;
-        for (let j = 0; j < width; j++)
-          out[i * width + j] = scalar(
-            valv,
-            vo + (k * width + j) * size,
-            type,
-            normalized,
-          );
-      }
-    }
-    return out;
-  }
+  });
   const primitives: GltfPrimitive[] = [];
   const meshes = list(doc.meshes, "meshes"),
     materials = list(doc.materials, "materials");

@@ -374,7 +374,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w16-tiles.test.ts",
-      "sha256": "d96f24f95b97f3243ed3051c3c08cc94ac477a38736e588cb52bce683f522f12",
+      "sha256": "cf85bfefd6227480d6e816f2b8fb5bdddb144766fb851f6d9bb7e3a1abfc6f78",
       "snapshot": "evidence-sources/tests/unit/w16-tiles.test.ts.txt"
     },
     {
@@ -394,7 +394,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/w15-io.test.ts",
-      "sha256": "113cd512da63c9ad439b7e26a0b5618faa57f41929dbaaddec263cdf03af1677",
+      "sha256": "bd4ccf0ac3d66763b41254eb1a3fc42ab4e1706fb50f1913d22988b96795727f",
       "snapshot": "evidence-sources/tests/unit/w15-io.test.ts.txt"
     },
     {
