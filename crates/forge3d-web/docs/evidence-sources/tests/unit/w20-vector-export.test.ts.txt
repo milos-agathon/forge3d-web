@@ -98,6 +98,9 @@ it.each([['SVG',exportSvg],['PDF',exportPdf]] as const)('%s captures bounds, sty
   try {
     const pending=encode(scene,options);await started;
     options.bounds.maxX=10000;options.background.fill(0);options.width=1;options.maxBytes=1;options.fonts[0]!.source='https://invalid.test/font';scene.clear();scene.addLabel('Replacement',[99,99]);
-    release();expect(new Uint8Array(await (await pending).arrayBuffer())).toEqual(new Uint8Array(await baseline.arrayBuffer()));
+    release();
+    // Compare every byte without enumerating a megabyte of typed-array properties.
+    const actual=Buffer.from(await (await pending).arrayBuffer()),expected=Buffer.from(await baseline.arrayBuffer());
+    expect(actual.equals(expected)).toBe(true);
   }finally{vi.unstubAllGlobals();scene.dispose();}
 });

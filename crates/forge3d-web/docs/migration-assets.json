@@ -1633,8 +1633,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w06-capture.html.txt",
-      "sha256": "104dd3188857d7e0750c77e895db1b7baa367c848bdcac8ce1786586342b2fa6",
-      "bytes": 50422,
+      "sha256": "316a5153afb0dbc92b10b87e171310a3a98667aa963317d22050976b023f27ae",
+      "bytes": 50914,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -1644,7 +1644,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/examples/test-w06-capture.html",
-            "sha256": "104dd3188857d7e0750c77e895db1b7baa367c848bdcac8ce1786586342b2fa6",
+            "sha256": "316a5153afb0dbc92b10b87e171310a3a98667aa963317d22050976b023f27ae",
             "hashMode": "utf8-lf"
           }
         ],
@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "84fb7de6f620f006710dc9538f34363ed5be25a849b176c59fb272017eedc415",
+      "sha256": "043b6c366b0f861ddb5544afde861a97b362688351dcbf2e1e230c4f8e1699eb",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -2312,8 +2312,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w06_capture.spec.ts.txt",
-      "sha256": "d9c39a3b6d1944b172ec7865ec58709ff5f7ec7f45bd38b4768b5fb6f6325200",
-      "bytes": 17929,
+      "sha256": "01c6a2bc703dcd1e6f93a3b4b262397e8d2928ccbb82bc0d13ae871dc215ac2b",
+      "bytes": 18181,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2323,7 +2323,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w06_capture.spec.ts",
-            "sha256": "d9c39a3b6d1944b172ec7865ec58709ff5f7ec7f45bd38b4768b5fb6f6325200",
+            "sha256": "01c6a2bc703dcd1e6f93a3b4b262397e8d2928ccbb82bc0d13ae871dc215ac2b",
             "hashMode": "utf8-lf"
           }
         ],
@@ -3512,8 +3512,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w06-frames.test.ts.txt",
-      "sha256": "a463f97ec17bcf4605e5540f4b0d87e15884fb31e7908c0f5761ff9fe56b10a9",
-      "bytes": 10340,
+      "sha256": "39753eeb347195b06b150f2553ed93164f9a0592903f9a2912ad7f852ee6764a",
+      "bytes": 12760,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -3523,7 +3523,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/unit/w06-frames.test.ts",
-            "sha256": "a463f97ec17bcf4605e5540f4b0d87e15884fb31e7908c0f5761ff9fe56b10a9",
+            "sha256": "39753eeb347195b06b150f2553ed93164f9a0592903f9a2912ad7f852ee6764a",
             "hashMode": "utf8-lf"
           }
         ],
@@ -4012,8 +4012,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w20-vector-export.test.ts.txt",
-      "sha256": "740fa04d16f9dc19318e24e572cf95496f7e9c2373b1983d3b8eb864bee67854",
-      "bytes": 15204,
+      "sha256": "436e6202aefdd95b6a0038fb26c0acbe22daddb431964b8fc443a69ae79a5274",
+      "bytes": 15340,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -4023,7 +4023,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/unit/w20-vector-export.test.ts",
-            "sha256": "740fa04d16f9dc19318e24e572cf95496f7e9c2373b1983d3b8eb864bee67854",
+            "sha256": "436e6202aefdd95b6a0038fb26c0acbe22daddb431964b8fc443a69ae79a5274",
             "hashMode": "utf8-lf"
           }
         ],

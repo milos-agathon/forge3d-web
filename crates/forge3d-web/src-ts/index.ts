@@ -1634,6 +1634,10 @@ export interface VideoEncodeOptions {
   creationTime?: Date | number;
   signal?: AbortSignal;
   onProgress?: (framesEncoded: number) => void;
+  /** Maximum retained encoded packets; defaults to 8 MiB. */
+  maxPacketBytes?: number;
+  /** Maximum contiguous muxed output; defaults to 256 MiB. */
+  maxOutputBytes?: number;
 }
 
 export interface EncodedVideoChunkInput {
@@ -1652,6 +1656,7 @@ export interface MuxVideoOptions {
   fps: number;
   decoderConfig?: VideoDecoderConfig;
   creationTime?: Date | number;
+  maxOutputBytes?: number;
 }
 
 export interface EncodedVideoResult {
@@ -1667,6 +1672,8 @@ export interface EncodedVideoResult {
   timestampsUs: number[];
   durationUs: number;
   keyFrames: number;
+  /** Observed peak bytes awaiting the muxer. */
+  peakPacketBytes?: number;
 }
 
 export interface FlyView {

@@ -988,6 +988,10 @@
           };
           result.mp4 = await encodeFor("mp4");
           result.webm = await encodeFor("webm");
+          if (result.webm.ok) {
+            const long = await encodeVideo(Array.from({length:120},(_,i)=>frames[i%frames.length]), {fps:12,container:"webm",maxPacketBytes:1<<20,maxOutputBytes:8<<20});
+            result.long = {frameCount:long.frameCount,peakPacketBytes:long.peakPacketBytes,size:long.blob.size};
+          }
           // Deterministic muxing: identical chunks produce identical bytes.
           const chunk = { data: new Uint8Array([0, 0, 0, 1, 9, 16]), type: "key", timestampUs: 0, durationUs: 83333 };
           const muxOptions = { codec: "vp9", container: "webm", width: 16, height: 16, fps: 12 };
@@ -1002,7 +1006,9 @@
           const saved = globalThis.VideoEncoder;
           globalThis.VideoEncoder = undefined;
           try {
-            result.unavailable = await ERR_DETAIL(() => encodeVideo(frames.slice(0, 2), { fps: 12 }));
+            result.producerClosed = false;
+            async function* rejectedProducer(){try{yield frames[0];yield frames[1];}finally{result.producerClosed=true;}}
+            result.unavailable = await ERR_DETAIL(() => encodeVideo(rejectedProducer(), { fps: 12 }));
           } finally {
             globalThis.VideoEncoder = saved;
           }

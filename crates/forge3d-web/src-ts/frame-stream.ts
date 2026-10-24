@@ -1,3 +1,4 @@
+import {FrameRecording} from "./frame-recording.js";
 import { Forge3DError } from "./runtime-failure.js";
 import type {
   CameraInput,
@@ -326,22 +327,7 @@ export async function writeFrames(
   sink: FrameSink,
   options: { signal?: AbortSignal } = {},
 ): Promise<FrameWriteSummary> {
-  const names: string[] = [];
-  const timestampsUs: number[] = [];
-  try {
-    for await (const frame of frames) {
-      if (options.signal?.aborted === true) {
-        throw cancelled(options.signal);
-      }
-      names.push(await sink.write(frame));
-      timestampsUs.push(frame.timestampUs);
-    }
-    await sink.close?.();
-    return { frames: names.length, names, timestampsUs };
-  } catch (error) {
-    await Promise.resolve(sink.abort?.(error)).catch(() => undefined);
-    throw Forge3DError.from(error);
-  }
+  return new FrameRecording(sink).consume(frames,options.signal);
 }
 
 /** Native `FrameDumper`: auto-numbered frame capture into a sink. */
@@ -349,7 +335,7 @@ export class FrameDumper {
   readonly prefix: string;
   readonly #sink: FrameSink;
   readonly #config: RenderConfig;
-  #frameCount = 0;
+  #session:FrameRecording|undefined;
   #recording = false;
 
   constructor(sink: FrameSink, options: { prefix?: string; frameDigits?: number } = {}) {
@@ -365,7 +351,8 @@ export class FrameDumper {
     if (this.#recording) {
       throw invalid("Already recording; call stopRecording() first");
     }
-    this.#frameCount = 0;
+    if(this.#session&&!this.#session.settled)throw invalid("Previous recording is still draining");
+    this.#session = new FrameRecording(this.#sink,index=>this.#config.frameFileName(index));
     this.#recording = true;
   }
 
@@ -374,13 +361,12 @@ export class FrameDumper {
     if (!this.#recording) {
       throw invalid("Not recording; call startRecording() first");
     }
-    const index = this.#frameCount;
+    const index = 0;
     const rendered: RenderedFrame =
       frame instanceof Frame
         ? { index, time: 0, timestampUs: 0, durationUs: 0, frame }
         : { ...frame, index };
-    this.#frameCount += 1;
-    return this.#sink.write(rendered, this.#config.frameFileName(index));
+    return this.#session!.write(rendered);
   }
 
   async stopRecording(): Promise<number> {
@@ -388,12 +374,12 @@ export class FrameDumper {
       throw invalid("Not recording");
     }
     this.#recording = false;
-    await this.#sink.close?.();
-    return this.#frameCount;
+    await this.#session!.close();
+    return this.#session!.admitted;
   }
 
   getFrameCount(): number {
-    return this.#frameCount;
+    return this.#session?.admitted??0;
   }
 
   isRecording(): boolean {
@@ -407,10 +393,10 @@ export async function dumpFrameSequence(
   sink: FrameSink,
   options: { prefix?: string; frameDigits?: number } = {},
 ): Promise<number> {
-  const dumper = new FrameDumper(sink, options);
-  dumper.startRecording();
-  for await (const frame of frames) {
-    await dumper.captureFrame(frame);
+  const config=new RenderConfig({filenamePrefix:options.prefix??"frame",frameDigits:options.frameDigits??4});
+  const recording=new FrameRecording(sink,index=>config.frameFileName(index));
+  async function* rendered():AsyncGenerator<RenderedFrame> {
+    for await(const frame of frames)yield {index:0,time:0,timestampUs:0,durationUs:0,frame};
   }
-  return dumper.stopRecording();
+  return (await recording.consume(rendered())).frames;
 }
