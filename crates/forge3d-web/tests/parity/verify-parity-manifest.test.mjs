@@ -164,3 +164,31 @@ test("keeps parity rationale as intact UTF-8", () => {
   assert(text.includes("G\u2192C"));
   assert(!text.includes("\u00c3\u00a2") && !text.includes("\u00e2\u2020\u2019"), "mojibake in parity rationale");
 });
+
+import { reconcileParity, verifyHistoricalBindings } from "../../../../scripts/parity-reconciliation.mjs";
+const acceptance = JSON.parse(readFileSync(resolve(repositoryRoot,"docs/parity/acceptance-records.json"),"utf8"));
+test("unchanged discovered identities retain independent evidence and digests exactly", () => {
+  const manifest=cleanData().manifest;
+  const statuses=new Map([...manifest.capabilities,...manifest.constraints].map(row=>[row.id,row.status]));
+  const discovered=manifest.webTargets.map(({evidence,tests,...target})=>({...target,status:statuses.get(target.capabilityId)}));
+  assert.deepEqual(reconcileParity(discovered,acceptance.records),manifest.webTargets);
+  verifyHistoricalBindings(manifest,acceptance);
+  const record=structuredClone(acceptance.records[0]);record.acceptance.digest="accepted-sha256";
+  assert.equal(reconcileParity([discovered[0]],[record])[0].digest,"accepted-sha256");
+});
+for (const [field,value] of [["id","renamed"],["contract","rebound"],["capabilityId","R99"],["owner","W99"],["status","invented"]]) {
+  test(`reconciliation rejects unreviewed ${field} changes`,()=>{
+    const record=acceptance.records[0];
+    const target={...record.identity,status:record.status,[field]:value};
+    assert.throws(()=>reconcileParity([target],[record]),/Unreviewed|Stale/);
+  });
+}
+test("reconciliation rejects both promotion and demotion, removed identities and historical drift",()=>{
+  for (const [before,after] of [["I","P"],["P","I"]]) {
+    const record={...acceptance.records[0],status:before};
+    assert.throws(()=>reconcileParity([{...record.identity,status:after}],[record]),/promotion\/demotion/);
+  }
+  assert.throws(()=>reconcileParity([],acceptance.records),/removed or renamed/);
+  const manifest=cleanData().manifest;manifest.counts.capabilities++;
+  assert.throws(()=>verifyHistoricalBindings(manifest,acceptance),/Historical/);
+});
