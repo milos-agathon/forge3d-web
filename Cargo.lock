@@ -257,6 +257,7 @@ dependencies = [
  "rstar",
  "serde",
  "serde_json",
+ "syn",
  "thiserror 1.0.69",
  "wgpu",
 ]

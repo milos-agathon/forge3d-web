@@ -1,0 +1,3589 @@
+{
+  "schemaVersion": 1,
+  "baselineLayers": [
+    {
+      "id": "deep-native",
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "tree": "52b0556094248d91d7dba83104e1d872c5fba0be",
+      "role": "Deepest compiled monolithic native semantics; earlier release evidence remains authoritative where behavior predates this snapshot",
+      "evidenceGrades": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "supportingCommits": [
+        "0cec80d765672f8f6f58a51fcd779c9638df574e"
+      ]
+    },
+    {
+      "id": "reconciliation",
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "tree": "5e9ccb51fa86776ad8f2c99edf0940d063c2f365",
+      "role": "Post-split compatibility reconciliation, complete native tests/examples/docs and named restoration surface",
+      "evidenceGrades": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "supportingCommits": []
+    },
+    {
+      "id": "final-contract",
+      "commit": "a55911f021925a3264e476374ce43d1b204f1073",
+      "tree": "86ddd8ea1a0f076029cd947b7841dd80cd595ddc",
+      "role": "Normative final package-root exports, PyO3 registrations, signatures and diagnostics immediately before native deletion",
+      "evidenceGrades": [
+        "B",
+        "C",
+        "D"
+      ],
+      "supportingCommits": []
+    },
+    {
+      "id": "browser-baseline",
+      "commit": "36c1ac251e2a0b1721227f4abd19fbb864636faa",
+      "tree": "3eba65cb060b141f7497b7ff7acd44b149fd8eb7",
+      "role": "Browser-only APIs, lifecycle behavior, tests, package evidence and support infrastructure retained by parity work",
+      "evidenceGrades": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "supportingCommits": []
+    }
+  ],
+  "counts": {
+    "capabilities": 84,
+    "constraints": 7,
+    "packageRootExports": 220,
+    "registeredClasses": 28,
+    "registeredFunctions": 44,
+    "sceneMethods": 216,
+    "pythonApiFiles": 72,
+    "nativeTestFiles": 211,
+    "namedNativeTestFiles": 191,
+    "nativeTestDefinitions": 1792,
+    "nativeExamples": 54,
+    "nativeDocumentationAssets": 88,
+    "nativeDocumentationPages": 53,
+    "browserDeclarations": 26,
+    "browserUnitFiles": 12,
+    "browserUnitCases": 80,
+    "browserPlaywrightSpecs": 14,
+    "browserPlaywrightLiteralCases": 38,
+    "browserPlaywrightGeneratedCases": 39,
+    "browserApiArtifacts": 6,
+    "browserHtmlFixtures": 7
+  },
+  "records": [
+    {
+      "identity": {
+        "id": "target:R01",
+        "capabilityId": "R01",
+        "kind": "web-api",
+        "contract": "Async WebGPU runtime and 18 stable codes exist; retain them and negotiate all later pass limits/features",
+        "owner": "W24"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R01"
+        ],
+        "tests": [
+          "clean Rust/wasm/TypeScript/API/package/consumer checks, every Playwright project, physical browser evidence, loss/visibility/BFCache, memory soak, goldens and real data."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R02",
+        "capabilityId": "R02",
+        "kind": "web-api",
+        "contract": "PNG screenshot exists; generalize to typed color, depth, ID, float, HDR and AOV readback",
+        "owner": "W06"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R02"
+        ],
+        "tests": [
+          "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R03",
+        "capabilityId": "R03",
+        "kind": "web-api",
+        "contract": "Current capabilities are minimal; expose adapter info, limits/features, fallback state, formats, timestamps and effective quality",
+        "owner": "W02"
+      },
+      "status": "P",
+      "acceptance": {
+        "evidence": [
+          "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R03"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R04",
+        "capabilityId": "R04",
+        "kind": "web-api",
+        "contract": "Add Forge3DScene, typed renderer config, session capabilities, validation/copy and named presets",
+        "owner": "W02"
+      },
+      "status": "G",
+      "acceptance": {
+        "evidence": [
+          "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R04"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R05",
+        "capabilityId": "R05",
+        "kind": "web-api",
+        "contract": "Replace one-terrain fixed pass with a scene graph and pass DAG; include native overlays, ground plane and text-mesh nodes",
+        "owner": "W02"
+      },
+      "status": "G",
+      "acceptance": {
+        "evidence": [
+          "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R05"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R06",
+        "capabilityId": "R06",
+        "kind": "web-api",
+        "contract": "Add reusable bundles, timestamp metrics with CPU fallback and per-pass stats",
+        "owner": "W02"
+      },
+      "status": "G",
+      "acceptance": {
+        "evidence": [
+          "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R06"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R07",
+        "capabilityId": "R07",
+        "kind": "web-api",
+        "contract": "Replace four coarse ceilings with allocation/category/peak tracking and deterministic quality downgrade",
+        "owner": "W02"
+      },
+      "status": "P",
+      "acceptance": {
+        "evidence": [
+          "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R07"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R08",
+        "capabilityId": "R08",
+        "kind": "web-api",
+        "contract": "Add browser-safe rings, promise fences, bounded compute, cancellation/backpressure, format accounting and transcode fallbacks",
+        "owner": "W02"
+      },
+      "status": "G",
+      "acceptance": {
+        "evidence": [
+          "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R08"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R09",
+        "capabilityId": "R09",
+        "kind": "equivalent",
+        "contract": "Worker pool with transferable buffers, optional SAB path and deterministic single-worker fallback",
+        "owner": "W02"
+      },
+      "status": "E",
+      "acceptance": {
+        "evidence": [
+          "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R09"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R10",
+        "capabilityId": "R10",
+        "kind": "web-api",
+        "contract": "DOM viewer exists; add feature-equivalent worker OffscreenCanvas renderer with proxied input",
+        "owner": "W02"
+      },
+      "status": "P",
+      "acceptance": {
+        "evidence": [
+          "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R10"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R11",
+        "capabilityId": "R11",
+        "kind": "equivalent",
+        "contract": "Hidden canvas/worker output as ImageBitmap, typed arrays, Blob, streams or OPFS handles",
+        "owner": "W02"
+      },
+      "status": "E",
+      "acceptance": {
+        "evidence": [
+          "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R11"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:R12",
+        "capabilityId": "R12",
+        "kind": "web-api",
+        "contract": "Machine-readable native-to-web symbol/workflow ledger rejects missing, duplicate and untested entries",
+        "owner": "W00"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R12"
+        ],
+        "tests": [
+          "schema, uniqueness and referential integrity; compare bf8db93/earlier semantic provenance, 1f4084a reconciliation, a55911f final contracts and current browser additions. Inventory all exports, PyO3 registrations, Scene method families, 191 named test files/1,792 test definitions, 54 examples, 88 documentation assets/53 Markdown-RST pages, changelog headings and inactive module roots; validate dependency-lock entries for HarfBuzz, PROJ, LAZ, GeoTIFF, Basis/KTX2, EXR, MP4 muxing, ZIP and PDF assets before build/test."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:C01",
+        "capabilityId": "C01",
+        "kind": "web-api",
+        "contract": "Look-at perspective/orbit exist; add typed orthographic/projection/transforms and world/screen conversion",
+        "owner": "W05"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C01"
+        ],
+        "tests": [
+          "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:C02",
+        "capabilityId": "C02",
+        "kind": "web-api",
+        "contract": "Add FPS/fly mode, controller switching, bindings and deterministic replay to existing orbit controls",
+        "owner": "W05"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C02"
+        ],
+        "tests": [
+          "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:C03",
+        "capabilityId": "C03",
+        "kind": "web-api",
+        "contract": "Add CameraAnimation, editing/evaluate/duration/frame-count API",
+        "owner": "W05"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C03"
+        ],
+        "tests": [
+          "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:C04",
+        "capabilityId": "C04",
+        "kind": "web-api",
+        "contract": "Add deterministic serializable rig builders using terrain sampler",
+        "owner": "W05"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C04"
+        ],
+        "tests": [
+          "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:C05",
+        "capabilityId": "C05",
+        "kind": "web-api",
+        "contract": "Extend single PNG to multi-frame progress/cancel streams and stable OPFS/download sinks",
+        "owner": "W06"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C05"
+        ],
+        "tests": [
+          "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:C06",
+        "capabilityId": "C06",
+        "kind": "equivalent",
+        "contract": "WebCodecs plus deterministic MP4 muxing; typed unavailable-codec diagnostic",
+        "owner": "W06"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C06"
+        ],
+        "tests": [
+          "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:C07",
+        "capabilityId": "C07",
+        "kind": "web-api",
+        "contract": "Add color/albedo/normal/depth/ID/motion AOVs, float HDR and EXR Blob",
+        "owner": "W06"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C07"
+        ],
+        "tests": [
+          "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:C08",
+        "capabilityId": "C08",
+        "kind": "equivalent",
+        "contract": "Add WebGPU accumulation/variance controller and measurable AOV-guided WebGPU denoiser equivalent",
+        "owner": "W06"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C08"
+        ],
+        "tests": [
+          "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T01",
+        "capabilityId": "T01",
+        "kind": "web-api",
+        "contract": "Add async DEM model with stats, percentile/domain, nodata fill/mask, spacing and CRS metadata",
+        "owner": "W03"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T01"
+        ],
+        "tests": [
+          "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T02",
+        "capabilityId": "T02",
+        "kind": "web-api",
+        "contract": "Basic grid/height/ramp exist; add physical spacing, exaggeration/domain, readback and named LUTs",
+        "owner": "W03"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T02"
+        ],
+        "tests": [
+          "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T03",
+        "capabilityId": "T03",
+        "kind": "web-api",
+        "contract": "Add CPU/WASM and WebGPU compute analysis with consistent units and typed query results",
+        "owner": "W03"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T03"
+        ],
+        "tests": [
+          "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T04",
+        "capabilityId": "T04",
+        "kind": "web-api",
+        "contract": "Add configurable compute passes and debug outputs",
+        "owner": "W03"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T04"
+        ],
+        "tests": [
+          "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T05",
+        "capabilityId": "T05",
+        "kind": "web-api",
+        "contract": "Replace fixed relief shader with typed PBR/POM pipeline and matching defaults/validation",
+        "owner": "W07"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T05"
+        ],
+        "tests": [
+          "port renderer/material/TV4/TV10/color goldens; zero-feature baseline; invalid parameters and missing-texture diagnostics; SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T06",
+        "capabilityId": "T06",
+        "kind": "web-api",
+        "contract": "Add masks, scalar/textured inputs, variation, SSS and deterministic fallback diagnostics",
+        "owner": "W07"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T06"
+        ],
+        "tests": [
+          "port renderer/material/TV4/TV10/color goldens; zero-feature baseline; invalid parameters and missing-texture diagnostics; SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T07",
+        "capabilityId": "T07",
+        "kind": "web-api",
+        "contract": "Add detail normal/material modulation and specular AA quality tiers",
+        "owner": "W07"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T07"
+        ],
+        "tests": [
+          "port renderer/material/TV4/TV10/color goldens; zero-feature baseline; invalid parameters and missing-texture diagnostics; SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T08",
+        "capabilityId": "T08",
+        "kind": "web-api",
+        "contract": "Replace whole-grid-only path with stable-budget crack-free camera-relative clipmaps",
+        "owner": "W08"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T08"
+        ],
+        "tests": [
+          "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T09",
+        "capabilityId": "T09",
+        "kind": "web-api",
+        "contract": "Add priority range scheduler, cache, camera prefetch and telemetry",
+        "owner": "W08"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T09"
+        ],
+        "tests": [
+          "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T10",
+        "capabilityId": "T10",
+        "kind": "web-api",
+        "contract": "Add GeoTIFF/COG worker, overview selection, cache, nodata/transform/CRS metadata",
+        "owner": "W08"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T10"
+        ],
+        "tests": [
+          "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T11",
+        "capabilityId": "T11",
+        "kind": "web-api",
+        "contract": "Add ordered lit/shadowed raster layers with opacity, extent and CRS transforms",
+        "owner": "W08"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T11"
+        ],
+        "tests": [
+          "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T12",
+        "capabilityId": "T12",
+        "kind": "web-api",
+        "contract": "Add terrain-aware point/line/polygon layers with depth bias and picking",
+        "owner": "W12"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/vector-layers.ts",
+          "crates/forge3d-web/src-ts/vector-geometry.ts",
+          "crates/forge3d-web/src-ts/vector-picking.ts",
+          "crates/forge3d-core/src/vector.rs",
+          "crates/forge3d-web/src/runtime/vector/",
+          "crates/forge3d-web/tests/golden/w12/provenance.json",
+          "crates/forge3d-web/docs/w12-verification.md"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/vector.test.ts",
+          "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+          "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+          "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
+          "npm run test:package-consumer:w12"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T13",
+        "capabilityId": "T13",
+        "kind": "web-api",
+        "contract": "Deterministic PCG64 generators, filters/masks, native heap QEM, instancing, LOD/HLOD, contact/blend and explicit time-driven wind are implemented and verified",
+        "owner": "W09"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T13"
+        ],
+        "tests": [
+          "port scatter/TV13/TV21/TV22/probe tests; deterministic seeds; bounds, activation and invalid-wind cases; memory and visual goldens."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T14a",
+        "capabilityId": "T14a",
+        "kind": "web-api",
+        "contract": "Add page table, feedback, residency, upload, cache and stats for albedo pages",
+        "owner": "W08"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T14a"
+        ],
+        "tests": [
+          "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T14b",
+        "capabilityId": "T14b",
+        "kind": "web-api",
+        "contract": "Return the same typed unsupported-family diagnostics; do not advertise residency",
+        "owner": "W08"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "tracked C closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T14b"
+        ],
+        "tests": [
+          "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T15",
+        "capabilityId": "T15",
+        "kind": "web-api",
+        "contract": "Native SH L2/reflection bakers, GPU grid blending/box projection, debug modes and admitted memory reports are implemented and verified",
+        "owner": "W09"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T15"
+        ],
+        "tests": [
+          "port scatter/TV13/TV21/TV22/probe tests; deterministic seeds; bounds, activation and invalid-wind cases; memory and visual goldens."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T16",
+        "capabilityId": "T16",
+        "kind": "web-api",
+        "contract": "Add water layer with depth color, animation, Fresnel/specular, foam and reflection tiers",
+        "owner": "W10"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T16"
+        ],
+        "tests": [
+          "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T17",
+        "capabilityId": "T17",
+        "kind": "web-api",
+        "contract": "Share sky/volumetric system with depth-correct terrain composition",
+        "owner": "W10"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T17"
+        ],
+        "tests": [
+          "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:T18",
+        "capabilityId": "T18",
+        "kind": "web-api",
+        "contract": "Add atomic list/apply/query/visibility integrated with scene state and bundles",
+        "owner": "W19"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/map-style.ts",
+          "crates/forge3d-web/src-ts/style-expressions.ts",
+          "crates/forge3d-web/src-ts/style-assets.ts",
+          "crates/forge3d-web/src-ts/scene-review.ts",
+          "crates/forge3d-web/src-ts/bundle.ts",
+          "crates/forge3d-web/docs/w19-evidence.md",
+          "crates/forge3d-web/docs/w19-native-test-coverage.json"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
+          "crates/forge3d-web/tests/unit/w19-native-contract.test.ts",
+          "crates/forge3d-web/tests/playwright/w19_style_bundle.spec.ts",
+          "npm run test:package-consumer:w19"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P01",
+        "capabilityId": "P01",
+        "kind": "web-api",
+        "contract": "Replace fixed shader lights with typed mutable collection, shadows and debug bounds",
+        "owner": "W04"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P01"
+        ],
+        "tests": [
+          "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P02",
+        "capabilityId": "P02",
+        "kind": "web-api",
+        "contract": "Add controls, effective range and point-affects-light query",
+        "owner": "W04"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P02"
+        ],
+        "tests": [
+          "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P03",
+        "capabilityId": "P03",
+        "kind": "web-api",
+        "contract": "Add LUT, rect/two-sided lights and approximation controls",
+        "owner": "W04"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P03"
+        ],
+        "tests": [
+          "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P04",
+        "capabilityId": "P04",
+        "kind": "web-api",
+        "contract": "Port the exact final enum and observable routing for Lambert, Phong/Blinn, Oren-Nayar, GGX/Beckmann, Disney, Ashikhmin, Ward, Toon, Minnaert, Subsurface and Hair; diagnose aliases/approximations",
+        "owner": "W04"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P04"
+        ],
+        "tests": [
+          "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P05",
+        "capabilityId": "P05",
+        "kind": "web-api",
+        "contract": "Add typed texture/material sets, color spaces, TBN, transcode and channel extraction",
+        "owner": "W04"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P05"
+        ],
+        "tests": [
+          "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P06",
+        "capabilityId": "P06",
+        "kind": "web-api",
+        "contract": "Add WebGPU IBL and CacheStorage/OPFS cache keyed by source/settings",
+        "owner": "W04"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P06"
+        ],
+        "tests": [
+          "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P07",
+        "capabilityId": "P07",
+        "kind": "web-api",
+        "contract": "Add all filters/cascades; CSM must not be accepted as a filter enum",
+        "owner": "W04"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P07"
+        ],
+        "tests": [
+          "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P08",
+        "capabilityId": "P08",
+        "kind": "web-api",
+        "contract": "Add UTC/location sun position, synchronized directional sun and animation",
+        "owner": "W10"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P08"
+        ],
+        "tests": [
+          "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P09",
+        "capabilityId": "P09",
+        "kind": "web-api",
+        "contract": "Add shared sky/atmosphere with temporal/froxel paths and bounded volumes",
+        "owner": "W10"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P09"
+        ],
+        "tests": [
+          "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P10",
+        "capabilityId": "P10",
+        "kind": "web-api",
+        "contract": "Add billboard/volumetric/hybrid clouds, presets, wind/noise and terrain shadows",
+        "owner": "W10"
+      },
+      "status": "P",
+      "acceptance": {
+        "evidence": [
+          "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P10"
+        ],
+        "tests": [
+          "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P11",
+        "capabilityId": "P11",
+        "kind": "web-api",
+        "contract": "Add toggleable stack with debug/AOV outputs and IBL fallback",
+        "owner": "W11"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P11"
+        ],
+        "tests": [
+          "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P12",
+        "capabilityId": "P12",
+        "kind": "web-api",
+        "contract": "Add capability-selected OIT, WBOIT fallback and observable effective mode",
+        "owner": "W12"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/vector-layers.ts",
+          "crates/forge3d-web/src-ts/vector-geometry.ts",
+          "crates/forge3d-web/src-ts/vector-picking.ts",
+          "crates/forge3d-core/src/vector.rs",
+          "crates/forge3d-web/src/runtime/vector/",
+          "crates/forge3d-web/tests/golden/w12/provenance.json",
+          "crates/forge3d-web/docs/w12-verification.md"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/vector.test.ts",
+          "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+          "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+          "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
+          "npm run test:package-consumer:w12"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P13",
+        "capabilityId": "P13",
+        "kind": "web-api",
+        "contract": "Add composable post-FX chain, quality settings and debug views",
+        "owner": "W11"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P13"
+        ],
+        "tests": [
+          "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P14",
+        "capabilityId": "P14",
+        "kind": "web-api",
+        "contract": "Add camera/object velocity, jitter/history invalidation, TAA and shutter sampling",
+        "owner": "W11"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P14"
+        ],
+        "tests": [
+          "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:P15",
+        "capabilityId": "P15",
+        "kind": "web-api",
+        "contract": "Add linear HDR graph, selectable tonemap/exposure/LUT and no double conversion",
+        "owner": "W11"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P15"
+        ],
+        "tests": [
+          "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:V01",
+        "capabilityId": "V01",
+        "kind": "web-api",
+        "contract": "Add batched styled point/line/polygon/graph layers and public handles",
+        "owner": "W12"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/vector-layers.ts",
+          "crates/forge3d-web/src-ts/vector-geometry.ts",
+          "crates/forge3d-web/src-ts/vector-picking.ts",
+          "crates/forge3d-core/src/vector.rs",
+          "crates/forge3d-web/src/runtime/vector/",
+          "crates/forge3d-web/tests/golden/w12/provenance.json",
+          "crates/forge3d-web/docs/w12-verification.md"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/vector.test.ts",
+          "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+          "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+          "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
+          "npm run test:package-consumer:w12"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:V02",
+        "capabilityId": "V02",
+        "kind": "web-api",
+        "contract": "Add GPU extrusion/compute culling with deterministic CPU fallback",
+        "owner": "W12"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/vector-layers.ts",
+          "crates/forge3d-web/src-ts/vector-geometry.ts",
+          "crates/forge3d-web/src-ts/vector-picking.ts",
+          "crates/forge3d-core/src/vector.rs",
+          "crates/forge3d-web/src/runtime/vector/",
+          "crates/forge3d-web/tests/golden/w12/provenance.json",
+          "crates/forge3d-web/docs/w12-verification.md"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/vector.test.ts",
+          "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+          "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+          "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
+          "npm run test:package-consumer:w12"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:V03",
+        "capabilityId": "V03",
+        "kind": "web-api",
+        "contract": "Add aligned color+pick targets and premultiplied compositing",
+        "owner": "W12"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/vector-layers.ts",
+          "crates/forge3d-web/src-ts/vector-geometry.ts",
+          "crates/forge3d-web/src-ts/vector-picking.ts",
+          "crates/forge3d-core/src/vector.rs",
+          "crates/forge3d-web/src/runtime/vector/",
+          "crates/forge3d-web/tests/golden/w12/provenance.json",
+          "crates/forge3d-web/docs/w12-verification.md"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/vector.test.ts",
+          "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+          "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+          "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
+          "npm run test:package-consumer:w12"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:V04",
+        "capabilityId": "V04",
+        "kind": "web-api",
+        "contract": "Add async point/rect/lasso picks, stable IDs and selection state",
+        "owner": "W12"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/vector-layers.ts",
+          "crates/forge3d-web/src-ts/vector-geometry.ts",
+          "crates/forge3d-web/src-ts/vector-picking.ts",
+          "crates/forge3d-core/src/vector.rs",
+          "crates/forge3d-web/src/runtime/vector/",
+          "crates/forge3d-web/tests/golden/w12/provenance.json",
+          "crates/forge3d-web/docs/w12-verification.md"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/vector.test.ts",
+          "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+          "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+          "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
+          "npm run test:package-consumer:w12"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:V05",
+        "capabilityId": "V05",
+        "kind": "web-api",
+        "contract": "Add font atlas and label/text layers with deterministic IDs and placement/removal",
+        "owner": "W13"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w13-implementation.md",
+          "docs/parity/label-case-contract.json",
+          "docs/parity/w13-native-test-coverage.json",
+          "crates/forge3d-web/src-ts/labels.ts",
+          "crates/forge3d-web/src-ts/label-plan.ts",
+          "crates/forge3d-web/src-ts/typography.ts",
+          "crates/forge3d-core/src/labels/mod.rs"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/labels.test.ts",
+          "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+          "crates/forge3d-web/tests/unit/label-contract-record.test.ts",
+          "crates/forge3d-web/tests/playwright/w13_labels.spec.ts",
+          "crates/forge3d-web/scripts/test-w13-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:V06a",
+        "capabilityId": "V06a",
+        "kind": "web-api",
+        "contract": "Add geometry placement, leaders and collision integration",
+        "owner": "W13"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w13-implementation.md",
+          "docs/parity/label-case-contract.json",
+          "docs/parity/w13-native-test-coverage.json",
+          "crates/forge3d-web/src-ts/labels.ts",
+          "crates/forge3d-web/src-ts/label-plan.ts",
+          "crates/forge3d-web/src-ts/typography.ts",
+          "crates/forge3d-core/src/labels/mod.rs"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/labels.test.ts",
+          "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+          "crates/forge3d-web/tests/unit/label-contract-record.test.ts",
+          "crates/forge3d-web/tests/playwright/w13_labels.spec.ts",
+          "crates/forge3d-web/scripts/test-w13-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:V06b",
+        "capabilityId": "V06b",
+        "kind": "web-api",
+        "contract": "Implement supported cases and return exact typed experimental diagnostics for the remainder",
+        "owner": "W13"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w13-implementation.md",
+          "docs/parity/label-case-contract.json",
+          "docs/parity/w13-native-test-coverage.json",
+          "crates/forge3d-web/src-ts/labels.ts",
+          "crates/forge3d-web/src-ts/label-plan.ts",
+          "crates/forge3d-web/src-ts/typography.ts",
+          "crates/forge3d-core/src/labels/mod.rs"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/labels.test.ts",
+          "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+          "crates/forge3d-web/tests/unit/label-contract-record.test.ts",
+          "crates/forge3d-web/tests/playwright/w13_labels.spec.ts",
+          "crates/forge3d-web/scripts/test-w13-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:V07",
+        "capabilityId": "V07",
+        "kind": "web-api",
+        "contract": "Add HarfBuzz-WASM shaping, deterministic assets/metrics and label compiler payloads",
+        "owner": "W13"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w13-implementation.md",
+          "docs/parity/label-case-contract.json",
+          "docs/parity/w13-native-test-coverage.json",
+          "crates/forge3d-web/src-ts/labels.ts",
+          "crates/forge3d-web/src-ts/label-plan.ts",
+          "crates/forge3d-web/src-ts/typography.ts",
+          "crates/forge3d-core/src/labels/mod.rs"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/labels.test.ts",
+          "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+          "crates/forge3d-web/tests/unit/label-contract-record.test.ts",
+          "crates/forge3d-web/tests/playwright/w13_labels.spec.ts",
+          "crates/forge3d-web/scripts/test-w13-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G01",
+        "capabilityId": "G01",
+        "kind": "equivalent",
+        "contract": "Add PROJ-WASM worker, grid assets, typed metadata and automatic layer reprojection",
+        "owner": "W14"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w14-implementation.md",
+          "docs/parity/w14-native-test-coverage.json",
+          "crates/forge3d-web/src-ts/crs.ts",
+          "crates/forge3d-web/src-ts/proj-kernel.ts",
+          "crates/forge3d-web/src-ts/datasets.ts",
+          "crates/forge3d-web/assets/proj/provenance.json",
+          "crates/forge3d-web/assets/datasets/provenance.json"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "crates/forge3d-web/tests/unit/w14-native-contract.test.ts",
+          "crates/forge3d-web/tests/playwright/w14_foundation.spec.ts",
+          "crates/forge3d-web/scripts/test-w14-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G02",
+        "capabilityId": "G02",
+        "kind": "web-api",
+        "contract": "Add browser range IO, LAZ decoder WASM, hierarchy loaders, cancellation/cache",
+        "owner": "W16"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w16-evidence.md",
+          "crates/forge3d-web/tests/fixtures/w16/copc-ept-tiles-v1.json"
+        ],
+        "tests": [
+          "port COPC/LAZ/EPT, point-buffer/LOD and tile parse/SSE tests; corrupt chunks, cancellation, external URIs, pressure, picking and loss."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G03",
+        "capabilityId": "G03",
+        "kind": "web-api",
+        "contract": "Add GPU point renderer, octree selection, adaptive budget, styles and stats",
+        "owner": "W16"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w16-evidence.md",
+          "crates/forge3d-web/tests/fixtures/w16/copc-ept-tiles-v1.json"
+        ],
+        "tests": [
+          "port COPC/LAZ/EPT, point-buffer/LOD and tile parse/SSE tests; corrupt chunks, cancellation, external URIs, pressure, picking and loss."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G04",
+        "capabilityId": "G04",
+        "kind": "web-api",
+        "contract": "Add relative-URL loader, bounds, SSE/cache, b3dm/pnts decode and asset diagnostics",
+        "owner": "W16"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w16-evidence.md",
+          "crates/forge3d-web/tests/fixtures/w16/copc-ept-tiles-v1.json"
+        ],
+        "tests": [
+          "port COPC/LAZ/EPT, point-buffer/LOD and tile parse/SSE tests; corrupt chunks, cancellation, external URIs, pressure, picking and loss."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G05a",
+        "capabilityId": "G05a",
+        "kind": "web-api",
+        "contract": "Add functional geometry, LOD and scalar-material paths",
+        "owner": "W15"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w15-implementation.md",
+          "docs/parity/w15-native-audit.json",
+          "crates/forge3d-web/docs/geometry-mesh-io.md",
+          "crates/forge3d-web/src-ts/buildings.ts",
+          "crates/forge3d-web/src-ts/building-materials.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G05b",
+        "capabilityId": "G05b",
+        "kind": "web-api",
+        "contract": "Preserve path/UV/format diagnostics and never report a scalar fallback as textured success",
+        "owner": "W15"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w15-implementation.md",
+          "docs/parity/w15-native-audit.json",
+          "crates/forge3d-web/docs/geometry-mesh-io.md",
+          "crates/forge3d-web/src-ts/building-diagnostics.ts",
+          "crates/forge3d-web/src-ts/buildings.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G06",
+        "capabilityId": "G06",
+        "kind": "web-api",
+        "contract": "Add transferable typed mesh constructors",
+        "owner": "W15"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w15-implementation.md",
+          "docs/parity/w15-native-audit.json",
+          "crates/forge3d-web/docs/geometry-mesh-io.md",
+          "crates/forge3d-web/src-ts/geometry.ts",
+          "crates/forge3d-web/src-ts/mesh.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G07",
+        "capabilityId": "G07",
+        "kind": "web-api",
+        "contract": "Port deterministic algorithms and preserve validation/index/dtype contracts",
+        "owner": "W15"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w15-implementation.md",
+          "docs/parity/w15-native-audit.json",
+          "crates/forge3d-web/docs/geometry-mesh-io.md",
+          "crates/forge3d-web/src-ts/mesh-processing.ts",
+          "crates/forge3d-web/src-ts/mesh-worker.ts",
+          "crates/forge3d-web/src/runtime/scatter/draw.rs"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G08",
+        "capabilityId": "G08",
+        "kind": "equivalent",
+        "contract": "Add async URL/File/Blob loaders and Blob/stream exporters; Draco is a separate unverified tombstone",
+        "owner": "W15"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w15-implementation.md",
+          "docs/parity/w15-native-audit.json",
+          "crates/forge3d-web/docs/geometry-mesh-io.md",
+          "crates/forge3d-web/src-ts/mesh-io.ts",
+          "crates/forge3d-web/src-ts/mesh-gltf.ts",
+          "crates/forge3d-web/src-ts/mesh-obj.ts",
+          "crates/forge3d-web/src-ts/mesh-stl.ts",
+          "crates/forge3d-web/src-ts/image-io.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G09",
+        "capabilityId": "G09",
+        "kind": "web-api",
+        "contract": "Add CPU/WASM builder and WebGPU LBVH/refit with stats/queries",
+        "owner": "W17"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w17-evidence.md",
+          "crates/forge3d-web/docs/tracing.md",
+          "crates/forge3d-core/src/accel.rs",
+          "crates/forge3d-core/src/sdf/mod.rs",
+          "crates/forge3d-web/src-ts/trace-wgsl.ts",
+          "crates/forge3d-web/src-ts/path-tracer.ts",
+          "crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w17-tracing.test.ts",
+          "crates/forge3d-web/tests/unit/w17-provenance.test.ts",
+          "crates/forge3d-web/src/w17_shader_tests.rs",
+          "crates/forge3d-web/tests/playwright/w17_tracing.spec.ts",
+          "crates/forge3d-web/scripts/test-w17-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G10",
+        "capabilityId": "G10",
+        "kind": "web-api",
+        "contract": "Add same data model, CPU evaluate and WebGPU hybrid render",
+        "owner": "W17"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w17-evidence.md",
+          "crates/forge3d-web/docs/tracing.md",
+          "crates/forge3d-core/src/accel.rs",
+          "crates/forge3d-core/src/sdf/mod.rs",
+          "crates/forge3d-web/src-ts/trace-wgsl.ts",
+          "crates/forge3d-web/src-ts/path-tracer.ts",
+          "crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w17-tracing.test.ts",
+          "crates/forge3d-web/tests/unit/w17-provenance.test.ts",
+          "crates/forge3d-web/src/w17_shader_tests.rs",
+          "crates/forge3d-web/tests/playwright/w17_tracing.spec.ts",
+          "crates/forge3d-web/scripts/test-w17-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:G11",
+        "capabilityId": "G11",
+        "kind": "web-api",
+        "contract": "Add WebGPU tracer preserving the final public surface and final internal queues/acceleration",
+        "owner": "W17"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w17-evidence.md",
+          "crates/forge3d-web/docs/tracing.md",
+          "crates/forge3d-core/src/accel.rs",
+          "crates/forge3d-core/src/sdf/mod.rs",
+          "crates/forge3d-web/src-ts/trace-wgsl.ts",
+          "crates/forge3d-web/src-ts/path-tracer.ts",
+          "crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w17-tracing.test.ts",
+          "crates/forge3d-web/tests/unit/w17-provenance.test.ts",
+          "crates/forge3d-web/src/w17_shader_tests.rs",
+          "crates/forge3d-web/tests/playwright/w17_tracing.spec.ts",
+          "crates/forge3d-web/scripts/test-w17-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:M01",
+        "capabilityId": "M01",
+        "kind": "web-api",
+        "contract": "Add typed deterministic diagnostics, layer summaries, support entries and render-block policy",
+        "owner": "W18"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/diagnostics.ts",
+          "crates/forge3d-web/src-ts/map-scene.ts",
+          "crates/forge3d-web/docs/w18-evidence.md",
+          "crates/forge3d-web/docs/w18-native-test-coverage.json",
+          "crates/forge3d-web/src-ts/map-settings.ts",
+          "crates/forge3d-web/src-ts/map-support-details.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+          "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+          "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+          "npm run test:package-consumer:w18",
+          "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+          "crates/forge3d-web/tests/api/w18-docs.test.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:M02a",
+        "capabilityId": "M02a",
+        "kind": "web-api",
+        "contract": "Add browser MapScene; bundle save/load adapters are owned by M04/W19",
+        "owner": "W18"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/diagnostics.ts",
+          "crates/forge3d-web/src-ts/map-scene.ts",
+          "crates/forge3d-web/docs/w18-evidence.md",
+          "crates/forge3d-web/docs/w18-native-test-coverage.json",
+          "crates/forge3d-web/src-ts/map-settings.ts",
+          "crates/forge3d-web/src-ts/map-support-details.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+          "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+          "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+          "npm run test:package-consumer:w18",
+          "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+          "crates/forge3d-web/tests/api/w18-docs.test.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:M02b",
+        "capabilityId": "M02b",
+        "kind": "web-api",
+        "contract": "Preserve exact blocking diagnostics until MapScene integration of G02-G04/T13 is implemented and tested",
+        "owner": "W18"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/diagnostics.ts",
+          "crates/forge3d-web/src-ts/map-scene.ts",
+          "crates/forge3d-web/docs/w18-evidence.md",
+          "crates/forge3d-web/docs/w18-native-test-coverage.json",
+          "crates/forge3d-web/src-ts/map-settings.ts",
+          "crates/forge3d-web/src-ts/map-support-details.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+          "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+          "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+          "npm run test:package-consumer:w18",
+          "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+          "crates/forge3d-web/tests/api/w18-docs.test.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:M03",
+        "capabilityId": "M03",
+        "kind": "web-api",
+        "contract": "Add JSON loader, evaluator, vector/label mapping and unsupported-field diagnostics",
+        "owner": "W19"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/map-style.ts",
+          "crates/forge3d-web/src-ts/style-expressions.ts",
+          "crates/forge3d-web/src-ts/style-assets.ts",
+          "crates/forge3d-web/src-ts/scene-review.ts",
+          "crates/forge3d-web/src-ts/bundle.ts",
+          "crates/forge3d-web/docs/w19-evidence.md",
+          "crates/forge3d-web/docs/w19-native-test-coverage.json"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
+          "crates/forge3d-web/tests/unit/w19-native-contract.test.ts",
+          "crates/forge3d-web/tests/playwright/w19_style_bundle.spec.ts",
+          "npm run test:package-consumer:w19"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:M04",
+        "capabilityId": "M04",
+        "kind": "equivalent",
+        "contract": "Add versioned ZIP/stream bundle with SHA-256, MapScene adapters and URL/File/OPFS round trip",
+        "owner": "W19"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/map-style.ts",
+          "crates/forge3d-web/src-ts/style-expressions.ts",
+          "crates/forge3d-web/src-ts/style-assets.ts",
+          "crates/forge3d-web/src-ts/scene-review.ts",
+          "crates/forge3d-web/src-ts/bundle.ts",
+          "crates/forge3d-web/docs/w19-evidence.md",
+          "crates/forge3d-web/docs/w19-native-test-coverage.json"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
+          "crates/forge3d-web/tests/unit/w19-native-contract.test.ts",
+          "crates/forge3d-web/tests/playwright/w19_style_bundle.spec.ts",
+          "npm run test:package-consumer:w19"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:M05",
+        "capabilityId": "M05",
+        "kind": "equivalent",
+        "contract": "Add Canvas/OffscreenCanvas composition and PNG/JPEG Blob export",
+        "owner": "W20"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w20-evidence.md",
+          "crates/forge3d-web/docs/w20-native-test-coverage.json",
+          "crates/forge3d-web/docs/cartography.md"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w20-vector-export.test.ts",
+          "crates/forge3d-web/tests/unit/w20-colormaps.test.ts",
+          "crates/forge3d-web/tests/unit/w20-native-coverage.test.ts",
+          "crates/forge3d-web/tests/playwright/w20_cartography.spec.ts",
+          "crates/forge3d-web/scripts/test-w20-package-consumer.mjs",
+          "crates/forge3d-web/scripts/verify-w20-pdf.py",
+          "crates/forge3d-web/tests/unit/w20-native-extra.test.ts",
+          "crates/forge3d-web/tests/unit/w20-review-regressions.test.ts",
+          "crates/forge3d-web/tests/browser/w20-native-plate-cases.js",
+          "crates/forge3d-web/scripts/test-w20-bundled-consumer.mjs",
+          "crates/forge3d-web/tests/unit/w20-text-layout.test.ts",
+          "crates/forge3d-web/tests/unit/w20-pdf-errors.test.ts"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:M06",
+        "capabilityId": "M06",
+        "kind": "equivalent",
+        "contract": "Add deterministic SVG and PDF Blobs with projection/validation",
+        "owner": "W20"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w20-evidence.md",
+          "crates/forge3d-web/docs/w20-native-test-coverage.json",
+          "crates/forge3d-web/docs/cartography.md"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w20-vector-export.test.ts",
+          "crates/forge3d-web/tests/unit/w20-colormaps.test.ts",
+          "crates/forge3d-web/tests/unit/w20-native-coverage.test.ts",
+          "crates/forge3d-web/tests/playwright/w20_cartography.spec.ts",
+          "crates/forge3d-web/scripts/test-w20-package-consumer.mjs",
+          "crates/forge3d-web/scripts/verify-w20-pdf.py",
+          "crates/forge3d-web/tests/unit/w20-native-extra.test.ts",
+          "crates/forge3d-web/tests/unit/w20-review-regressions.test.ts",
+          "crates/forge3d-web/tests/browser/w20-native-plate-cases.js",
+          "crates/forge3d-web/scripts/test-w20-bundled-consumer.mjs",
+          "crates/forge3d-web/tests/unit/w20-text-layout.test.ts",
+          "crates/forge3d-web/tests/unit/w20-pdf-errors.test.ts"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:M07",
+        "capabilityId": "M07",
+        "kind": "web-api",
+        "contract": "Add registry, built-ins, interpolation/import and texture export",
+        "owner": "W20"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w20-evidence.md",
+          "crates/forge3d-web/docs/w20-native-test-coverage.json",
+          "crates/forge3d-web/docs/cartography.md"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w20-vector-export.test.ts",
+          "crates/forge3d-web/tests/unit/w20-colormaps.test.ts",
+          "crates/forge3d-web/tests/unit/w20-native-coverage.test.ts",
+          "crates/forge3d-web/tests/playwright/w20_cartography.spec.ts",
+          "crates/forge3d-web/scripts/test-w20-package-consumer.mjs",
+          "crates/forge3d-web/scripts/verify-w20-pdf.py",
+          "crates/forge3d-web/tests/unit/w20-native-extra.test.ts",
+          "crates/forge3d-web/tests/unit/w20-review-regressions.test.ts",
+          "crates/forge3d-web/tests/browser/w20-native-plate-cases.js",
+          "crates/forge3d-web/scripts/test-w20-bundled-consumer.mjs",
+          "crates/forge3d-web/tests/unit/w20-text-layout.test.ts",
+          "crates/forge3d-web/tests/unit/w20-pdf-errors.test.ts"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:M08",
+        "capabilityId": "M08",
+        "kind": "equivalent",
+        "contract": "Add WebCrypto Ed25519 with @noble/ed25519@3.2.0 pure-JS fallback, expiry/grace and feature gates; document browser verification as validity/gating, not tamper-resistant DRM",
+        "owner": "W21"
+      },
+      "status": "E",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w21-evidence.md",
+          "crates/forge3d-web/docs/utilities.md",
+          "crates/forge3d-web/tests/fixtures/w21/native-contract.json",
+          "crates/forge3d-web/src-ts/license.ts",
+          "crates/forge3d-web/src-ts/png-decode.ts",
+          "crates/forge3d-web/src-ts/benchmark.ts",
+          "crates/forge3d-web/tests/browser/viewer-benchmark.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w21-license.test.ts",
+          "crates/forge3d-web/tests/unit/w21-images.test.ts",
+          "crates/forge3d-web/tests/unit/w21-benchmark.test.ts",
+          "crates/forge3d-web/tests/playwright/w21_utilities.spec.ts",
+          "crates/forge3d-web/scripts/test-w21-package-consumer.mjs",
+          "crates/forge3d-web/tests/unit/w21-review-license.test.ts",
+          "crates/forge3d-web/tests/unit/w21-review-benchmark.test.ts",
+          "crates/forge3d-web/tests/unit/w21-review-status.test.ts",
+          "crates/forge3d-web/tests/playwright/viewer_benchmark.spec.ts"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:M09",
+        "capabilityId": "M09",
+        "kind": "web-api",
+        "contract": "Extend FND-07 to per-operation warmup/stats/throughput/environment/budget API",
+        "owner": "W21"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w21-evidence.md",
+          "crates/forge3d-web/docs/utilities.md",
+          "crates/forge3d-web/tests/fixtures/w21/native-contract.json",
+          "crates/forge3d-web/src-ts/license.ts",
+          "crates/forge3d-web/src-ts/png-decode.ts",
+          "crates/forge3d-web/src-ts/benchmark.ts",
+          "crates/forge3d-web/tests/browser/viewer-benchmark.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w21-license.test.ts",
+          "crates/forge3d-web/tests/unit/w21-images.test.ts",
+          "crates/forge3d-web/tests/unit/w21-benchmark.test.ts",
+          "crates/forge3d-web/tests/playwright/w21_utilities.spec.ts",
+          "crates/forge3d-web/scripts/test-w21-package-consumer.mjs",
+          "crates/forge3d-web/tests/unit/w21-review-license.test.ts",
+          "crates/forge3d-web/tests/unit/w21-review-benchmark.test.ts",
+          "crates/forge3d-web/tests/unit/w21-review-status.test.ts",
+          "crates/forge3d-web/tests/playwright/viewer_benchmark.spec.ts"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:E01",
+        "capabilityId": "E01",
+        "kind": "equivalent",
+        "contract": "Forge3DViewer plus worker OffscreenCanvas; DOM accessibility/input replace OS window",
+        "owner": "W02"
+      },
+      "status": "P",
+      "acceptance": {
+        "evidence": [
+          "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:E01"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:E02",
+        "capabilityId": "E02",
+        "kind": "equivalent",
+        "contract": "Direct typed same-realm API, MessagePort worker protocol, optional app-owned WebSocket adapter",
+        "owner": "W02"
+      },
+      "status": "E",
+      "acceptance": {
+        "evidence": [
+          "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:E02"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:E03",
+        "capabilityId": "E03",
+        "kind": "equivalent",
+        "contract": "URL/File/Blob/ArrayBuffer/streams/File System Access/OPFS/download Blob",
+        "owner": "W02"
+      },
+      "status": "E",
+      "acceptance": {
+        "evidence": [
+          "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:E03"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:E04",
+        "capabilityId": "E04",
+        "kind": "equivalent",
+        "contract": "TypedArray ownership/shape, borrowed WASM views, ImageBitmap, custom element/notebook adapter",
+        "owner": "W02"
+      },
+      "status": "E",
+      "acceptance": {
+        "evidence": [
+          "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:E04"
+        ],
+        "tests": [
+          "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:E05",
+        "capabilityId": "E05",
+        "kind": "equivalent",
+        "contract": "Pinned WASM codecs, browser caches and measurable WebGPU denoiser; typed capability errors",
+        "owner": "W22"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/src-ts/codec-registry.ts",
+          "crates/forge3d-web/src-ts/codec-dispatch.ts",
+          "crates/forge3d-web/src-ts/codec-denoiser.ts",
+          "crates/forge3d-web/tests/fixtures/w22/manifest.json",
+          "crates/forge3d-web/docs/codecs.md",
+          "crates/forge3d-web/docs/w22-evidence.md"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w22-codecs.test.ts",
+          "crates/forge3d-web/tests/playwright/w22_codecs.spec.ts",
+          "crates/forge3d-web/tests/playwright/w06_capture.spec.ts",
+          "crates/forge3d-web/scripts/test-w22-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:E06",
+        "capabilityId": "E06",
+        "kind": "equivalent",
+        "contract": "ESM registry/assets, fetch/cache/integrity and reproducible fixtures",
+        "owner": "W14"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w14-implementation.md",
+          "docs/parity/w14-native-test-coverage.json",
+          "crates/forge3d-web/src-ts/crs.ts",
+          "crates/forge3d-web/src-ts/proj-kernel.ts",
+          "crates/forge3d-web/src-ts/datasets.ts",
+          "crates/forge3d-web/assets/proj/provenance.json",
+          "crates/forge3d-web/assets/datasets/provenance.json"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "crates/forge3d-web/tests/unit/w14-native-contract.test.ts",
+          "crates/forge3d-web/tests/playwright/w14_foundation.spec.ts",
+          "crates/forge3d-web/scripts/test-w14-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:E07",
+        "capabilityId": "E07",
+        "kind": "equivalent",
+        "contract": "ImageData/typed-array PNG encode/decode and browser display adapters",
+        "owner": "W21"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "crates/forge3d-web/docs/w21-evidence.md",
+          "crates/forge3d-web/docs/utilities.md",
+          "crates/forge3d-web/tests/fixtures/w21/native-contract.json",
+          "crates/forge3d-web/src-ts/license.ts",
+          "crates/forge3d-web/src-ts/png-decode.ts",
+          "crates/forge3d-web/src-ts/benchmark.ts",
+          "crates/forge3d-web/tests/browser/viewer-benchmark.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w21-license.test.ts",
+          "crates/forge3d-web/tests/unit/w21-images.test.ts",
+          "crates/forge3d-web/tests/unit/w21-benchmark.test.ts",
+          "crates/forge3d-web/tests/playwright/w21_utilities.spec.ts",
+          "crates/forge3d-web/scripts/test-w21-package-consumer.mjs",
+          "crates/forge3d-web/tests/unit/w21-review-license.test.ts",
+          "crates/forge3d-web/tests/unit/w21-review-benchmark.test.ts",
+          "crates/forge3d-web/tests/unit/w21-review-status.test.ts",
+          "crates/forge3d-web/tests/playwright/viewer_benchmark.spec.ts"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:render-raster",
+        "capabilityId": "R04",
+        "kind": "tombstone",
+        "contract": "Do not restore the removed top-level helper; implement its renderer outcome through R04.",
+        "owner": "W02"
+      },
+      "status": "G",
+      "acceptance": {
+        "evidence": [
+          "1f4084a:CHANGELOG.md:192-197"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for render-raster"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:render-polygons",
+        "capabilityId": "V01",
+        "kind": "tombstone",
+        "contract": "Do not restore the removed helper; implement polygon outcomes through V01.",
+        "owner": "W12"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "1f4084a:CHANGELOG.md:192-197"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for render-polygons"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:render-raytrace-mesh",
+        "capabilityId": "G11",
+        "kind": "tombstone",
+        "contract": "Do not restore the removed helper; implement tracing outcomes through G11.",
+        "owner": "W17"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "1f4084a:CHANGELOG.md:192-197"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for render-raytrace-mesh"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:csm-filter-value",
+        "capabilityId": "P07",
+        "kind": "tombstone",
+        "contract": "CSM remains a cascade mode and must be rejected as a filter enum.",
+        "owner": "W04"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "1f4084a:tests/test_shadow_techniques.py"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for csm-filter-value"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:vt-normal-mask",
+        "capabilityId": "T14b",
+        "kind": "tombstone",
+        "contract": "Preserve exact unsupported-family diagnostics.",
+        "owner": "W08"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "1f4084a:tests/test_tv20_virtual_texturing.py"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for vt-normal-mask"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:textured-buildings",
+        "capabilityId": "G05b",
+        "kind": "tombstone",
+        "contract": "Do not report scalar fallback as textured success.",
+        "owner": "W15"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w15-implementation.md",
+          "docs/parity/w15-native-audit.json",
+          "crates/forge3d-web/docs/geometry-mesh-io.md",
+          "crates/forge3d-web/src-ts/building-diagnostics.ts",
+          "crates/forge3d-web/src-ts/buildings.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:experimental-label-cases",
+        "capabilityId": "V06b",
+        "kind": "tombstone",
+        "contract": "Preserve exact experimental diagnostics until promoted by runtime evidence.",
+        "owner": "W13"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "1f4084a:tests/test_p2_advanced_labels_repeated_curved.py"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for experimental-label-cases"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:mapscene-underdeveloped",
+        "capabilityId": "M02b",
+        "kind": "tombstone",
+        "contract": "Preserve underdeveloped diagnostics until integrated behavior passes.",
+        "owner": "W18"
+      },
+      "status": "C",
+      "acceptance": {
+        "evidence": [
+          "1f4084a:tests/test_mapscene_support_status.py"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for mapscene-underdeveloped"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:ply-import",
+        "capabilityId": "G08",
+        "kind": "tombstone",
+        "contract": "Not a parity claim; any implementation is a separately versioned feature.",
+        "owner": "W15"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w15-implementation.md",
+          "docs/parity/w15-native-audit.json",
+          "crates/forge3d-web/docs/geometry-mesh-io.md",
+          "crates/forge3d-web/src-ts/mesh-io.ts",
+          "crates/forge3d-web/src-ts/mesh-gltf.ts",
+          "crates/forge3d-web/src-ts/mesh-obj.ts",
+          "crates/forge3d-web/src-ts/mesh-stl.ts",
+          "crates/forge3d-web/src-ts/image-io.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:draco-decode",
+        "capabilityId": "G08",
+        "kind": "tombstone",
+        "contract": "Not a parity claim; preserve final rejection diagnostics.",
+        "owner": "W15"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "docs/parity/w15-implementation.md",
+          "docs/parity/w15-native-audit.json",
+          "crates/forge3d-web/docs/geometry-mesh-io.md",
+          "crates/forge3d-web/src-ts/mesh-io.ts",
+          "crates/forge3d-web/src-ts/mesh-gltf.ts",
+          "crates/forge3d-web/src-ts/mesh-obj.ts",
+          "crates/forge3d-web/src-ts/mesh-stl.ts",
+          "crates/forge3d-web/src-ts/image-io.ts"
+        ],
+        "tests": [
+          "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:tv11-page-shadows",
+        "capabilityId": "P07",
+        "kind": "tombstone",
+        "contract": "Design-only history remains outside the parity denominator.",
+        "owner": "W04"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "design commits de6e014,5f27c21,779f94f,ef79523"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for tv11-page-shadows"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:automatic-dem-water",
+        "capabilityId": "T16",
+        "kind": "tombstone",
+        "contract": "Tombstone; explicit water masks remain T16.",
+        "owner": "W10"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "e6427c1"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for automatic-dem-water"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:hud",
+        "capabilityId": "R10",
+        "kind": "tombstone",
+        "contract": "Use accessible DOM diagnostics rather than recreating the HUD.",
+        "owner": "W02"
+      },
+      "status": "P",
+      "acceptance": {
+        "evidence": [
+          "771ba4f and 2af9223"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for hud"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:rasterio-adapters",
+        "capabilityId": "T10",
+        "kind": "tombstone",
+        "contract": "Observable COG/chunk/typed-array outcomes remain tracked without restoring Python adapters.",
+        "owner": "W08"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "8065223 and f5ee458"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for rasterio-adapters"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:xyz-wmts-cartopy",
+        "capabilityId": "T11",
+        "kind": "tombstone",
+        "contract": "Browser layer outcomes remain tracked without restoring Python adapters.",
+        "owner": "W08"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "8065223 and f5ee458"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for xyz-wmts-cartopy"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:datashader",
+        "capabilityId": "V01",
+        "kind": "tombstone",
+        "contract": "Vector outcomes remain tracked without restoring the Python adapter.",
+        "owner": "W12"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "8065223 and f5ee458"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for datashader"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:svgf-hair-anisotropic",
+        "capabilityId": "G11",
+        "kind": "tombstone",
+        "contract": "Do not represent removed experiments as final public APIs.",
+        "owner": "W17"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "2025 cleanup history"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for svgf-hair-anisotropic"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:python-native-packaging",
+        "capabilityId": "R12",
+        "kind": "tombstone",
+        "contract": "Browser outcomes map to XC constraints; the native ABI is not emulated.",
+        "owner": "W00"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "86daa089bcf8a13b1c67342e32cd8cfcae0a2f53"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for python-native-packaging"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:vshade-alias",
+        "capabilityId": "R12",
+        "kind": "tombstone",
+        "contract": "Do not invent an npm namespace alias.",
+        "owner": "W00"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "1f4084a:python/vshade/__init__.py"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for vshade-alias"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:webgl-fallback",
+        "capabilityId": "R01",
+        "kind": "tombstone",
+        "contract": "WebGPU browser execution remains the product boundary.",
+        "owner": "W24"
+      },
+      "status": "I",
+      "acceptance": {
+        "evidence": [
+          "current support matrix"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for webgl-fallback"
+        ]
+      }
+    },
+    {
+      "identity": {
+        "id": "target:tombstone:node-rendering",
+        "capabilityId": "R11",
+        "kind": "tombstone",
+        "contract": "Node rendering remains outside the browser execution boundary.",
+        "owner": "W02"
+      },
+      "status": "E",
+      "acceptance": {
+        "evidence": [
+          "current support matrix"
+        ],
+        "tests": [
+          "W00 tombstone ledger contract for node-rendering"
+        ]
+      }
+    }
+  ],
+  "capabilityRecords": [
+    {
+      "id": "R01",
+      "targetId": "target:R01",
+      "status": "I",
+      "requiredWebOutcome": "Async WebGPU runtime and 18 stable codes exist; retain them and negotiate all later pass limits/features",
+      "requiredTests": [
+        "clean Rust/wasm/TypeScript/API/package/consumer checks, every Playwright project, physical browser evidence, loss/visibility/BFCache, memory soak, goldens and real data."
+      ],
+      "acceptance": [
+        "no G, P, E or G\u2192C; every verified C row returns the exact typed status and is not advertised as rendering; visuals meet SSIM >= 0.98 or stricter row-specific threshold; numeric contracts meet manifest tolerances; disposal returns to baseline."
+      ]
+    },
+    {
+      "id": "R02",
+      "targetId": "target:R02",
+      "status": "I",
+      "requiredWebOutcome": "PNG screenshot exists; generalize to typed color, depth, ID, float, HDR and AOV readback",
+      "requiredTests": [
+        "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "float color/AOV maximum absolute error is <=1e-5 and depth is <=1e-6 on offline-denoise-v1; noisy denoise SSIM gain is >=0.02 with MSE reduction >=20%, while converged SSIM regression is <=0.005."
+      ]
+    },
+    {
+      "id": "R03",
+      "targetId": "target:R03",
+      "status": "P",
+      "requiredWebOutcome": "Current capabilities are minimal; expose adapter info, limits/features, fallback state, formats, timestamps and effective quality",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "R04",
+      "targetId": "target:R04",
+      "status": "G",
+      "requiredWebOutcome": "Add Forge3DScene, typed renderer config, session capabilities, validation/copy and named presets",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "R05",
+      "targetId": "target:R05",
+      "status": "G",
+      "requiredWebOutcome": "Replace one-terrain fixed pass with a scene graph and pass DAG; include native overlays, ground plane and text-mesh nodes",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "R06",
+      "targetId": "target:R06",
+      "status": "G",
+      "requiredWebOutcome": "Add reusable bundles, timestamp metrics with CPU fallback and per-pass stats",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "R07",
+      "targetId": "target:R07",
+      "status": "P",
+      "requiredWebOutcome": "Replace four coarse ceilings with allocation/category/peak tracking and deterministic quality downgrade",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "R08",
+      "targetId": "target:R08",
+      "status": "G",
+      "requiredWebOutcome": "Add browser-safe rings, promise fences, bounded compute, cancellation/backpressure, format accounting and transcode fallbacks",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "R09",
+      "targetId": "target:R09",
+      "status": "E",
+      "requiredWebOutcome": "Worker pool with transferable buffers, optional SAB path and deterministic single-worker fallback",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "R10",
+      "targetId": "target:R10",
+      "status": "P",
+      "requiredWebOutcome": "DOM viewer exists; add feature-equivalent worker OffscreenCanvas renderer with proxied input",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "R11",
+      "targetId": "target:R11",
+      "status": "E",
+      "requiredWebOutcome": "Hidden canvas/worker output as ImageBitmap, typed arrays, Blob, streams or OPFS handles",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "R12",
+      "targetId": "target:R12",
+      "status": "I",
+      "requiredWebOutcome": "Machine-readable native-to-web symbol/workflow ledger rejects missing, duplicate and untested entries",
+      "requiredTests": [
+        "schema, uniqueness and referential integrity; compare bf8db93/earlier semantic provenance, 1f4084a reconciliation, a55911f final contracts and current browser additions. Inventory all exports, PyO3 registrations, Scene method families, 191 named test files/1,792 test definitions, 54 examples, 88 documentation assets/53 Markdown-RST pages, changelog headings and inactive module roots; validate dependency-lock entries for HarfBuzz, PROJ, LAZ, GeoTIFF, Basis/KTX2, EXR, MP4 muxing, ZIP and PDF assets before build/test."
+      ],
+      "acceptance": [
+        "every public symbol, method family, test, example, doc feature, module root and changelog addition across all four baseline layers maps to exactly one capability ID and one web API/equivalent/tombstone; zero or more separately typed XC links may express cross-cutting browser constraints. Blank owner/evidence/test fields fail CI."
+      ]
+    },
+    {
+      "id": "C01",
+      "targetId": "target:C01",
+      "status": "I",
+      "requiredWebOutcome": "Look-at perspective/orbit exist; add typed orthographic/projection/transforms and world/screen conversion",
+      "requiredTests": [
+        "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
+      ],
+      "acceptance": [
+        "native sample paths and matrix results match within 1e-5; clearance never violates its minimum; loss replay is identical."
+      ]
+    },
+    {
+      "id": "C02",
+      "targetId": "target:C02",
+      "status": "I",
+      "requiredWebOutcome": "Add FPS/fly mode, controller switching, bindings and deterministic replay to existing orbit controls",
+      "requiredTests": [
+        "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
+      ],
+      "acceptance": [
+        "native sample paths and matrix results match within 1e-5; clearance never violates its minimum; loss replay is identical."
+      ]
+    },
+    {
+      "id": "C03",
+      "targetId": "target:C03",
+      "status": "I",
+      "requiredWebOutcome": "Add CameraAnimation, editing/evaluate/duration/frame-count API",
+      "requiredTests": [
+        "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
+      ],
+      "acceptance": [
+        "native sample paths and matrix results match within 1e-5; clearance never violates its minimum; loss replay is identical."
+      ]
+    },
+    {
+      "id": "C04",
+      "targetId": "target:C04",
+      "status": "I",
+      "requiredWebOutcome": "Add deterministic serializable rig builders using terrain sampler",
+      "requiredTests": [
+        "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
+      ],
+      "acceptance": [
+        "native sample paths and matrix results match within 1e-5; clearance never violates its minimum; loss replay is identical."
+      ]
+    },
+    {
+      "id": "C05",
+      "targetId": "target:C05",
+      "status": "I",
+      "requiredWebOutcome": "Extend single PNG to multi-frame progress/cancel streams and stable OPFS/download sinks",
+      "requiredTests": [
+        "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "float color/AOV maximum absolute error is <=1e-5 and depth is <=1e-6 on offline-denoise-v1; noisy denoise SSIM gain is >=0.02 with MSE reduction >=20%, while converged SSIM regression is <=0.005."
+      ]
+    },
+    {
+      "id": "C06",
+      "targetId": "target:C06",
+      "status": "I",
+      "requiredWebOutcome": "WebCodecs plus deterministic MP4 muxing; typed unavailable-codec diagnostic",
+      "requiredTests": [
+        "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "float color/AOV maximum absolute error is <=1e-5 and depth is <=1e-6 on offline-denoise-v1; noisy denoise SSIM gain is >=0.02 with MSE reduction >=20%, while converged SSIM regression is <=0.005."
+      ]
+    },
+    {
+      "id": "C07",
+      "targetId": "target:C07",
+      "status": "I",
+      "requiredWebOutcome": "Add color/albedo/normal/depth/ID/motion AOVs, float HDR and EXR Blob",
+      "requiredTests": [
+        "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "float color/AOV maximum absolute error is <=1e-5 and depth is <=1e-6 on offline-denoise-v1; noisy denoise SSIM gain is >=0.02 with MSE reduction >=20%, while converged SSIM regression is <=0.005."
+      ]
+    },
+    {
+      "id": "C08",
+      "targetId": "target:C08",
+      "status": "I",
+      "requiredWebOutcome": "Add WebGPU accumulation/variance controller and measurable AOV-guided WebGPU denoiser equivalent",
+      "requiredTests": [
+        "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "float color/AOV maximum absolute error is <=1e-5 and depth is <=1e-6 on offline-denoise-v1; noisy denoise SSIM gain is >=0.02 with MSE reduction >=20%, while converged SSIM regression is <=0.005."
+      ]
+    },
+    {
+      "id": "T01",
+      "targetId": "target:T01",
+      "status": "I",
+      "requiredWebOutcome": "Add async DEM model with stats, percentile/domain, nodata fill/mask, spacing and CRS metadata",
+      "requiredTests": [
+        "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
+      ],
+      "acceptance": [
+        "W00 fixtures require DEM scalar abs/rel error <= 1e-6, slope/aspect <= 1e-4 rad, contour Hausdorff <= 0.25 cell and AO/sun maximum absolute error <= 0.02; large inputs avoid a second full-size copy and obey the manifest resource budget."
+      ]
+    },
+    {
+      "id": "T02",
+      "targetId": "target:T02",
+      "status": "I",
+      "requiredWebOutcome": "Basic grid/height/ramp exist; add physical spacing, exaggeration/domain, readback and named LUTs",
+      "requiredTests": [
+        "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
+      ],
+      "acceptance": [
+        "W00 fixtures require DEM scalar abs/rel error <= 1e-6, slope/aspect <= 1e-4 rad, contour Hausdorff <= 0.25 cell and AO/sun maximum absolute error <= 0.02; large inputs avoid a second full-size copy and obey the manifest resource budget."
+      ]
+    },
+    {
+      "id": "T03",
+      "targetId": "target:T03",
+      "status": "I",
+      "requiredWebOutcome": "Add CPU/WASM and WebGPU compute analysis with consistent units and typed query results",
+      "requiredTests": [
+        "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
+      ],
+      "acceptance": [
+        "W00 fixtures require DEM scalar abs/rel error <= 1e-6, slope/aspect <= 1e-4 rad, contour Hausdorff <= 0.25 cell and AO/sun maximum absolute error <= 0.02; large inputs avoid a second full-size copy and obey the manifest resource budget."
+      ]
+    },
+    {
+      "id": "T04",
+      "targetId": "target:T04",
+      "status": "I",
+      "requiredWebOutcome": "Add configurable compute passes and debug outputs",
+      "requiredTests": [
+        "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
+      ],
+      "acceptance": [
+        "W00 fixtures require DEM scalar abs/rel error <= 1e-6, slope/aspect <= 1e-4 rad, contour Hausdorff <= 0.25 cell and AO/sun maximum absolute error <= 0.02; large inputs avoid a second full-size copy and obey the manifest resource budget."
+      ]
+    },
+    {
+      "id": "T05",
+      "targetId": "target:T05",
+      "status": "I",
+      "requiredWebOutcome": "Replace fixed relief shader with typed PBR/POM pipeline and matching defaults/validation",
+      "requiredTests": [
+        "port renderer/material/TV4/TV10/color goldens; zero-feature baseline; invalid parameters and missing-texture diagnostics; SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "every listed material toggle has a W00 golden SSIM >= 0.98 and non-zero manifest-defined pixel delta while defaults preserve baseline; p95 frame time is <=16.7 ms on reference-discrete and <=33.3 ms on reference-integrated 1080p profiles, with peak GPU allocation <= budget."
+      ]
+    },
+    {
+      "id": "T06",
+      "targetId": "target:T06",
+      "status": "I",
+      "requiredWebOutcome": "Add masks, scalar/textured inputs, variation, SSS and deterministic fallback diagnostics",
+      "requiredTests": [
+        "port renderer/material/TV4/TV10/color goldens; zero-feature baseline; invalid parameters and missing-texture diagnostics; SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "every listed material toggle has a W00 golden SSIM >= 0.98 and non-zero manifest-defined pixel delta while defaults preserve baseline; p95 frame time is <=16.7 ms on reference-discrete and <=33.3 ms on reference-integrated 1080p profiles, with peak GPU allocation <= budget."
+      ]
+    },
+    {
+      "id": "T07",
+      "targetId": "target:T07",
+      "status": "I",
+      "requiredWebOutcome": "Add detail normal/material modulation and specular AA quality tiers",
+      "requiredTests": [
+        "port renderer/material/TV4/TV10/color goldens; zero-feature baseline; invalid parameters and missing-texture diagnostics; SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "every listed material toggle has a W00 golden SSIM >= 0.98 and non-zero manifest-defined pixel delta while defaults preserve baseline; p95 frame time is <=16.7 ms on reference-discrete and <=33.3 ms on reference-integrated 1080p profiles, with peak GPU allocation <= budget."
+      ]
+    },
+    {
+      "id": "T08",
+      "targetId": "target:T08",
+      "status": "I",
+      "requiredWebOutcome": "Replace whole-grid-only path with stable-budget crack-free camera-relative clipmaps",
+      "requiredTests": [
+        "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+      ],
+      "acceptance": [
+        "triangle/residency stay within 5% of the W00 budget; cracks are <=0.5 px and height discontinuity <=1e-4 of elevation range; range/cache stats are observable and overlay order/blends deterministic."
+      ]
+    },
+    {
+      "id": "T09",
+      "targetId": "target:T09",
+      "status": "I",
+      "requiredWebOutcome": "Add priority range scheduler, cache, camera prefetch and telemetry",
+      "requiredTests": [
+        "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+      ],
+      "acceptance": [
+        "triangle/residency stay within 5% of the W00 budget; cracks are <=0.5 px and height discontinuity <=1e-4 of elevation range; range/cache stats are observable and overlay order/blends deterministic."
+      ]
+    },
+    {
+      "id": "T10",
+      "targetId": "target:T10",
+      "status": "I",
+      "requiredWebOutcome": "Add GeoTIFF/COG worker, overview selection, cache, nodata/transform/CRS metadata",
+      "requiredTests": [
+        "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+      ],
+      "acceptance": [
+        "triangle/residency stay within 5% of the W00 budget; cracks are <=0.5 px and height discontinuity <=1e-4 of elevation range; range/cache stats are observable and overlay order/blends deterministic."
+      ]
+    },
+    {
+      "id": "T11",
+      "targetId": "target:T11",
+      "status": "I",
+      "requiredWebOutcome": "Add ordered lit/shadowed raster layers with opacity, extent and CRS transforms",
+      "requiredTests": [
+        "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+      ],
+      "acceptance": [
+        "triangle/residency stay within 5% of the W00 budget; cracks are <=0.5 px and height discontinuity <=1e-4 of elevation range; range/cache stats are observable and overlay order/blends deterministic."
+      ]
+    },
+    {
+      "id": "T12",
+      "targetId": "target:T12",
+      "status": "I",
+      "requiredWebOutcome": "Add terrain-aware point/line/polygon layers with depth bias and picking",
+      "requiredTests": [
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles. The 15 correction cases additionally cover nearest opaque surfaces, native medium dual-source, miter/cap pixel geometry, AOV namespace/normal/jitter, 200k stable parallel compaction, 2000 selections, bounded readback, incremental resources, scene retention, public limit errors and graph drape. All are mirrored in dist."
+      ],
+      "acceptance": [
+        "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
+      ]
+    },
+    {
+      "id": "T13",
+      "targetId": "target:T13",
+      "status": "I",
+      "requiredWebOutcome": "Deterministic PCG64 generators, filters/masks, native heap QEM, instancing, LOD/HLOD, contact/blend and explicit time-driven wind are implemented and verified",
+      "requiredTests": [
+        "port scatter/TV13/TV21/TV22/probe tests; deterministic seeds; bounds, activation and invalid-wind cases; memory and visual goldens."
+      ],
+      "acceptance": [
+        "transforms max abs <=1e-5; every AABB contains each instance with <=1e-5 scene-diagonal slack; fixed seed/time hashes are exact; SH coefficient max abs <=1e-3, probe SSIM >=0.98, and allocation <= manifest budget."
+      ]
+    },
+    {
+      "id": "T14a",
+      "targetId": "target:T14a",
+      "status": "I",
+      "requiredWebOutcome": "Add page table, feedback, residency, upload, cache and stats for albedo pages",
+      "requiredTests": [
+        "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+      ],
+      "acceptance": [
+        "triangle/residency stay within 5% of the W00 budget; cracks are <=0.5 px and height discontinuity <=1e-4 of elevation range; range/cache stats are observable and overlay order/blends deterministic."
+      ]
+    },
+    {
+      "id": "T14b",
+      "targetId": "target:T14b",
+      "status": "C",
+      "requiredWebOutcome": "Return the same typed unsupported-family diagnostics; do not advertise residency",
+      "requiredTests": [
+        "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
+      ],
+      "acceptance": [
+        "triangle/residency stay within 5% of the W00 budget; cracks are <=0.5 px and height discontinuity <=1e-4 of elevation range; range/cache stats are observable and overlay order/blends deterministic."
+      ]
+    },
+    {
+      "id": "T15",
+      "targetId": "target:T15",
+      "status": "I",
+      "requiredWebOutcome": "Native SH L2/reflection bakers, GPU grid blending/box projection, debug modes and admitted memory reports are implemented and verified",
+      "requiredTests": [
+        "port scatter/TV13/TV21/TV22/probe tests; deterministic seeds; bounds, activation and invalid-wind cases; memory and visual goldens."
+      ],
+      "acceptance": [
+        "transforms max abs <=1e-5; every AABB contains each instance with <=1e-5 scene-diagonal slack; fixed seed/time hashes are exact; SH coefficient max abs <=1e-3, probe SSIM >=0.98, and allocation <= manifest budget."
+      ]
+    },
+    {
+      "id": "T16",
+      "targetId": "target:T16",
+      "status": "I",
+      "requiredWebOutcome": "Add water layer with depth color, animation, Fresnel/specular, foam and reflection tiers",
+      "requiredTests": [
+        "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
+      ],
+      "acceptance": [
+        "UTC sun vectors meet sun-vector-v1 (angular error <=5e-9 degrees, direction component error <=1e-6); volume contribution outside declared bounds is <=1/255; water/cloud goldens meet SSIM >=0.98; terrain and general scenes share one atmosphere within the configured GPU budget."
+      ]
+    },
+    {
+      "id": "T17",
+      "targetId": "target:T17",
+      "status": "I",
+      "requiredWebOutcome": "Share sky/volumetric system with depth-correct terrain composition",
+      "requiredTests": [
+        "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
+      ],
+      "acceptance": [
+        "UTC sun vectors meet sun-vector-v1 (angular error <=5e-9 degrees, direction component error <=1e-6); volume contribution outside declared bounds is <=1/255; water/cloud goldens meet SSIM >=0.98; terrain and general scenes share one atmosphere within the configured GPU budget."
+      ]
+    },
+    {
+      "id": "T18",
+      "targetId": "target:T18",
+      "status": "I",
+      "requiredWebOutcome": "Add atomic list/apply/query/visibility integrated with scene state and bundles",
+      "requiredTests": [
+        "port style/bundle suites; expression conformance, unsupported fields, sprite/glyphs, checksum tamper, asset rewrite, migration, round trip and atomic variants."
+      ],
+      "acceptance": [
+        "supported styles render; unsupported fields diagnose; bundles round-trip offline and verify every asset."
+      ]
+    },
+    {
+      "id": "P01",
+      "targetId": "target:P01",
+      "status": "I",
+      "requiredWebOutcome": "Replace fixed shader lights with typed mutable collection, shadows and debug bounds",
+      "requiredTests": [
+        "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+      ],
+      "acceptance": [
+        "all selections are observable/validated; CSM is not a filter; unsupported formats select a documented effective quality without lying."
+      ]
+    },
+    {
+      "id": "P02",
+      "targetId": "target:P02",
+      "status": "I",
+      "requiredWebOutcome": "Add controls, effective range and point-affects-light query",
+      "requiredTests": [
+        "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+      ],
+      "acceptance": [
+        "all selections are observable/validated; CSM is not a filter; unsupported formats select a documented effective quality without lying."
+      ]
+    },
+    {
+      "id": "P03",
+      "targetId": "target:P03",
+      "status": "I",
+      "requiredWebOutcome": "Add LUT, rect/two-sided lights and approximation controls",
+      "requiredTests": [
+        "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+      ],
+      "acceptance": [
+        "all selections are observable/validated; CSM is not a filter; unsupported formats select a documented effective quality without lying."
+      ]
+    },
+    {
+      "id": "P04",
+      "targetId": "target:P04",
+      "status": "I",
+      "requiredWebOutcome": "Port the exact final enum and observable routing for Lambert, Phong/Blinn, Oren-Nayar, GGX/Beckmann, Disney, Ashikhmin, Ward, Toon, Minnaert, Subsurface and Hair; diagnose aliases/approximations",
+      "requiredTests": [
+        "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+      ],
+      "acceptance": [
+        "all selections are observable/validated; CSM is not a filter; unsupported formats select a documented effective quality without lying."
+      ]
+    },
+    {
+      "id": "P05",
+      "targetId": "target:P05",
+      "status": "I",
+      "requiredWebOutcome": "Add typed texture/material sets, color spaces, TBN, transcode and channel extraction",
+      "requiredTests": [
+        "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+      ],
+      "acceptance": [
+        "all selections are observable/validated; CSM is not a filter; unsupported formats select a documented effective quality without lying."
+      ]
+    },
+    {
+      "id": "P06",
+      "targetId": "target:P06",
+      "status": "I",
+      "requiredWebOutcome": "Add WebGPU IBL and CacheStorage/OPFS cache keyed by source/settings",
+      "requiredTests": [
+        "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+      ],
+      "acceptance": [
+        "all selections are observable/validated; CSM is not a filter; unsupported formats select a documented effective quality without lying."
+      ]
+    },
+    {
+      "id": "P07",
+      "targetId": "target:P07",
+      "status": "I",
+      "requiredWebOutcome": "Add all filters/cascades; CSM must not be accepted as a filter enum",
+      "requiredTests": [
+        "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
+      ],
+      "acceptance": [
+        "all selections are observable/validated; CSM is not a filter; unsupported formats select a documented effective quality without lying."
+      ]
+    },
+    {
+      "id": "P08",
+      "targetId": "target:P08",
+      "status": "I",
+      "requiredWebOutcome": "Add UTC/location sun position, synchronized directional sun and animation",
+      "requiredTests": [
+        "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
+      ],
+      "acceptance": [
+        "UTC sun vectors meet sun-vector-v1 (angular error <=5e-9 degrees, direction component error <=1e-6); volume contribution outside declared bounds is <=1/255; water/cloud goldens meet SSIM >=0.98; terrain and general scenes share one atmosphere within the configured GPU budget."
+      ]
+    },
+    {
+      "id": "P09",
+      "targetId": "target:P09",
+      "status": "I",
+      "requiredWebOutcome": "Add shared sky/atmosphere with temporal/froxel paths and bounded volumes",
+      "requiredTests": [
+        "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
+      ],
+      "acceptance": [
+        "UTC sun vectors meet sun-vector-v1 (angular error <=5e-9 degrees, direction component error <=1e-6); volume contribution outside declared bounds is <=1/255; water/cloud goldens meet SSIM >=0.98; terrain and general scenes share one atmosphere within the configured GPU budget."
+      ]
+    },
+    {
+      "id": "P10",
+      "targetId": "target:P10",
+      "status": "P",
+      "requiredWebOutcome": "Add billboard/volumetric/hybrid clouds, presets, wind/noise and terrain shadows",
+      "requiredTests": [
+        "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
+      ],
+      "acceptance": [
+        "UTC sun vectors meet sun-vector-v1 (angular error <=5e-9 degrees, direction component error <=1e-6); volume contribution outside declared bounds is <=1/255; water/cloud goldens meet SSIM >=0.98; terrain and general scenes share one atmosphere within the configured GPU budget."
+      ]
+    },
+    {
+      "id": "P11",
+      "targetId": "target:P11",
+      "status": "I",
+      "requiredWebOutcome": "Add toggleable stack with debug/AOV outputs and IBL fallback",
+      "requiredTests": [
+        "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "passes toggle independently; debug views expose intermediates; temporal disocclusion has 95% error decay within 8 frames and converged flicker <=1/255; linear color persists until final output."
+      ]
+    },
+    {
+      "id": "P12",
+      "targetId": "target:P12",
+      "status": "I",
+      "requiredWebOutcome": "Add capability-selected OIT, WBOIT fallback and observable effective mode",
+      "requiredTests": [
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles. The 15 correction cases additionally cover nearest opaque surfaces, native medium dual-source, miter/cap pixel geometry, AOV namespace/normal/jitter, 200k stable parallel compaction, 2000 selections, bounded readback, incremental resources, scene retention, public limit errors and graph drape. All are mirrored in dist."
+      ],
+      "acceptance": [
+        "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
+      ]
+    },
+    {
+      "id": "P13",
+      "targetId": "target:P13",
+      "status": "I",
+      "requiredWebOutcome": "Add composable post-FX chain, quality settings and debug views",
+      "requiredTests": [
+        "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "passes toggle independently; debug views expose intermediates; temporal disocclusion has 95% error decay within 8 frames and converged flicker <=1/255; linear color persists until final output."
+      ]
+    },
+    {
+      "id": "P14",
+      "targetId": "target:P14",
+      "status": "I",
+      "requiredWebOutcome": "Add camera/object velocity, jitter/history invalidation, TAA and shutter sampling",
+      "requiredTests": [
+        "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "passes toggle independently; debug views expose intermediates; temporal disocclusion has 95% error decay within 8 frames and converged flicker <=1/255; linear color persists until final output."
+      ]
+    },
+    {
+      "id": "P15",
+      "targetId": "target:P15",
+      "status": "I",
+      "requiredWebOutcome": "Add linear HDR graph, selectable tonemap/exposure/LUT and no double conversion",
+      "requiredTests": [
+        "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
+      ],
+      "acceptance": [
+        "passes toggle independently; debug views expose intermediates; temporal disocclusion has 95% error decay within 8 frames and converged flicker <=1/255; linear color persists until final output."
+      ]
+    },
+    {
+      "id": "V01",
+      "targetId": "target:V01",
+      "status": "I",
+      "requiredWebOutcome": "Add batched styled point/line/polygon/graph layers and public handles",
+      "requiredTests": [
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles. The 15 correction cases additionally cover nearest opaque surfaces, native medium dual-source, miter/cap pixel geometry, AOV namespace/normal/jitter, 200k stable parallel compaction, 2000 selections, bounded readback, incremental resources, scene retention, public limit errors and graph drape. All are mirrored in dist."
+      ],
+      "acceptance": [
+        "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
+      ]
+    },
+    {
+      "id": "V02",
+      "targetId": "target:V02",
+      "status": "I",
+      "requiredWebOutcome": "Add GPU extrusion/compute culling with deterministic CPU fallback",
+      "requiredTests": [
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles. The 15 correction cases additionally cover nearest opaque surfaces, native medium dual-source, miter/cap pixel geometry, AOV namespace/normal/jitter, 200k stable parallel compaction, 2000 selections, bounded readback, incremental resources, scene retention, public limit errors and graph drape. All are mirrored in dist."
+      ],
+      "acceptance": [
+        "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
+      ]
+    },
+    {
+      "id": "V03",
+      "targetId": "target:V03",
+      "status": "I",
+      "requiredWebOutcome": "Add aligned color+pick targets and premultiplied compositing",
+      "requiredTests": [
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles. The 15 correction cases additionally cover nearest opaque surfaces, native medium dual-source, miter/cap pixel geometry, AOV namespace/normal/jitter, 200k stable parallel compaction, 2000 selections, bounded readback, incremental resources, scene retention, public limit errors and graph drape. All are mirrored in dist."
+      ],
+      "acceptance": [
+        "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
+      ]
+    },
+    {
+      "id": "V04",
+      "targetId": "target:V04",
+      "status": "I",
+      "requiredWebOutcome": "Add async point/rect/lasso picks, stable IDs and selection state",
+      "requiredTests": [
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles. The 15 correction cases additionally cover nearest opaque surfaces, native medium dual-source, miter/cap pixel geometry, AOV namespace/normal/jitter, 200k stable parallel compaction, 2000 selections, bounded readback, incremental resources, scene retention, public limit errors and graph drape. All are mirrored in dist."
+      ],
+      "acceptance": [
+        "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
+      ]
+    },
+    {
+      "id": "V05",
+      "targetId": "target:V05",
+      "status": "I",
+      "requiredWebOutcome": "Add font atlas and label/text layers with deterministic IDs and placement/removal",
+      "requiredTests": [
+        "port every label API/plan/typography/P2 shaping/curved test; coverage, keepouts, IDs, serialization, repeated paths and terrain elevation."
+      ],
+      "acceptance": [
+        "identical candidates produce identical accepted/rejected order and reasons; complex scripts shape deterministically; experimental cases stay diagnostic until functional cases pass. The label-case manifest is exhaustive and is the only source of truth for render-versus-diagnostic outcomes."
+      ]
+    },
+    {
+      "id": "V06a",
+      "targetId": "target:V06a",
+      "status": "I",
+      "requiredWebOutcome": "Add geometry placement, leaders and collision integration",
+      "requiredTests": [
+        "port every label API/plan/typography/P2 shaping/curved test; coverage, keepouts, IDs, serialization, repeated paths and terrain elevation."
+      ],
+      "acceptance": [
+        "identical candidates produce identical accepted/rejected order and reasons; complex scripts shape deterministically; experimental cases stay diagnostic until functional cases pass. The label-case manifest is exhaustive and is the only source of truth for render-versus-diagnostic outcomes."
+      ]
+    },
+    {
+      "id": "V06b",
+      "targetId": "target:V06b",
+      "status": "C",
+      "requiredWebOutcome": "Implement supported cases and return exact typed experimental diagnostics for the remainder",
+      "requiredTests": [
+        "port every label API/plan/typography/P2 shaping/curved test; coverage, keepouts, IDs, serialization, repeated paths and terrain elevation."
+      ],
+      "acceptance": [
+        "identical candidates produce identical accepted/rejected order and reasons; complex scripts shape deterministically; experimental cases stay diagnostic until functional cases pass. The label-case manifest is exhaustive and is the only source of truth for render-versus-diagnostic outcomes."
+      ]
+    },
+    {
+      "id": "V07",
+      "targetId": "target:V07",
+      "status": "I",
+      "requiredWebOutcome": "Add HarfBuzz-WASM shaping, deterministic assets/metrics and label compiler payloads",
+      "requiredTests": [
+        "port every label API/plan/typography/P2 shaping/curved test; coverage, keepouts, IDs, serialization, repeated paths and terrain elevation."
+      ],
+      "acceptance": [
+        "identical candidates produce identical accepted/rejected order and reasons; complex scripts shape deterministically; experimental cases stay diagnostic until functional cases pass. The label-case manifest is exhaustive and is the only source of truth for render-versus-diagnostic outcomes."
+      ]
+    },
+    {
+      "id": "G01",
+      "targetId": "target:G01",
+      "status": "I",
+      "requiredWebOutcome": "Add PROJ-WASM worker, grid assets, typed metadata and automatic layer reprojection",
+      "requiredTests": [
+        "port CRS/dataset tests; EPSG/WKT, axis order, geometry, missing grid, cache/digest/offline/abort cases."
+      ],
+      "acceptance": [
+        "W00 fixtures are <=1e-7 degrees geographic or <=0.01 m projected with round-trip <=0.02 m; missing grids fail structurally rather than applying identity."
+      ]
+    },
+    {
+      "id": "G02",
+      "targetId": "target:G02",
+      "status": "C",
+      "requiredWebOutcome": "Add browser range IO, LAZ decoder WASM, hierarchy loaders, cancellation/cache",
+      "requiredTests": [
+        "port COPC/LAZ/EPT, point-buffer/LOD and tile parse/SSE tests; corrupt chunks, cancellation, external URIs, pressure, picking and loss."
+      ],
+      "acceptance": [
+        "copc-ept-tiles-v1 counts/colors and recorded camera-node/SSE selections are exact; bounds max absolute error <=1e-5 dataset span; initial ranged view fetches <=25% fixture bytes with no non-Range body fetch and allocation <= budget. Functional acceptance rests on real-data conformance, installed-package runs and codec sign-off (D1)."
+      ]
+    },
+    {
+      "id": "G03",
+      "targetId": "target:G03",
+      "status": "C",
+      "requiredWebOutcome": "Add GPU point renderer, octree selection, adaptive budget, styles and stats",
+      "requiredTests": [
+        "port COPC/LAZ/EPT, point-buffer/LOD and tile parse/SSE tests; corrupt chunks, cancellation, external URIs, pressure, picking and loss."
+      ],
+      "acceptance": [
+        "copc-ept-tiles-v1 counts/colors and recorded camera-node/SSE selections are exact; bounds max absolute error <=1e-5 dataset span; initial ranged view fetches <=25% fixture bytes with no non-Range body fetch and allocation <= budget. Functional acceptance rests on real-data conformance, installed-package runs and codec sign-off (D1)."
+      ]
+    },
+    {
+      "id": "G04",
+      "targetId": "target:G04",
+      "status": "C",
+      "requiredWebOutcome": "Add relative-URL loader, bounds, SSE/cache, b3dm/pnts decode and asset diagnostics",
+      "requiredTests": [
+        "port COPC/LAZ/EPT, point-buffer/LOD and tile parse/SSE tests; corrupt chunks, cancellation, external URIs, pressure, picking and loss."
+      ],
+      "acceptance": [
+        "copc-ept-tiles-v1 counts/colors and recorded camera-node/SSE selections are exact; bounds max absolute error <=1e-5 dataset span; initial ranged view fetches <=25% fixture bytes with no non-Range body fetch and allocation <= budget. Functional acceptance rests on real-data conformance, installed-package runs and codec sign-off (D1)."
+      ]
+    },
+    {
+      "id": "G05a",
+      "targetId": "target:G05a",
+      "status": "I",
+      "requiredWebOutcome": "Add functional geometry, LOD and scalar-material paths",
+      "requiredTests": [
+        "port geometry/TBN/IO/CityJSON/building tests; OBJ/STL round trips, plain glTF/GLB fixtures, topology diagnostics, LOD bounds and instancing."
+      ],
+      "acceptance": [
+        "format-preserving counts/topology are exact; position/normal/UV/TBN maximum absolute error <=1e-5; bounds and round-trip Hausdorff <=1e-5 scene diagonal on mesh-io-v1; building diagnostics never imply textured success."
+      ]
+    },
+    {
+      "id": "G05b",
+      "targetId": "target:G05b",
+      "status": "C",
+      "requiredWebOutcome": "Preserve path/UV/format diagnostics and never report a scalar fallback as textured success",
+      "requiredTests": [
+        "port geometry/TBN/IO/CityJSON/building tests; OBJ/STL round trips, plain glTF/GLB fixtures, topology diagnostics, LOD bounds and instancing."
+      ],
+      "acceptance": [
+        "format-preserving counts/topology are exact; position/normal/UV/TBN maximum absolute error <=1e-5; bounds and round-trip Hausdorff <=1e-5 scene diagonal on mesh-io-v1; building diagnostics never imply textured success."
+      ]
+    },
+    {
+      "id": "G06",
+      "targetId": "target:G06",
+      "status": "I",
+      "requiredWebOutcome": "Add transferable typed mesh constructors",
+      "requiredTests": [
+        "port geometry/TBN/IO/CityJSON/building tests; OBJ/STL round trips, plain glTF/GLB fixtures, topology diagnostics, LOD bounds and instancing."
+      ],
+      "acceptance": [
+        "format-preserving counts/topology are exact; position/normal/UV/TBN maximum absolute error <=1e-5; bounds and round-trip Hausdorff <=1e-5 scene diagonal on mesh-io-v1; building diagnostics never imply textured success."
+      ]
+    },
+    {
+      "id": "G07",
+      "targetId": "target:G07",
+      "status": "I",
+      "requiredWebOutcome": "Port deterministic algorithms and preserve validation/index/dtype contracts",
+      "requiredTests": [
+        "port geometry/TBN/IO/CityJSON/building tests; OBJ/STL round trips, plain glTF/GLB fixtures, topology diagnostics, LOD bounds and instancing."
+      ],
+      "acceptance": [
+        "format-preserving counts/topology are exact; position/normal/UV/TBN maximum absolute error <=1e-5; bounds and round-trip Hausdorff <=1e-5 scene diagonal on mesh-io-v1; building diagnostics never imply textured success."
+      ]
+    },
+    {
+      "id": "G08",
+      "targetId": "target:G08",
+      "status": "I",
+      "requiredWebOutcome": "Add async URL/File/Blob loaders and Blob/stream exporters; Draco is a separate unverified tombstone",
+      "requiredTests": [
+        "port geometry/TBN/IO/CityJSON/building tests; OBJ/STL round trips, plain glTF/GLB fixtures, topology diagnostics, LOD bounds and instancing."
+      ],
+      "acceptance": [
+        "format-preserving counts/topology are exact; position/normal/UV/TBN maximum absolute error <=1e-5; bounds and round-trip Hausdorff <=1e-5 scene diagonal on mesh-io-v1; building diagnostics never imply textured success."
+      ]
+    },
+    {
+      "id": "G09",
+      "targetId": "target:G09",
+      "status": "I",
+      "requiredWebOutcome": "Add CPU/WASM builder and WebGPU LBVH/refit with stats/queries",
+      "requiredTests": [
+        "port final API SDF/BVH and shipped path-tracing behavior tests; deterministic seeds, BVH/refit, CSG distance/material, queue compaction, progressive cancellation, AOV/cache/ReSTIR/guiding/media."
+      ],
+      "acceptance": [
+        "on trace-sdf-v1 CPU/GPU hit IDs and fixed-seed hashes are exact; t/barycentric max abs <=1e-5, SDF max abs <=1e-4 scene diagonal with exact material, RMSE strictly decreases at 1/4/16/64 spp and 64-spp SSIM >=0.98."
+      ]
+    },
+    {
+      "id": "G10",
+      "targetId": "target:G10",
+      "status": "I",
+      "requiredWebOutcome": "Add same data model, CPU evaluate and WebGPU hybrid render",
+      "requiredTests": [
+        "port final API SDF/BVH and shipped path-tracing behavior tests; deterministic seeds, BVH/refit, CSG distance/material, queue compaction, progressive cancellation, AOV/cache/ReSTIR/guiding/media."
+      ],
+      "acceptance": [
+        "on trace-sdf-v1 CPU/GPU hit IDs and fixed-seed hashes are exact; t/barycentric max abs <=1e-5, SDF max abs <=1e-4 scene diagonal with exact material, RMSE strictly decreases at 1/4/16/64 spp and 64-spp SSIM >=0.98."
+      ]
+    },
+    {
+      "id": "G11",
+      "targetId": "target:G11",
+      "status": "I",
+      "requiredWebOutcome": "Add WebGPU tracer preserving the final public surface and final internal queues/acceleration",
+      "requiredTests": [
+        "port final API SDF/BVH and shipped path-tracing behavior tests; deterministic seeds, BVH/refit, CSG distance/material, queue compaction, progressive cancellation, AOV/cache/ReSTIR/guiding/media."
+      ],
+      "acceptance": [
+        "on trace-sdf-v1 CPU/GPU hit IDs and fixed-seed hashes are exact; t/barycentric max abs <=1e-5, SDF max abs <=1e-4 scene diagonal with exact material, RMSE strictly decreases at 1/4/16/64 spp and 64-spp SSIM >=0.98."
+      ]
+    },
+    {
+      "id": "M01",
+      "targetId": "target:M01",
+      "status": "I",
+      "requiredWebOutcome": "Add typed deterministic diagnostics, layer summaries, support entries and render-block policy",
+      "requiredTests": [
+        "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+        "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+        "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+        "npm run test:package-consumer:w18",
+        "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+        "crates/forge3d-web/tests/api/w18-docs.test.mjs"
+      ],
+      "acceptance": [
+        "validation enumerates every layer/resource before rendering; unsupported/Pro/experimental paths cannot report success."
+      ]
+    },
+    {
+      "id": "M02a",
+      "targetId": "target:M02a",
+      "status": "I",
+      "requiredWebOutcome": "Add browser MapScene; bundle save/load adapters are owned by M04/W19",
+      "requiredTests": [
+        "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+        "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+        "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+        "npm run test:package-consumer:w18",
+        "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+        "crates/forge3d-web/tests/api/w18-docs.test.mjs"
+      ],
+      "acceptance": [
+        "validation enumerates every layer/resource before rendering; unsupported/Pro/experimental paths cannot report success."
+      ]
+    },
+    {
+      "id": "M02b",
+      "targetId": "target:M02b",
+      "status": "C",
+      "requiredWebOutcome": "Preserve exact blocking diagnostics until MapScene integration of G02-G04/T13 is implemented and tested",
+      "requiredTests": [
+        "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+        "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+        "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+        "npm run test:package-consumer:w18",
+        "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+        "crates/forge3d-web/tests/api/w18-docs.test.mjs"
+      ],
+      "acceptance": [
+        "validation enumerates every layer/resource before rendering; unsupported/Pro/experimental paths cannot report success."
+      ]
+    },
+    {
+      "id": "M03",
+      "targetId": "target:M03",
+      "status": "I",
+      "requiredWebOutcome": "Add JSON loader, evaluator, vector/label mapping and unsupported-field diagnostics",
+      "requiredTests": [
+        "port style/bundle suites; expression conformance, unsupported fields, sprite/glyphs, checksum tamper, asset rewrite, migration, round trip and atomic variants."
+      ],
+      "acceptance": [
+        "supported styles render; unsupported fields diagnose; bundles round-trip offline and verify every asset."
+      ]
+    },
+    {
+      "id": "M04",
+      "targetId": "target:M04",
+      "status": "I",
+      "requiredWebOutcome": "Add versioned ZIP/stream bundle with SHA-256, MapScene adapters and URL/File/OPFS round trip",
+      "requiredTests": [
+        "port style/bundle suites; expression conformance, unsupported fields, sprite/glyphs, checksum tamper, asset rewrite, migration, round trip and atomic variants."
+      ],
+      "acceptance": [
+        "supported styles render; unsupported fields diagnose; bundles round-trip offline and verify every asset."
+      ]
+    },
+    {
+      "id": "M05",
+      "targetId": "target:M05",
+      "status": "I",
+      "requiredWebOutcome": "Add Canvas/OffscreenCanvas composition and PNG/JPEG Blob export",
+      "requiredTests": [
+        "port layout/export/projection/colormap tests; deterministic SVG, PDF parse/render smoke, scale distance, north arrow, inset, CPT/JSON."
+      ],
+      "acceptance": [
+        "layout is within 1 px; SVG validates; PDF contains expected page/vector/text objects; all exports are Blobs."
+      ]
+    },
+    {
+      "id": "M06",
+      "targetId": "target:M06",
+      "status": "I",
+      "requiredWebOutcome": "Add deterministic SVG and PDF Blobs with projection/validation",
+      "requiredTests": [
+        "port layout/export/projection/colormap tests; deterministic SVG, PDF parse/render smoke, scale distance, north arrow, inset, CPT/JSON."
+      ],
+      "acceptance": [
+        "layout is within 1 px; SVG validates; PDF contains expected page/vector/text objects; all exports are Blobs."
+      ]
+    },
+    {
+      "id": "M07",
+      "targetId": "target:M07",
+      "status": "I",
+      "requiredWebOutcome": "Add registry, built-ins, interpolation/import and texture export",
+      "requiredTests": [
+        "port layout/export/projection/colormap tests; deterministic SVG, PDF parse/render smoke, scale distance, north arrow, inset, CPT/JSON."
+      ],
+      "acceptance": [
+        "layout is within 1 px; SVG validates; PDF contains expected page/vector/text objects; all exports are Blobs."
+      ]
+    },
+    {
+      "id": "M08",
+      "targetId": "target:M08",
+      "status": "E",
+      "requiredWebOutcome": "Add WebCrypto Ed25519 with @noble/ed25519@3.2.0 pure-JS fallback, expiry/grace and feature gates; document browser verification as validity/gating, not tamper-resistant DRM",
+      "requiredTests": [
+        "port license/gating/PNG/benchmark tests; bad/expired/grace signatures, image round trip, warmup stats and environment."
+      ],
+      "acceptance": [
+        "verification is offline and only provides validity/expiry/grace and client API gating, not tamper-resistant DRM; sensitive server/data entitlements remain server-side. PNG RGBA8 round trips exactly; benchmark schema is stable and consumes the typed renderer config from W02."
+      ]
+    },
+    {
+      "id": "M09",
+      "targetId": "target:M09",
+      "status": "I",
+      "requiredWebOutcome": "Extend FND-07 to per-operation warmup/stats/throughput/environment/budget API",
+      "requiredTests": [
+        "port license/gating/PNG/benchmark tests; bad/expired/grace signatures, image round trip, warmup stats and environment."
+      ],
+      "acceptance": [
+        "verification is offline and only provides validity/expiry/grace and client API gating, not tamper-resistant DRM; sensitive server/data entitlements remain server-side. PNG RGBA8 round trips exactly; benchmark schema is stable and consumes the typed renderer config from W02."
+      ]
+    },
+    {
+      "id": "E01",
+      "targetId": "target:E01",
+      "status": "P",
+      "requiredWebOutcome": "Forge3DViewer plus worker OffscreenCanvas; DOM accessibility/input replace OS window",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "E02",
+      "targetId": "target:E02",
+      "status": "E",
+      "requiredWebOutcome": "Direct typed same-realm API, MessagePort worker protocol, optional app-owned WebSocket adapter",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "E03",
+      "targetId": "target:E03",
+      "status": "E",
+      "requiredWebOutcome": "URL/File/Blob/ArrayBuffer/streams/File System Access/OPFS/download Blob",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "E04",
+      "targetId": "target:E04",
+      "status": "E",
+      "requiredWebOutcome": "TypedArray ownership/shape, borrowed WASM views, ImageBitmap, custom element/notebook adapter",
+      "requiredTests": [
+        "graph ordering/cycle detection, resource alias/lifetime, budget overflow/downscale, loss replay, resize/disposal, timestamp fallback, config round trip, ground-plane/text-mesh nodes and preset snapshots; worker/main conformance, ARIA/focus/pointer/wheel/keyboard replay, no-SAB, FSA/OPFS unavailable/quota behavior, and borrowed-view memory-growth/dispose/transfer."
+      ],
+      "acceptance": [
+        "multiple layer/pass types coexist; resources are accounted once; lost devices rebuild the same scene; budgets reject or downscale before OOM."
+      ]
+    },
+    {
+      "id": "E05",
+      "targetId": "target:E05",
+      "status": "I",
+      "requiredWebOutcome": "Pinned WASM codecs, browser caches and measurable WebGPU denoiser; typed capability errors",
+      "requiredTests": [
+        "codec fixture conformance, corrupt-input capability errors, cache-key replay, denoiser SSIM delta and registry disposal."
+      ],
+      "acceptance": [
+        "every E05 fixture has one selected codec or exact typed unavailable result; cache round-trip is byte-exact and corrupt inputs are typed; on offline-denoise-v1 denoise gains SSIM >=0.02/MSE >=20% with converged regression <=0.005."
+      ]
+    },
+    {
+      "id": "E06",
+      "targetId": "target:E06",
+      "status": "I",
+      "requiredWebOutcome": "ESM registry/assets, fetch/cache/integrity and reproducible fixtures",
+      "requiredTests": [
+        "port CRS/dataset tests; EPSG/WKT, axis order, geometry, missing grid, cache/digest/offline/abort cases."
+      ],
+      "acceptance": [
+        "W00 fixtures are <=1e-7 degrees geographic or <=0.01 m projected with round-trip <=0.02 m; missing grids fail structurally rather than applying identity."
+      ]
+    },
+    {
+      "id": "E07",
+      "targetId": "target:E07",
+      "status": "I",
+      "requiredWebOutcome": "ImageData/typed-array PNG encode/decode and browser display adapters",
+      "requiredTests": [
+        "port license/gating/PNG/benchmark tests; bad/expired/grace signatures, image round trip, warmup stats and environment."
+      ],
+      "acceptance": [
+        "verification is offline and only provides validity/expiry/grace and client API gating, not tamper-resistant DRM; sensitive server/data entitlements remain server-side. PNG RGBA8 round trips exactly; benchmark schema is stable and consumes the typed renderer config from W02."
+      ]
+    }
+  ]
+}

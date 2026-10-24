@@ -31,3 +31,4 @@ wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json.workspace = true
+syn = { version = "2", features = ["full"] }

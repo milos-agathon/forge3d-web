@@ -1,3 +1,4 @@
+import { reconcileParity, verifyHistoricalBindings, reconcileCapabilityEvidence, retainHistoricalSources } from "./parity-reconciliation.mjs";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -1055,67 +1056,21 @@ function npmAsset(id, values) {
   };
 }
 
-function buildDependencyLock() {
-  const assets = Object.entries(npmSources).map(([id, values]) => npmAsset(id, values));
-  const proj=assets.find(asset=>asset.id==="proj-wasm");
-  const projProvenance=JSON.parse(readFileSync(join(repositoryRoot,"crates/forge3d-web/assets/proj/provenance.json"),"utf8"));
-  proj.build.artifacts.push(...[...projProvenance.assets,...projProvenance.grids,...projProvenance.notices].map(asset=>({name:"assets/proj/"+asset.name,sha256:asset.sha256})));
-  proj.fixtureProvenance.push("crates/forge3d-web/assets/proj/provenance.json","crates/forge3d-web/tests/fixtures/w14/crs-epsg-v1.json","docs/parity/w14-native-test-coverage.json");
-  proj.build.provenance += "; unmodified Emscripten artifacts compared to the digest-verified archive; proj-data-conus-v1 grid and notices are artifact-pinned";
-  proj.review.security = "Experimental dependency: W14 fixture conformance, malformed CRS/shape/grid inputs, SHA-256 poisoning negative controls, offline strict-CSP installed consumer and advisory review completed; see docs/parity/w14-implementation.md";
-  proj.review.license = "Retain proj-wasm MIT LICENSE, upstream PROJ-COPYING and NOAA public-domain grid attribution; all notices ship with the package";
-  assets.push({
-    id: "basis-universal",
-    package: "basis_universal",
-    version: "2.0.3",
-    ecosystem: "upstream-wasm",
-    source: { uri: "https://codeload.github.com/BinomialLLC/basis_universal/tar.gz/refs/tags/v2_0_3", sha256: "eb9ac9ec933524b3c97720368b5cb423fa8767bfc409029d4864063e0d078bec", integrity: "git-commit-21fb6e242b1e425a7557c5655bb1b475f71933ca" },
-    license: { spdx: "Apache-2.0", provenance: "LICENSE in basis_universal commit 21fb6e242b1e425a7557c5655bb1b475f71933ca", review: "Apache-2.0 notice and attribution must ship with the WASM/JS pair" },
-    build: { provenance: "upstream checked-in webgl/transcoder/build artifacts at commit 21fb6e242b1e425a7557c5655bb1b475f71933ca; locally rebuilt output is rejected unless an ADR pins an Emscripten toolchain", toolchain: "upstream Emscripten WebGL transcoder build, artifact-locked", flags: ["single-threaded", "webgl-transcoder", "no-runtime-cdn"], artifacts: [{ name: "basis_transcoder.js", sha256: "697ab2b61e257f4e62e68bb021bd667d7e5c2bef9fa359600b76804f52f26a80", sri: "sha384-prKJ+b7t+CEoKkHut7HYRUZ1Jye8M+e/1b6QGseIm98QtLNX9G48aBCyYT3jP8IH" }, { name: "basis_transcoder.wasm", sha256: "5139f8299b2c4ff691877e2e8809fabdd64d029af061bbb95d8ea8d1acabd522", sri: "sha384-IzrxHljMzPSJUYnPQfAp46lGBIDE9h02UUF0W0WQqHY+Q65k+weklhRFX/FlxqWL" }] },
-    fixtureProvenance: ["1f4084a:src/loaders/ktx2", "1f4084a:tests/test_mesh_tbn.py"],
-    manifestFixtureIds: ["terrain-material-v1"],
-    delivery: { mode: "bundled-self-hosted-wasm", cspRule: "Serve JS/WASM from 'self' with application/wasm; script-src 'self'; connect-src 'self'; no CDN fallback", sriRule: "Both checked-in upstream artifacts must match the recorded SHA-256 and SHA-384 values before packaging", runtimeRemoteFetch: false },
-    consumingTasks: ["W04", "W22"],
-    consumerTokens: ["basis_universal", "basis_transcoder.wasm", "basis_transcoder.js"],
-    review: { security: "Run KTX2 corrupt-input and decompression-bound tests before consumption", maintenance: "Exact upstream commit and artifacts are frozen; substitution requires an ADR and the same fixtures", license: "Retain Apache-2.0 license and notices" },
-  });
-  assets.push({
-    id: "exr",
-    package: "exr",
-    version: "1.74.2",
-    ecosystem: "crates.io",
-    source: { uri: "https://static.crates.io/crates/exr/exr-1.74.2.crate", sha256: "711fe42c9964295e01ee3fba3f9fe0e1d24b98886950d68efe81b1c76e21adf3", integrity: "sha256-711fe42c9964295e01ee3fba3f9fe0e1d24b98886950d68efe81b1c76e21adf3" },
-    license: { spdx: "BSD-3-Clause", provenance: "crates.io metadata and LICENSE.md in exr 1.74.2", review: "BSD-3-Clause notice must ship with the WASM package" },
-    build: { provenance: "crates.io source compiled by the workspace for wasm32-unknown-unknown", toolchain: "Rust >=1.83.0, workspace stable toolchain", flags: ["--no-default-features", "default-rayon-disabled", "--target=wasm32-unknown-unknown"], artifacts: [{ name: "exr-1.74.2.crate", sha256: "711fe42c9964295e01ee3fba3f9fe0e1d24b98886950d68efe81b1c76e21adf3", sri: "sha256-711fe42c9964295e01ee3fba3f9fe0e1d24b98886950d68efe81b1c76e21adf3" }] },
-    fixtureProvenance: ["1f4084a:tests/test_exr_output.py"],
-    manifestFixtureIds: ["offline-denoise-v1"],
-    delivery: { mode: "compiled-into-self-hosted-wasm", cspRule: "Only the Forge3D self-hosted WASM module is loaded; connect-src and script-src remain 'self'", sriRule: "Cargo source checksum and final Forge3D WASM package digest must both match their locks", runtimeRemoteFetch: false },
-    consumingTasks: ["W06", "W22"],
-    consumerTokens: ["exr =", "exr::"],
-    review: { security: "Run malformed EXR, dimension-limit and allocation-bound tests before consumption", maintenance: "Default rayon remains disabled for WASM; version substitution requires an ADR and the same fixtures", license: "Retain BSD-3-Clause license text" },
-  });
-  assets.sort((left, right) => requiredDependencyIds.indexOf(left.id) - requiredDependencyIds.indexOf(right.id));
-  return { schemaVersion: 1, lockId: "forge3d-parity-dependencies-v1", policy: "Every lock-controlled codec, shaping, projection, archive, document, video or cryptographic asset is exact-version and exact-digest pinned. Substitution requires an ADR, license/security review and the same fixture suite.", assets };
-}
-
 function countRecords() {
   return Object.fromEntries([...new Set(records.map((record) => record.kind))].sort().map((kind) => [kind, records.filter((record) => record.kind === kind).length]));
 }
 
-function writeJson(path, value) {
+function jsonArtifact(path, value) {
   const absolute = join(repositoryRoot, path);
-  mkdirSync(dirname(absolute), { recursive: true });
   const bytes = Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8");
-  writeFileSync(absolute, bytes);
   return { path, sha256: sha256(bytes), bytes };
 }
 
 function main() {
-  // Preserve independently maintained W15/W16 evidence when refreshing W17.
-  const previousTargets = new Map(JSON.parse(readFileSync(join(repositoryRoot,"docs/parity/forge3d-composite-baseline.json"),"utf8")).webTargets.filter(t=>["W15","W16"].includes(t.owner)).map(t=>[t.id,t]));
+  const acceptance = JSON.parse(readFileSync(join(repositoryRoot, "docs/parity/acceptance-records.json"), "utf8"));
   for (const commit of Object.values(commits)) git(["cat-file", "-e", `${commit}^{commit}`]);
   const planText = readFileSync(join(repositoryRoot, planPath), "utf8").replaceAll("\r\n", "\n").replaceAll("\r", "\n");
-  const rows = parsePlan(planText);
+  const rows = reconcileCapabilityEvidence(parsePlan(planText), acceptance.capabilityRecords);
   const capabilities = rows.filter((row) => row.lifecycle !== "XC");
   const constraints = rows.filter((row) => row.lifecycle === "XC");
   if (capabilities.length !== 84 || constraints.length !== 7) throw new Error(`expected 84 capabilities and 7 constraints, got ${capabilities.length}/${constraints.length}`);
@@ -1132,14 +1087,14 @@ function main() {
   addBrowserBaseline();
   const tombstones = addTombstones();
 
-  const inventory = { schemaVersion: 1, sourceDate: "2026-09-20", records: records.sort((left, right) => left.id.localeCompare(right.id)), counts: countRecords() };
+  const inventory = { schemaVersion: 1, sourceDate: "2026-09-20", records: retainHistoricalSources(records.sort((left, right) => left.id.localeCompare(right.id)), JSON.parse(readFileSync(join(repositoryRoot,"crates/forge3d-web/tests/parity/composite-inventory.json"),"utf8")).records), counts: countRecords() };
   const fixtureContracts = buildFixtureContracts();
   const hardwareProfiles = buildHardwareProfiles();
-  const dependencyLock = buildDependencyLock();
-  const inventoryFile = writeJson("crates/forge3d-web/tests/parity/composite-inventory.json", inventory);
-  const fixtureFile = writeJson("crates/forge3d-web/tests/parity/fixture-contracts.json", fixtureContracts);
-  const hardwareFile = writeJson("crates/forge3d-web/tests/parity/hardware-profiles.json", hardwareProfiles);
-  const dependencyFile = writeJson("docs/parity/dependency-lock.json", dependencyLock);
+  const dependencyLock = JSON.parse(readFileSync(join(repositoryRoot,"docs/parity/dependency-lock.json"),"utf8"));
+  const inventoryFile = jsonArtifact("crates/forge3d-web/tests/parity/composite-inventory.json", inventory);
+  const fixtureFile = jsonArtifact("crates/forge3d-web/tests/parity/fixture-contracts.json", fixtureContracts);
+  const hardwareFile = jsonArtifact("crates/forge3d-web/tests/parity/hardware-profiles.json", hardwareProfiles);
+  const dependencyFile = jsonArtifact("docs/parity/dependency-lock.json", dependencyLock);
 
   const targetRows = [...capabilities, ...constraints].map((row) => ({
     id: row.targetId,
@@ -1147,36 +1102,9 @@ function main() {
     kind: row.lifecycle === "XC" || equivalentCapabilityIds.has(row.id) ? "equivalent" : "web-api",
     contract: row.requiredWebOutcome,
     owner: row.ownerTask,
-    evidence: row.ownerTask === "W13" ? ["docs/parity/w13-implementation.md", "docs/parity/label-case-contract.json", "docs/parity/w13-native-test-coverage.json", "crates/forge3d-web/src-ts/labels.ts", "crates/forge3d-web/src-ts/label-plan.ts", "crates/forge3d-web/src-ts/typography.ts", "crates/forge3d-core/src/labels/mod.rs"] : row.ownerTask === "W12" && row.status === "I" ? [
-      "crates/forge3d-web/src-ts/vector-layers.ts",
-      "crates/forge3d-web/src-ts/vector-geometry.ts",
-      "crates/forge3d-web/src-ts/vector-picking.ts",
-      "crates/forge3d-core/src/vector.rs",
-      "crates/forge3d-web/src/runtime/vector/",
-      "crates/forge3d-web/tests/golden/w12/provenance.json",
-      "crates/forge3d-web/docs/w12-verification.md",
-    ] : row.status === "I" ? [`current browser baseline and ${planPath}:${row.id}`] : [`tracked ${row.status} closure state in ${planPath}:${row.id}`],
-    tests: row.ownerTask === "W13" ? ["crates/forge3d-web/tests/unit/labels.test.ts", "crates/forge3d-web/tests/unit/label-workflows.test.ts", "crates/forge3d-web/tests/unit/label-contract-record.test.ts", "crates/forge3d-web/tests/playwright/w13_labels.spec.ts", "crates/forge3d-web/scripts/test-w13-package-consumer.mjs"] : row.ownerTask === "W12" && row.status === "I" ? [
-      "crates/forge3d-web/tests/unit/vector.test.ts",
-      "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
-      "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
-      "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
-      "npm run test:package-consumer:w12",
-    ] : row.requiredTests,
-    ...(row.ownerTask==="W21"?{
-      evidence:["crates/forge3d-web/docs/w21-evidence.md","crates/forge3d-web/docs/utilities.md","crates/forge3d-web/tests/fixtures/w21/native-contract.json","crates/forge3d-web/src-ts/license.ts","crates/forge3d-web/src-ts/png-decode.ts","crates/forge3d-web/src-ts/benchmark.ts","crates/forge3d-web/tests/browser/viewer-benchmark.ts"],
-      tests:["crates/forge3d-web/tests/unit/w21-license.test.ts","crates/forge3d-web/tests/unit/w21-images.test.ts","crates/forge3d-web/tests/unit/w21-benchmark.test.ts","crates/forge3d-web/tests/playwright/w21_utilities.spec.ts","crates/forge3d-web/scripts/test-w21-package-consumer.mjs","crates/forge3d-web/tests/unit/w21-review-license.test.ts","crates/forge3d-web/tests/unit/w21-review-benchmark.test.ts","crates/forge3d-web/tests/unit/w21-review-status.test.ts","crates/forge3d-web/tests/playwright/viewer_benchmark.spec.ts"],
-    }:{}),
-    ...(row.ownerTask==="W17"?{
-      evidence:["crates/forge3d-web/docs/w17-evidence.md","crates/forge3d-web/docs/tracing.md","crates/forge3d-core/src/accel.rs","crates/forge3d-core/src/sdf/mod.rs","crates/forge3d-web/src-ts/trace-wgsl.ts","crates/forge3d-web/src-ts/path-tracer.ts","crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json"],
-      tests:["crates/forge3d-web/tests/unit/w17-tracing.test.ts","crates/forge3d-web/tests/unit/w17-provenance.test.ts","crates/forge3d-web/src/w17_shader_tests.rs","crates/forge3d-web/tests/playwright/w17_tracing.spec.ts","crates/forge3d-web/scripts/test-w17-package-consumer.mjs"],
-    }:{}),
-    ...(row.ownerTask==="W14"?{
-      evidence:["docs/parity/w14-implementation.md","docs/parity/w14-native-test-coverage.json","crates/forge3d-web/src-ts/crs.ts","crates/forge3d-web/src-ts/proj-kernel.ts","crates/forge3d-web/src-ts/datasets.ts","crates/forge3d-web/assets/proj/provenance.json","crates/forge3d-web/assets/datasets/provenance.json"],
-      tests:["crates/forge3d-web/tests/unit/w14-crs.test.ts","crates/forge3d-web/tests/unit/w14-datasets.test.ts","crates/forge3d-web/tests/unit/w14-native-contract.test.ts","crates/forge3d-web/tests/playwright/w14_foundation.spec.ts","crates/forge3d-web/scripts/test-w14-package-consumer.mjs"],
-    }:{}),
+    status: row.status,
   }));
-  const tombstoneTargets = tombstones.map((item) => ({ id: item.targetId, capabilityId: item.capabilityId, kind: "tombstone", contract: item.disposition, owner: capabilities.find((row) => row.id === item.capabilityId)?.ownerTask ?? "W00", evidence: item.evidence, tests: [`W00 tombstone ledger contract for ${item.id}`] }));
+  const tombstoneTargets = tombstones.map((item) => ({ status: capabilities.find(row => row.id === item.capabilityId)?.status, id: item.targetId, capabilityId: item.capabilityId, kind: "tombstone", contract: item.disposition, owner: capabilities.find((row) => row.id === item.capabilityId)?.ownerTask ?? "W00", evidence: item.evidence, tests: [`W00 tombstone ledger contract for ${item.id}`] }));
   const manifest = {
     $schema: "./schema.json",
     schemaVersion: 1,
@@ -1213,10 +1141,7 @@ function main() {
     },
     capabilities,
     constraints,
-    webTargets: [...targetRows, ...tombstoneTargets].map(target=>{
-      const previous=previousTargets.get(target.id);
-      return previous?{...target,evidence:previous.evidence,tests:previous.tests}:target;
-    }),
+    webTargets: reconcileParity([...targetRows, ...tombstoneTargets], acceptance.records),
     tombstones,
     inventorySources: [
       { kind: "composite-inventory", path: inventoryFile.path, sha256: inventoryFile.sha256, recordCount: inventory.records.length },
@@ -1228,7 +1153,12 @@ function main() {
     requiredHardwareProfileIds,
     dependencyLock: { path: dependencyFile.path, sha256: dependencyFile.sha256, requiredAssetIds: requiredDependencyIds },
   };
-  writeJson("docs/parity/forge3d-composite-baseline.json", manifest);
+  verifyHistoricalBindings(manifest, acceptance);
+  for (const artifact of [inventoryFile,fixtureFile,hardwareFile,dependencyFile,jsonArtifact("docs/parity/forge3d-composite-baseline.json", manifest)]) {
+    const absolute=join(repositoryRoot,artifact.path);
+    mkdirSync(dirname(absolute), {recursive:true});
+    writeFileSync(absolute,artifact.bytes);
+  }
   const releaseMetadataChangelog = mappings.filter((mapping) => mapping.classificationRule === "changelog:release-engineering-metadata").length;
   console.log(JSON.stringify({ ok: true, artifactCount: records.length, mappingCount: mappings.length, sceneMethods, unresolvedClassifications: 0, releaseMetadataChangelog, counts: inventory.counts }, null, 2));
 }
