@@ -5296,7 +5296,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w11_postfx.spec.ts",
-      "sha256": "08d55fb5e5ea124cd2c96e2eb8f734fdd77d550993b6b170a599f9fa18075151",
+      "sha256": "a92d0fbde4f18287f366506421118e74c9db56f4129e1f2fe8f4b810c260b4ab",
       "declarations": [
         "W11 effects execute, expose finite HDR intermediates and preserve the disabled path",
         "W11 disocclusion decay, stationary flicker, accumulation and HZB",
@@ -5304,7 +5304,9 @@
         "W11 independent native shader images meet SSIM 0.98",
         "W11 history, object motion, resize and 30 allocation cycles",
         "W11 baseline formats, debug views, order, output transfer and transactional admission",
-        "W11 module worker consumes and clears serialized post-FX"
+        "W11 module worker consumes and clears serialized post-FX",
+        "architecture #31: covered display/readback/offline/display transitions preserve history",
+        "architecture #32: rejected commits preserve history and camera edits refresh picks"
       ]
     },
     {

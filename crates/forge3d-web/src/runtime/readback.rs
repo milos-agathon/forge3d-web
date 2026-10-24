@@ -4,7 +4,6 @@ use wasm_bindgen::{closure::Closure, prelude::*, Clamped, JsCast};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
-use super::render::encode_scene_render_pass_with_depth;
 use super::Forge3DRuntime;
 use crate::error::{map_core_error, Forge3DErrorCode, WebError};
 
@@ -93,10 +92,7 @@ async fn read_frame_runtime(
     runtime: &mut Forge3DRuntime,
     with_coverage: bool,
 ) -> Result<FrameReadback, WebError> {
-    super::environment::refresh(runtime)?;
-    super::shadows::refresh_shadow_state(runtime)?;
-    super::shader_variants::sync_pipelines(runtime)?;
-    super::scatter::prepare(runtime, None)?;
+    super::frame::prepare(runtime)?;
     let context = runtime.context.clone().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
@@ -201,21 +197,15 @@ async fn capture_frame_rgba(
             label: Some("forge3d-web-readback-encoder"),
         });
 
-    if super::postfx::readback_needs_scene_render(runtime) {
-        super::shadows::encode_shadow_passes(runtime, &mut encoder);
-    }
-    if runtime.postfx.is_some() {
-        super::postfx::encode(runtime, &mut encoder, &view, false)?;
-    } else {
-        encode_scene_render_pass_with_depth(
-            runtime,
-            &mut encoder,
-            &view,
-            "forge3d-web-readback-pass",
-            None,
-            with_coverage,
-        );
-    }
+    super::frame::encode_output(
+        runtime,
+        &mut encoder,
+        &view,
+        super::frame::Mode::Readback,
+        "forge3d-web-readback-pass",
+        None,
+        with_coverage,
+    )?;
     if let Some(coverage) = &coverage {
         coverage.encode(&mut encoder, runtime.width, runtime.height);
     }
@@ -241,7 +231,7 @@ async fn capture_frame_rgba(
         },
     );
 
-    context.queue.submit(std::iter::once(encoder.finish()));
+    super::frame::submit(runtime, context, encoder, super::frame::Mode::Readback);
     if let Some(error) = validation_scope.pop().await {
         return Err(WebError::new(
             Forge3DErrorCode::InternalError,

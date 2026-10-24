@@ -291,11 +291,17 @@ impl Params {
         Self::zeroed()
     }
 }
-pub(super) fn invalidate(runtime: &mut Forge3DRuntime, reason: &'static str, rebuild: bool) {
-    super::vector::invalidate_pick(runtime);
+pub(super) fn reset_derived(
+    runtime: &mut Forge3DRuntime,
+    reason: &'static str,
+    recapture: bool,
+    rebuild: bool,
+) {
     if let Some(fx) = &mut runtime.postfx {
         fx.temporal.reset(reason);
-        fx.last_camera = None;
+        if recapture {
+            fx.last_camera = None;
+        }
         if rebuild {
             fx.capture = None;
         }
