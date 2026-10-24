@@ -25,7 +25,8 @@ impl EnvironmentResources {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let packed = pack(&snapshot);
+        let packed = forge3d_core::environment::payload::encode(&snapshot)
+            .expect("validated environment payload");
         let payload = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("environment-density-and-masks"),
             contents: bytemuck::cast_slice(&packed),
@@ -66,7 +67,7 @@ impl EnvironmentResources {
         });
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("forge3d-environment-shader"),
-            source: wgpu::ShaderSource::Wgsl(SHADER.into()),
+            source: wgpu::ShaderSource::Wgsl(shader_source().into()),
         });
         let ibl_layout = crate::runtime::ibl::create_ibl_bind_group_layout(device);
         let effect_pipeline = pipeline(

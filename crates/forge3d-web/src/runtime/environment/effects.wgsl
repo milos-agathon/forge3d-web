@@ -123,10 +123,10 @@ fn box_range(o:vec3<f32>,d:vec3<f32>,lo:vec3<f32>,hi:vec3<f32>)->vec2<f32>{
  return vec2<f32>(near,far);
 }
 fn volume_sample(p:vec3<f32>,base:u32)->f32 {
- let lo=v4(base);let hi=v4(base+4u);if(any(p<lo.xyz)||any(p>hi.xyz)){return 0.;}
- let dim=vec3<u32>(v4(base+12u).xyz);let q=(p-lo.xyz)/(hi.xyz-lo.xyz)*vec3<f32>(dim-1u);let cell=vec3<u32>(floor(q));let frac=fract(q);
+ let lo=v4(base);let hi=v4(base+VOLUME_MAX);if(any(p<lo.xyz)||any(p>hi.xyz)){return 0.;}
+ let dim=vec3<u32>(v4(base+VOLUME_DIMENSIONS).xyz);let q=(p-lo.xyz)/(hi.xyz-lo.xyz)*vec3<f32>(dim-1u);let cell=vec3<u32>(floor(q));let frac=fract(q);
  var result=0.;for(var z=0u;z<2u;z++){for(var y=0u;y<2u;y++){for(var x=0u;x<2u;x++){
- let point=min(cell+vec3<u32>(x,y,z),dim-1u);let index=u32(data[base+11u])+point.x+dim.x*(point.y+dim.y*point.z);
+ let point=min(cell+vec3<u32>(x,y,z),dim-1u);let index=u32(data[base+VOLUME_OFFSET])+point.x+dim.x*(point.y+dim.y*point.z);
  let weight=select(1.-frac.x,frac.x,x==1u)*select(1.-frac.y,frac.y,y==1u)*select(1.-frac.z,frac.z,z==1u);result+=data[index]*weight;
  }}}return result*lo.w;
 }
@@ -176,9 +176,9 @@ fn hue_shift(color: vec3<f32>, shift: f32) -> vec3<f32> {
 
 // Surface modes use the same geometry in display, atmosphere clipping and HDR guides.
 fn surface_wave(uv:vec2<f32>,b:u32)->f32 {
- if(data[b+7u]<2.5){return 0.;}
- let wave=v4(b+16u);let time=env.p[0].w;
- return simple_wave(uv,time,wave.x,wave.y,wave.z)+simple_wave(uv*wave.w,time,wave.x*min(wave.w,1.)*0.15,7.,data[b+37u]);
+ if(data[b+WATER_PROPERTIES+3u]<2.5){return 0.;}
+ let wave=v4(b+WATER_WAVES);let time=env.p[0].w;
+ return simple_wave(uv,time,wave.x,wave.y,wave.z)+simple_wave(uv*wave.w,time,wave.x*min(wave.w,1.)*0.15,7.,data[b+WATER_RIPPLE_SPEED]);
 }
 fn surface_normal(uv:vec2<f32>,b:u32)->vec3<f32>{
  let eps=0.01;let h=surface_wave(uv,b);
@@ -192,14 +192,14 @@ fn wave_normal(uv:vec2<f32>,time:f32,amplitude:f32,frequency:f32,speed:f32)->vec
  let eps=0.01;let h=simple_wave(uv,time,amplitude,frequency,speed);let x=simple_wave(uv+vec2<f32>(eps,0.),time,amplitude,frequency,speed);let z=simple_wave(uv+vec2<f32>(0.,eps),time,amplitude,frequency,speed);return normalize(vec3<f32>(h-x,eps,h-z));
 }
 fn water_hit(origin:vec3<f32>,dir:vec3<f32>,limit:f32,w:u32)->vec2<f32>{
- if(data[128u+w*48u+42u]>0.5){return vec2<f32>(0.);}
+ if(data[water_base(w)+WATER_TERRAIN_MASK]>0.5){return vec2<f32>(0.);}
  if(abs(dir.y)<1e-6){return vec2<f32>(-1.,0.);}
- let b=128u+w*48u;let bounds=v4(b);let prop=v4(b+4u);let wave=v4(b+16u);let flow=v4(b+24u).zw;
+ let b=water_base(w);let bounds=v4(b);let prop=v4(b+WATER_PROPERTIES);let wave=v4(b+WATER_WAVES);let flow=v4(b+WATER_FOAM_FLOW).zw;
  if(prop.y<=0.||prop.w<0.5){return vec2<f32>(-1.,0.);}
  var t=(prop.x-origin.y)/dir.y;
  for(var iteration=0;iteration<5;iteration++){let p=origin+dir*t;let uv=p.xz+flow*env.p[0].w;let h=prop.x+surface_wave(uv,b);let normal=surface_normal(uv,b);let derivative=dot(normal,dir)/normal.y;if(abs(derivative)>1e-5){t-=(p.y-h)/derivative;}}
  let p=origin+dir*t;if(t<=0.||t>=limit||p.x<bounds.x||p.z<bounds.y||p.x>bounds.z||p.z>bounds.w){return vec2<f32>(-1.,0.);}
- let uv=(p.xz-bounds.xy)/(bounds.zw-bounds.xy);let dim=vec2<u32>(u32(data[b+28u]),u32(data[b+29u]));let cell=min(vec2<u32>(uv*vec2<f32>(dim)),dim-1u);return vec2<f32>(t,data[u32(data[b+30u])+cell.x+dim.x*cell.y]);
+ let uv=(p.xz-bounds.xy)/(bounds.zw-bounds.xy);let dim=vec2<u32>(u32(data[b+WATER_MASK]),u32(data[b+WATER_MASK_HEIGHT]));let cell=min(vec2<u32>(uv*vec2<f32>(dim)),dim-1u);return vec2<f32>(t,data[u32(data[b+WATER_MASK_OFFSET])+cell.x+dim.x*cell.y]);
 }
 @fragment fn fs_effect(i:Fullscreen)->@location(0) vec4<f32>{
  let z=depth_at(i.uv);let origin=world(i.uv,0.);let far=world(i.uv,min(z,0.999999));let dir=normalize(far-origin);var distance=min(length(far-origin),env.p[11].x);
@@ -212,7 +212,7 @@ fn water_hit(origin:vec3<f32>,dir:vec3<f32>,limit:f32,w:u32)->vec2<f32>{
  radiance+=transmittance*absorb*lit*env.p[14].z/max(1e-6,env.p[14].z+env.p[14].w);transmittance*=1.-absorb;}}
  // Each declared box is clipped before marching, so a thin box cannot be skipped
  // by a step spanning the whole camera frustum.
- for(var v=0u;v<u32(env.p[11].z);v++){let base=v*16u;let interval=box_range(origin,dir,v4(base).xyz,v4(base+4u).xyz);let end=min(interval.y,distance);if(end<=interval.x){continue;}let dt=(end-interval.x)/f32(steps);for(var j=0u;j<steps;j++){let p=origin+dir*(interval.x+(f32(j)+0.5)*dt);let absorb=1.-exp(-volume_sample(p,base)*dt);let light=v4(base+8u).xyz+env.p[2].xyz*env.p[1].w*hg_phase(dot(dir,env.p[1].xyz),data[base+7u])*sun_visibility(p);radiance+=transmittance*absorb*light;transmittance*=1.-absorb;}}
+ for(var v=0u;v<u32(env.p[11].z);v++){let base=volume_base(v);let interval=box_range(origin,dir,v4(base).xyz,v4(base+VOLUME_MAX).xyz);let end=min(interval.y,distance);if(end<=interval.x){continue;}let dt=(end-interval.x)/f32(steps);for(var j=0u;j<steps;j++){let p=origin+dir*(interval.x+(f32(j)+0.5)*dt);let absorb=1.-exp(-volume_sample(p,base)*dt);let light=v4(base+VOLUME_COLOR).xyz+env.p[2].xyz*env.p[1].w*hg_phase(dot(dir,env.p[1].xyz),data[base+VOLUME_ANISOTROPY])*sun_visibility(p);radiance+=transmittance*absorb*light;transmittance*=1.-absorb;}}
  if(env.p[12].w>0.5&&env.bits.z==0u&&abs(dir.y)>1e-6){let a=(env.p[6].w-origin.y)/dir.y;let b=(env.p[6].w+env.p[7].x-origin.y)/dir.y;let begin=max(0.,min(a,b));let end=min(distance,max(a,b));if(end>begin){var count=steps;if(env.p[9].y<0.5||(env.p[9].y>1.5&&begin>env.p[9].x*0.5)){count=1u;}let dt=(end-begin)/f32(count);for(var j=0u;j<count;j++){let p=origin+dir*(begin+(f32(j)+0.5)*dt);let density=cloud_density(p)*(1.-smoothstep(env.p[9].x*0.75,env.p[9].x,length(p-env.p[0].xyz)));let absorb=1.-exp(-density*dt*env.p[8].y*0.08);var shadow=1.;for(var k=1u;k<=4u;k++){shadow*=exp(-cloud_density(p+env.p[1].xyz*f32(k)*env.p[7].x/4.)*env.p[7].x*env.p[8].y*0.02);}let irradiance=textureSampleLevel(cloud_ibl_irradiance,cloud_ibl_sampler,vec3<f32>(0.,1.,0.),0.).rgb;let reflection=textureSampleLevel(cloud_ibl_specular,cloud_ibl_sampler,reflect(-dir,vec3<f32>(0.,1.,0.)),0.).rgb;let lit=cloud_scattering(density,dir,irradiance,reflection,shadow);radiance+=transmittance*absorb*lit;transmittance*=1.-absorb;}}}
  // Reproject stable history. Reject depth discontinuities and offscreen samples.
  if(env.p[12].y>0.5&&env.p[2].w>0.){let clip=env.previous_vp*vec4<f32>(far,1.);let uv=clip.xy/clip.w*vec2<f32>(0.5,-0.5)+0.5;if(clip.w>0.&&all(uv>=vec2<f32>(0.))&&all(uv<=vec2<f32>(1.))){let dz=textureSampleLevel(previous_depth,linear_sampler,uv,0.).r;if(abs(dz-clip.z/clip.w)<0.001){let prev=textureSampleLevel(history,linear_sampler,uv,0.);radiance=mix(radiance,prev.rgb,env.p[2].w);transmittance=mix(transmittance,prev.a,env.p[2].w);}}}
@@ -226,13 +226,13 @@ fn upscaled(uv:vec2<f32>)->vec4<f32>{let dims=vec2<i32>(textureDimensions(effect
  // Project cloud density along the sun to darken terrain and general geometry.
  if(z<0.999999&&env.p[12].w>0.5&&env.p[1].y>0.001){let t=(env.p[6].w+env.p[7].x*0.5-hit.y)/env.p[1].y;if(t>0.){let d=cloud_density(hit+env.p[1].xyz*t);base=vec4<f32>(base.rgb*(1.-env.p[8].x*(1.-exp(-d*env.p[7].x*0.02))),base.a);}}
  var water_mask=0.;var foam_value=0.;var reflected=vec3<f32>(0.);var closest=length(hit-origin);
- for(var w=0u;w<u32(env.p[11].w);w++){let b=128u+w*48u;let prop=v4(b+4u);if(data[b+42u]>0.5){continue;}let h=water_hit(origin,dir,closest,w);if(h.x<=0.||h.y<=0.){continue;}let t=h.x;let mask=h.y;let p=origin+dir*t;water_mask=mask;closest=t;
- let wave=v4(b+16u);var light=v4(b+20u);if(prop.w<1.5){light.x=0.;}let misc=v4(b+24u);let normal=surface_normal(p.xz+misc.zw*env.p[0].w,b);let r=reflect(dir,normal);reflected=sky_color(r);
+ for(var w=0u;w<u32(env.p[11].w);w++){let b=water_base(w);let prop=v4(b+WATER_PROPERTIES);if(data[b+WATER_TERRAIN_MASK]>0.5){continue;}let h=water_hit(origin,dir,closest,w);if(h.x<=0.||h.y<=0.){continue;}let t=h.x;let mask=h.y;let p=origin+dir*t;water_mask=mask;closest=t;
+ let wave=v4(b+WATER_WAVES);var light=v4(b+WATER_REFLECTION);if(prop.w<1.5){light.x=0.;}let misc=v4(b+WATER_FOAM_FLOW);let normal=surface_normal(p.xz+misc.zw*env.p[0].w,b);let r=reflect(dir,normal);reflected=sky_color(r);
  if(light.z>0.5&&light.z<1.5){let clip=env.vp*vec4<f32>(p+r*max(1.,length(hit-p)),1.);let ruv=clip.xy/clip.w*vec2<f32>(0.5,-0.5)+0.5;if(clip.w>0.&&all(ruv>vec2<f32>(0.))&&all(ruv<vec2<f32>(1.))&&depth_at(ruv)<0.999999){reflected=textureSampleLevel(scene_color,linear_sampler,ruv,0.).rgb;}}
- if(light.z>1.5){let ruv=clamp(i.uv+normal.xz*wave.x*data[b+40u],vec2<f32>(0.001),vec2<f32>(0.999));let tex=textureSampleLevel(reflections,linear_sampler,ruv,i32(w),0.);reflected=mix(reflected,tex.rgb,tex.a);}
- let depth=max(0.,p.y-hit.y);let controls=v4(b+36u);let tint=v4(b+32u);var body=mix(hue_shift(mix(v4(b+8u).xyz,v4(b+12u).xyz,1.-exp(-depth/prop.z)),controls.x),tint.rgb,tint.a);
+ if(light.z>1.5){let ruv=clamp(i.uv+normal.xz*wave.x*data[b+WATER_DISTORTION],vec2<f32>(0.001),vec2<f32>(0.999));let tex=textureSampleLevel(reflections,linear_sampler,ruv,i32(w),0.);reflected=mix(reflected,tex.rgb,tex.a);}
+ let depth=max(0.,p.y-hit.y);let controls=v4(b+WATER_CONTROLS);let tint=v4(b+WATER_TINT);var body=mix(hue_shift(mix(v4(b+WATER_SHALLOW).xyz,v4(b+WATER_DEEP).xyz,1.-exp(-depth/prop.z)),controls.x),tint.rgb,tint.a);
  let refracted_uv=clamp(i.uv+normal.xz*controls.z*0.03,vec2<f32>(0.001),vec2<f32>(0.999));if(depth_at(refracted_uv)>=z){body=mix(body,textureSampleLevel(scene_color,linear_sampler,refracted_uv,0.).rgb,controls.z*exp(-depth/prop.z));}let fresnel=0.02+0.98*pow(1.-clamp(dot(-dir,normal),0.,1.),light.w);let spec=pow(max(0.,dot(r,env.p[1].xyz)),mix(256.,8.,light.y))*env.p[1].w;var color=mix(body,reflected,fresnel*light.x)+env.p[2].xyz*spec;
- foam_value=(1.-smoothstep(0.,max(misc.x,0.001),depth))*misc.y*(0.6+0.4*noise_seed(vec3<f32>(p.xz*0.3*(data[b+41u]/20.)+misc.zw*env.p[0].w,0.),0u));color=mix(color,vec3<f32>(1.),foam_value);base=vec4<f32>(mix(base.rgb,color,prop.y*mask*select(1.,smoothstep(0.,max(controls.w,0.001),depth),controls.w>0.)),1.);
+ foam_value=(1.-smoothstep(0.,max(misc.x,0.001),depth))*misc.y*(0.6+0.4*noise_seed(vec3<f32>(p.xz*0.3*(data[b+WATER_FOAM_NOISE]/20.)+misc.zw*env.p[0].w,0.),0u));color=mix(color,vec3<f32>(1.),foam_value);base=vec4<f32>(mix(base.rgb,color,prop.y*mask*select(1.,smoothstep(0.,max(controls.w,0.001),depth),controls.w>0.)),1.);
  }
  let fx=upscaled(i.uv);var result=base.rgb*fx.a+fx.rgb;
  if(z<0.999999&&env.p[18].x>0.5&&env.p[9].w>0.5&&env.p[18].w<0.5){result=aerial_perspective(result,dir,closest);}
@@ -257,9 +257,9 @@ fn water_surface(uv:vec2<f32>)->WaterSurface {
  var closest=length(hit-origin);var result:WaterSurface;result.valid=false;
  for(var w=0u;w<u32(env.p[11].w);w++){
   let h=water_hit(origin,dir,closest,w);if(h.x<=0.||h.y<=0.){continue;}
-  closest=h.x;let b=128u+w*48u;let prop=v4(b+4u);let wave=v4(b+16u);let flow=v4(b+24u).zw;
+  closest=h.x;let b=water_base(w);let prop=v4(b+WATER_PROPERTIES);let wave=v4(b+WATER_WAVES);let flow=v4(b+WATER_FOAM_FLOW).zw;
   result.position=origin+dir*h.x;result.normal=surface_normal(result.position.xz+flow*env.p[0].w,b);
-  let tint=v4(b+32u);result.albedo=mix(hue_shift(mix(v4(b+8u).xyz,v4(b+12u).xyz,1.-exp(-max(0.,result.position.y-hit.y)/prop.z)),data[b+36u]),tint.rgb,tint.a);result.layer=w;result.valid=true;
+  let tint=v4(b+WATER_TINT);result.albedo=mix(hue_shift(mix(v4(b+WATER_SHALLOW).xyz,v4(b+WATER_DEEP).xyz,1.-exp(-max(0.,result.position.y-hit.y)/prop.z)),data[b+WATER_CONTROLS]),tint.rgb,tint.a);result.layer=w;result.valid=true;
  }
  return result;
 }
@@ -267,7 +267,7 @@ struct WaterPrimary {@location(0) depth:f32,@location(1) id:u32,@location(2) mot
 @fragment fn fs_water_primary(i:Fullscreen)->WaterPrimary {
  let water=water_surface(i.uv);if(!water.valid){discard;}
  var out:WaterPrimary;let d=dot(water.position-env.p[0].xyz,env.p[15].xyz);
- out.depth=clamp((d-env.p[16].x)/(env.p[16].y-env.p[16].x),0.,1.);out.id=0xfffffff0u+water.layer;
+ out.depth=clamp((d-env.p[16].x)/(env.p[16].y-env.p[16].x),0.,1.);out.id=__CAPTURE_WATER_BASE__+water.layer;
  let current=env.vp*vec4<f32>(water.position,1.);let previous=env.previous_vp*vec4<f32>(water.position,1.);
  out.motion=vec2<f32>(0.);if(abs(current.w)>1e-12&&abs(previous.w)>1e-12){out.motion=(current.xy/current.w-previous.xy/previous.w)*vec2<f32>(0.5*env.p[10].x,-0.5*env.p[10].y);}
  return out;

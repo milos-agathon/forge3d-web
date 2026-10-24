@@ -102,6 +102,8 @@ try {
   mkdirSync(w09GoldenDirectory, {recursive:true});
   copyFileSync(join(packageRoot, "tests", "golden", "w09", "probes.json"), join(w09GoldenDirectory, "probes.json"));
   cpSync(join(packageRoot, "tests", "golden", "w10"), join(consumerDirectory, "tests", "golden", "w10"), {recursive:true});
+  copyFileSync(join(packageRoot, "..", "forge3d-core", "src", "environment", "payload.rs"), join(consumerDirectory, "w10-runtime-payload.rs"));
+  copyFileSync(join(packageRoot,"src","runtime","capture_identity.rs"),join(consumerDirectory,"w10-capture-identity.rs"));
   for (const name of ["sky", "effects"]) copyFileSync(join(packageRoot, "src", "runtime", "environment", `${name}.wgsl`), join(consumerDirectory, `w10-runtime-${name}.wgsl`));
   mkdirSync(join(consumerDirectory,"tests","browser"),{recursive:true});
   copyFileSync(join(packageRoot,"tests","browser","w11-native-oracle.js"),join(consumerDirectory,"tests","browser","w11-native-oracle.js"));
@@ -228,7 +230,7 @@ try {
       "test-w08-package.html",
       "test-w08-cog-worker.js",
       ...(w11Only ? ["test-w11-postfx.html", "test-w11-worker.js"] : []),
-      ...(w10Only ? ["test-w10.html", "test-w10-native.html", "w10-acceptance.js", "test-w10-worker.js", "w10-native-probes.js", "w10-reflection-metrics.js", "w10-runtime-sky.wgsl", "w10-runtime-effects.wgsl"] : []),
+      ...(w10Only ? ["test-w10.html", "test-w10-native.html", "w10-acceptance.js", "test-w10-worker.js", "w10-native-probes.js", "w10-reflection-metrics.js", "w10-runtime-sky.wgsl", "w10-runtime-effects.wgsl", "w10-runtime-payload.rs", "w10-capture-identity.rs"] : []),
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }

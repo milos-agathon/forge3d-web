@@ -129,6 +129,14 @@ fn prepare_scene(
         let textured = super::shader_variants::terrain_texture_flags(&parsed.materials) != 0;
         super::terrain_profile::check_reflection(&context.device.limits(), textured)?;
     }
+    super::capture_identity::scatter_starts(
+        parsed.scatter.iter().map(|b| b.transforms.len() / 16),
+        &parsed
+            .nodes
+            .iter()
+            .map(|n| build::scene_object_id(n.id))
+            .collect::<Vec<_>>(),
+    )?;
     let built = if parsed.nodes.is_empty() && parsed.passes.is_empty() {
         None
     } else {
@@ -253,7 +261,16 @@ fn prepare_scene(
             parsed.light_ids.clone(),
         ));
     }
-    let scatter = super::scatter::build(runtime, parsed.scatter.clone(), &mut planned)?;
+    let scatter = super::scatter::build(
+        runtime,
+        parsed.scatter.clone(),
+        &parsed
+            .nodes
+            .iter()
+            .map(|n| build::scene_object_id(n.id))
+            .collect::<Vec<_>>(),
+        &mut planned,
+    )?;
     let probes = super::probes::prepare(runtime, parsed.probes.as_ref(), &mut planned)?;
 
     let textures = super::textures::build_texture_resources(

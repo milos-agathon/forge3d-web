@@ -103,12 +103,7 @@ pub(super) fn invalid(message: impl Into<String>) -> WebError {
 pub(super) fn validate_node_topology(nodes: &[ParsedNode]) -> Result<(), WebError> {
     let mut seen = BTreeSet::new();
     for node in nodes {
-        if node.id
-            >= crate::runtime::offline::AOV_ID_VECTOR
-                - crate::runtime::offline::AOV_ID_SCENE_NODE_BASE
-        {
-            return Err(invalid("scene node ID overlaps the reserved AOV namespace"));
-        }
+        crate::runtime::capture_identity::scene(node.id)?;
         if !seen.insert(node.id) {
             return Err(invalid(format!("duplicate scene node id {}", node.id)));
         }

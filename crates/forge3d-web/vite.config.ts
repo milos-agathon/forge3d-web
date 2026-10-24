@@ -19,6 +19,12 @@ export default defineConfig({
       name: "forge3d-source-wasm-route",
       configureServer(server) {
         server.middlewares.use((request, response, next) => {
+          if(request.url==='/w10-capture-identity.rs'){response.setHeader('content-type','text/plain');response.end(readFileSync(new URL('./src/runtime/capture_identity.rs',import.meta.url)));return;}
+          if (request.url === '/w10-runtime-payload.rs') {
+            response.setHeader('content-type', 'text/plain');
+            response.end(readFileSync(new URL('../forge3d-core/src/environment/payload.rs', import.meta.url)));
+            return;
+          }
           // Append the verified declaration after transpilation so Vite cannot
           // rewrite its source. The PROJ asset is fetched only as reference data.
           if (request.url?.split('?')[0] === '/dist/crs-worker.js') {
