@@ -14,6 +14,8 @@ import type {
   NormalizedTerrainVtLayerFamily,
   OverlayBlendMode,
   TerrainMaterialImage,
+  TerrainOverlayLayerUpdate,
+  TerrainOverlayRevealInput,
   TerrainOverlaysInput,
   TerrainVirtualTextureInput,
   TerrainVtFamily,
@@ -44,6 +46,124 @@ function invalidTerrain(field: string, message: string): Forge3DError {
     `Invalid terrain ${field}: ${message}`,
     { reason: "invalid-input", field },
   );
+}
+
+const REVEAL_DEFAULTS: Required<TerrainOverlayRevealInput> = {
+  threshold: 0,
+  fade: 0,
+  freshColor: [1, 1, 1],
+  freshMix: 0,
+  freshAlpha: false,
+};
+
+/** Mirror of wasm `OverlayRevealJs::resolve` + core `OverlayReveal::validate`:
+ * fields left out keep `base`. */
+export function normalizeTerrainOverlayReveal(
+  input: TerrainOverlayRevealInput,
+  base: Required<TerrainOverlayRevealInput> = REVEAL_DEFAULTS,
+): Required<TerrainOverlayRevealInput> {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    throw invalidInput("overlay.reveal", "reveal must be an object");
+  }
+  const color = input.freshColor ?? base.freshColor;
+  if (!Array.isArray(color) || color.length !== 3) {
+    throw invalidInput("overlay.reveal.fresh_color", "reveal freshColor channels must be in [0.0, 1.0]");
+  }
+  const reveal: Required<TerrainOverlayRevealInput> = {
+    threshold: input.threshold ?? base.threshold,
+    fade: input.fade ?? base.fade,
+    freshColor: [color[0], color[1], color[2]],
+    freshMix: input.freshMix ?? base.freshMix,
+    freshAlpha: input.freshAlpha ?? base.freshAlpha,
+  };
+  const unit = (value: number) => Number.isFinite(value) && value >= 0 && value <= 1;
+  if (!unit(reveal.threshold)) {
+    throw invalidInput("overlay.reveal.threshold", "reveal threshold must be in [0.0, 1.0]");
+  }
+  if (!(Number.isFinite(reveal.fade) && reveal.fade >= 0)) {
+    throw invalidInput("overlay.reveal.fade", "reveal fade must be a finite number >= 0");
+  }
+  if (!reveal.freshColor.every(unit)) {
+    throw invalidInput("overlay.reveal.fresh_color", "reveal freshColor channels must be in [0.0, 1.0]");
+  }
+  if (!unit(reveal.freshMix)) {
+    throw invalidInput("overlay.reveal.fresh_mix", "reveal freshMix must be in [0.0, 1.0]");
+  }
+  if (typeof reveal.freshAlpha !== "boolean") {
+    throw invalidInput("overlay.reveal.fresh_alpha", "reveal freshAlpha must be a boolean");
+  }
+  return reveal;
+}
+
+/** A detached copy of an update (the caller may reuse its objects). */
+export function cloneTerrainOverlayLayerUpdate(update: TerrainOverlayLayerUpdate): TerrainOverlayLayerUpdate {
+  return {
+    name: update.name,
+    ...(update.opacity !== undefined ? { opacity: update.opacity } : {}),
+    ...(update.reveal !== undefined
+      ? {
+          reveal: {
+            ...update.reveal,
+            ...(update.reveal.freshColor !== undefined
+              ? { freshColor: [...update.reveal.freshColor] as [number, number, number] }
+              : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+/** Validates `updates` against `overlays` the way the runtime's
+ * `update_layers` does (each name matches exactly one layer, which has a
+ * reveal; values in range) and returns `overlays` with them applied. Layer
+ * images are shared, not copied. Throws before changing anything. */
+export function applyTerrainOverlayLayerUpdates(
+  overlays: TerrainOverlaysInput,
+  updates: TerrainOverlayLayerUpdate[],
+): TerrainOverlaysInput {
+  if (!Array.isArray(updates)) {
+    throw new Forge3DError(
+      "INVALID_INPUT",
+      "Invalid terrain overlay layer updates: must be an array",
+      { reason: "invalid-input" },
+    );
+  }
+  const layers = [...(overlays.layers ?? [])];
+  updates.forEach((update, index) => {
+    const field = `updates[${index}]`;
+    if (typeof update !== "object" || update === null || typeof update.name !== "string") {
+      throw invalidInput(field, "each update needs a layer name");
+    }
+    const slots = layers.flatMap((layer, slot) =>
+      (layer.name ?? `layer${slot}`) === update.name ? [slot] : [],
+    );
+    if (slots.length === 0) {
+      throw invalidInput(field, `no overlay layer is named '${update.name}'`);
+    }
+    if (slots.length > 1) {
+      throw invalidInput(field, `more than one overlay layer is named '${update.name}'`);
+    }
+    const slot = slots[0]!;
+    const layer = layers[slot]!;
+    if (layer.reveal === undefined) {
+      throw invalidInput(
+        field,
+        `layer '${update.name}' has no reveal, so its opacity is baked into its image; change it with setTerrainOverlays`,
+      );
+    }
+    const next = { ...layer };
+    if (update.opacity !== undefined) {
+      if (!(Number.isFinite(update.opacity) && update.opacity >= 0 && update.opacity <= 1)) {
+        throw invalidInput(`${field}.opacity`, "opacity must be in [0.0, 1.0]");
+      }
+      next.opacity = update.opacity;
+    }
+    if (update.reveal !== undefined) {
+      next.reveal = normalizeTerrainOverlayReveal(update.reveal, normalizeTerrainOverlayReveal(layer.reveal));
+    }
+    layers[slot] = next;
+  });
+  return { ...overlays, layers };
 }
 
 /** W08 (F5): the native `OverlaySettings::default()` — overlays are
@@ -122,6 +242,7 @@ function normalizeLayer(
     blendMode?: string;
     visible?: boolean;
     zOrder?: number;
+    reveal?: TerrainOverlayRevealInput;
   };
   const image = normalizeImage(input.image, field);
   const hasExtent = input.extent !== undefined;
@@ -202,6 +323,7 @@ function normalizeLayer(
     visible,
     zOrder,
   };
+  if (input.reveal !== undefined) normalized.reveal = normalizeTerrainOverlayReveal(input.reveal);
   if (extent !== undefined) normalized.extent = extent;
   if (crs !== undefined) normalized.crs = crs;
   if (crsBounds !== undefined) normalized.crsBounds = crsBounds;
@@ -243,6 +365,13 @@ export function normalizeTerrainOverlays(
       "resolution_scale must be in [0.1, 2.0]",
     );
   }
+  if (input.outputSize !== undefined) {
+    if (!Array.isArray(input.outputSize) || input.outputSize.length !== 2 ||
+      !input.outputSize.every(value => Number.isInteger(value) && value > 0 && value <= 0xffffffff)) {
+      throw invalidInput("overlay.output_size", "output_size must contain two positive uint32 dimensions");
+    }
+    settings.outputSize = [input.outputSize[0], input.outputSize[1]];
+  }
   const visible = terrainOverlayVisibleLayers(settings).length;
   if (visible > MAX_VISIBLE_LAYERS) {
     throw invalidInput(
@@ -253,11 +382,12 @@ export function normalizeTerrainOverlays(
   return settings;
 }
 
-/** Native `is_effectively_visible`: `visible && opacity > 0.001`. */
+/** Native `is_effectively_visible`: `visible && opacity > 0.001`; a
+ * reveal layer keeps its slot at any opacity (its opacity is live). */
 export function isTerrainOverlayLayerVisible(
   layer: NormalizedTerrainOverlayLayer,
 ): boolean {
-  return layer.visible && layer.opacity > VISIBLE_OPACITY_EPSILON;
+  return layer.visible && (layer.reveal !== undefined || layer.opacity > VISIBLE_OPACITY_EPSILON);
 }
 
 /** Native `visible_layers()`: effectively-visible layers sorted by

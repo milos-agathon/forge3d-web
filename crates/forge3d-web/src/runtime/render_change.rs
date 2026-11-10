@@ -5,6 +5,9 @@ use forge3d_core::{camera::CameraInput, postfx::TemporalState};
 #[derive(Clone, Copy)]
 pub(super) enum Change {
     Scene,
+    /// Overlay uniform values only (reveal layers): same capture size and
+    /// formats, so history resets but the capture is kept.
+    Overlay,
     Lighting,
     Camera,
     Selection,
@@ -29,6 +32,13 @@ impl Change {
                 temporal: Some("scene"),
                 recapture: true,
                 rebuild: true,
+            },
+            Overlay => Consequences {
+                pick: true,
+                environment: false,
+                temporal: Some("scene"),
+                recapture: true,
+                rebuild: false,
             },
             // Camera cuts are classified against the last rendered camera, not each setter.
             Camera => Consequences {
@@ -121,6 +131,9 @@ mod tests {
             assert_eq!(c.consequences().temporal, Some("scene"));
         }
         assert!(!Change::Explicit.consequences().rebuild);
+        let o = Change::Overlay.consequences();
+        assert!(o.pick && o.recapture && !o.rebuild);
+        assert_eq!(o.temporal, Some("scene"));
         assert_eq!(Change::Explicit.consequences().temporal, Some("explicit"));
         assert_eq!(Change::Size.consequences().temporal, Some("resize"));
     }

@@ -8,9 +8,11 @@ import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
 import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
 import { PostFxChain, resolvePostFx } from "./postfx.js";
 import type { PostFxChainInput, PostFxInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx-types.js";
-import { type SceneSnapshot, type CameraControllerMode, type CameraInput, type CameraInputEvent, type CameraProjectionKind, Forge3DRuntime, normalizeTerrainMaterial, type FlyView, type Forge3DRuntimeCapabilities, type Forge3DRuntimeOptions, type Forge3DViewerOptions, type HeightAoOptions, type HeightStreamingStats, type HeightTileCompletion, type HeightTilePlan, type LodSelectionReport, type MaterialVtSourceImage, type OrbitView, type ResizeInput, type SunVisibilityOptions, type TerrainColorRampInput, type TerrainColormapInput, type TerrainDebugView, type TerrainGeometryInput, type TerrainGeometryReport, type TerrainHeightmapInput, type TerrainHeightmapSourceInput, type TerrainMaterialInput, type TerrainMaterialVtStats, type TerrainOverlayReport, type TerrainOverlaysInput, type TerrainStreamingInput, type ViewerCapabilities, type ViewerDiagnostics, type ViewerResourceBudget, type ViewerStatus } from "./index.js";
+import { type SceneSnapshot, type CameraControllerMode, type CameraInput, type CameraInputEvent, type CameraProjectionKind, Forge3DRuntime, normalizeTerrainMaterial, type FlyView, type Forge3DRuntimeCapabilities, type Forge3DRuntimeOptions, type Forge3DViewerOptions, type HeightAoOptions, type HeightStreamingStats, type HeightTileCompletion, type HeightTilePlan, type LodSelectionReport, type MaterialVtSourceImage, type OrbitView, type ResizeInput, type SunVisibilityOptions, type TerrainColorRampInput, type TerrainColormapInput, type TerrainDebugView, type TerrainGeometryInput, type TerrainGeometryReport, type TerrainHeightmapInput, type TerrainHeightmapSourceInput, type TerrainMaterialInput, type TerrainMaterialVtStats, type TerrainOverlayReport, type TerrainOverlayLayerUpdate, type TerrainOverlaysInput, type TerrainStreamingInput, type ViewerCapabilities, type ViewerDiagnostics, type ViewerResourceBudget, type ViewerStatus } from "./index.js";
 import { Forge3DError } from "./runtime-failure.js";
 import { OrbitController } from "./orbit-controller.js";
+import { ownedOverlayData } from "./overlay-ownership.js";
+import { applyTerrainOverlayLayerUpdates, cloneTerrainOverlayLayerUpdate } from "./terrain-overlay.js";
 import { TerrainScatterBatch, normalizeScatterBatches, type ScatterBatchInput, type ScatterBatchSnapshot, type ScatterFrameStats, type ScatterMemoryReport } from "./terrain-scatter.js";
 import { TerrainLightingProbes, validateProbeSnapshot, type TerrainProbeSnapshot, type TerrainProbeMemoryReport } from "./terrain-probes.js";
 import { CameraController } from "./camera-controllers.js";
@@ -40,6 +42,8 @@ interface ViewerRuntime {
   ): void;
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setTerrainOverlays?(overlays: TerrainOverlaysInput): void;
+  updateTerrainOverlayLayers?(updates: TerrainOverlayLayerUpdate[]): void;
   setScene?(scene: SceneSnapshot): void;
   setEnvironment?(snapshot: EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport?():EnvironmentMemoryReport;
@@ -454,6 +458,72 @@ export class Forge3DViewer {
     const replay = cloneTerrain(terrain);
     this.#callRuntime(() => runtime.setTerrain(replay));
     this.#retained.terrain = { kind: "direct", value: replay };
+    this.#scheduler?.requestRender();
+  }
+
+  /** Overlay-only terrain update; see `Forge3DRuntime.setTerrainOverlays`. */
+  setTerrainOverlays(overlays: TerrainOverlaysInput): void {
+    const runtime = this.#operationalRuntime();
+    const current = this.#retained.terrain;
+    if (current === undefined) {
+      throw new Forge3DError(
+        "INVALID_INPUT",
+        "setTerrainOverlays requires a committed terrain",
+      );
+    }
+    const carrier: TerrainMetadataCarrier = {};
+    copyTerrainMetadata({ overlays }, carrier);
+    const next = carrier.overlays!;
+    if (current.kind === "direct") {
+      validateTerrainAgainstBudget(
+        { ...current.value, overlays: next },
+        this.#budget,
+        this.#capabilities.maxTextureDimension2D,
+      );
+    }
+    this.#callRuntime(() => {
+      if (runtime.setTerrainOverlays !== undefined) {
+        runtime.setTerrainOverlays(next);
+      } else if (current.kind === "direct") {
+        runtime.setTerrain({ ...current.value, overlays: next });
+      } else {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime cannot update overlays of a source-loaded terrain",
+        );
+      }
+    });
+    current.value.overlays = next;
+    this.#scheduler?.requestRender();
+  }
+
+  /**
+   * Changes the live opacity and reveal values of reveal overlay layers
+   * (layers committed with `reveal`), by name. Only a small uniform is
+   * written: no image is re-sent, resampled or uploaded, so this is cheap
+   * enough to call every frame. See `TerrainOverlayRevealInput`.
+   */
+  updateTerrainOverlayLayers(updates: TerrainOverlayLayerUpdate[]): void {
+    const runtime = this.#operationalRuntime();
+    const current = this.#retained.terrain;
+    if (current === undefined || current.value.overlays === undefined) {
+      throw new Forge3DError(
+        "INVALID_INPUT",
+        "updateTerrainOverlayLayers requires committed terrain overlays",
+      );
+    }
+    const next = applyTerrainOverlayLayerUpdates(current.value.overlays, updates);
+    const update = runtime.updateTerrainOverlayLayers;
+    if (update === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime cannot update overlay layers in place",
+      );
+    }
+    this.#callRuntime(() =>
+      update.call(runtime, updates.map(cloneTerrainOverlayLayerUpdate)),
+    );
+    current.value.overlays = next;
     this.#scheduler?.requestRender();
   }
 
@@ -1545,7 +1615,7 @@ function copyTerrainMetadata(
               image: {
                 width: layer.image.width,
                 height: layer.image.height,
-                data: layer.image.data.slice(),
+                data: ownedOverlayData(layer.image.data),
               },
               ...(layer.extent !== undefined
                 ? { extent: [...layer.extent] as typeof layer.extent }
@@ -1553,6 +1623,16 @@ function copyTerrainMetadata(
               ...(layer.crsBounds !== undefined
                 ? {
                     crsBounds: [...layer.crsBounds] as typeof layer.crsBounds,
+                  }
+                : {}),
+              ...(layer.reveal !== undefined
+                ? {
+                    reveal: {
+                      ...layer.reveal,
+                      ...(layer.reveal.freshColor !== undefined
+                        ? { freshColor: [...layer.reveal.freshColor] as [number, number, number] }
+                        : {}),
+                    },
                   }
                 : {}),
             })),

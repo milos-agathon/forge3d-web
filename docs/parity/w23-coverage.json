@@ -5998,9 +5998,10 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/terrain-overlays.test.ts",
-      "sha256": "74c894d8958e08bab2f543767f5fec261164556b8e2d7a9ccc9ae85c8556e2b5",
+      "sha256": "2635cdc4b80af3572b8474847944c117cdfb0f27097dc550e3519131be55bf96",
       "declarations": [
         "matches the native OverlaySettings::default exactly",
+        "retains explicit imagery dimensions without changing legacy defaults",
         "applies native defaults to a minimal block",
         "normalizes a fully specified stack verbatim",
         "rejects non-object input",
@@ -6013,7 +6014,11 @@
         "visible_layers sorts by zOrder stably",
         "passes Uint8Array image objects through",
         "accepts rgba aliases and Uint8ClampedArray data",
-        "rejects malformed image objects"
+        "rejects malformed image objects",
+        "fills reveal defaults and keeps a reveal layer planned at opacity 0",
+        "validates reveal values with the core wording",
+        "applies updates by name, keeping omitted reveal fields and sharing images",
+        "rejects unknown, duplicate and non-reveal layers before changing anything"
       ]
     },
     {

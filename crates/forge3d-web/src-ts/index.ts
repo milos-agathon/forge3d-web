@@ -116,6 +116,8 @@ import type { TerrainProbeSnapshot } from "./terrain-probes.js";
 import { TerrainScatterBatch, normalizeScatterBatches } from "./terrain-scatter.js";
 import type { ScatterBatchInput } from "./scatter-types.js";
 import { TerrainLightingProbes, validateProbeSnapshot, type TerrainProbeMemoryReport } from "./terrain-probes.js";
+import { ownedOverlayData } from "./overlay-ownership.js";
+import { applyTerrainOverlayLayerUpdates, cloneTerrainOverlayLayerUpdate } from "./terrain-overlay.js";
 export { TerrainScatterBatch, ScatterWindSettings, TerrainScatterSource, makeScatterTransform, seededScatterTransforms, gridScatterTransforms, bilinearScatterSample, simplifyScatterMesh, autoScatterLodLevels, scatterMeshBounds, scatterTransformBounds } from "./terrain-scatter.js";
 export type * from "./scatter-types.js";
 export { TerrainLightingProbes, getTerrainProbeMaterialDefaults } from "./terrain-probes.js";
@@ -333,7 +335,38 @@ export interface TerrainOverlaysInput {
   enabled?: boolean;
   globalOpacity?: number;
   resolutionScale?: number;
+  /** Explicit composite pixels, independent of DEM resolution; device and memory limits still apply. */
+  outputSize?: [number, number];
   layers?: TerrainOverlayLayerInput[];
+}
+
+/** Shader-side reveal of an overlay layer. The layer's alpha channel is
+ * then a key (alpha byte / 255), not coverage: a texel shows where
+ * `key >= threshold` (key 0 never shows). Its age `key - threshold` gives a
+ * freshness `exp(-age / fade)`; the color is mixed toward `freshColor` by
+ * `freshMix * freshness`, and the alpha is 1, or the freshness when
+ * `freshAlpha` is set. The layer's `opacity` is applied in the shader, so
+ * `updateTerrainOverlayLayers` can change all of these without re-sending
+ * the image. */
+export interface TerrainOverlayRevealInput {
+  /** Key (0..1) at and above which texels show; default 0. */
+  threshold?: number;
+  /** Key distance over which freshness falls by 1/e; 0 (default) disables it. */
+  fade?: number;
+  /** sRGB color (0..1 per channel) fresh texels are mixed toward; default white. */
+  freshColor?: [number, number, number];
+  /** Mix toward `freshColor` at full freshness, 0..1; default 0. */
+  freshMix?: number;
+  /** Alpha follows freshness (a glow) instead of being 1; default false. */
+  freshAlpha?: boolean;
+}
+
+/** One `updateTerrainOverlayLayers` entry: a reveal layer named `name`
+ * gets a new live opacity and/or reveal values (omitted fields keep theirs). */
+export interface TerrainOverlayLayerUpdate {
+  name: string;
+  opacity?: number;
+  reveal?: TerrainOverlayRevealInput;
 }
 
 /** One W08 overlay layer; `extent` (uv) and `crs`/`crsBounds` are mutually
@@ -351,6 +384,8 @@ export interface TerrainOverlayLayerInput {
   blendMode?: "normal" | "multiply" | "overlay";
   visible?: boolean;
   zOrder?: number;
+  /** Shader-side reveal; the image's alpha is then a key (see `TerrainOverlayRevealInput`). */
+  reveal?: TerrainOverlayRevealInput;
 }
 
 /** W08 (E5) `getTerrainOverlayReport` shape — `enabled:false` zeros when
@@ -739,6 +774,7 @@ export interface NormalizedTerrainOverlays {
   enabled: boolean;
   globalOpacity: number;
   resolutionScale: number;
+  outputSize?: [number, number];
   layers: NormalizedTerrainOverlayLayer[];
 }
 
@@ -754,6 +790,7 @@ export interface NormalizedTerrainOverlayLayer {
   blendMode: OverlayBlendMode;
   visible: boolean;
   zOrder: number;
+  reveal?: Required<TerrainOverlayRevealInput>;
 }
 
 /** W08 (F5): `TerrainVtLayerInput` under the native naming. */
@@ -2673,6 +2710,8 @@ interface WasmRuntime {
   ): () => void;
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setTerrainOverlays?(overlays: TerrainOverlaysInput): boolean;
+  updateTerrainOverlayLayers?(updates: TerrainOverlayLayerUpdate[]): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setEnvironment?(snapshot: EnvironmentSnapshot | null): void;
   getEnvironmentMemoryReport?(): EnvironmentMemoryReport;
@@ -2800,6 +2839,8 @@ export class Forge3DRuntime {
   #deviceLossError: Forge3DError | undefined;
   #vectorState: { input: VectorLayers | VectorSnapshot; terrain: TerrainHeightmapInput | undefined; geometryRevision: number; highlightRevision: number } | undefined;
   #geospatialTerrain: TerrainDataset | TerrainHeightmapInput | undefined;
+  /** Normalized input of the committed terrain, for overlay-only commits. */
+  #committedTerrain: TerrainHeightmapInput | undefined;
   #geospatialVectorEpoch = 0;
   #geospatialVectorAbort: AbortController | undefined;
 
@@ -3524,7 +3565,54 @@ export class Forge3DRuntime {
     const normalized = normalizeTerrainHeightmapInput(terrain instanceof TerrainDataset ? terrain.toTerrainInput() : terrain);
     this.#geospatialVectorEpoch++;
     this.#geospatialVectorAbort?.abort();
-    this.#runOrQueue(() => {this.#inner.setTerrain(normalized);this.#geospatialTerrain=terrain;});
+    this.#runOrQueue(() => {this.#inner.setTerrain(normalized);this.#geospatialTerrain=terrain;this.#committedTerrain=normalized;});
+  }
+
+  /**
+   * Replaces the committed terrain's overlays without rebuilding the
+   * terrain: layers whose inputs are unchanged keep their resampled texture
+   * slice and only changed slices are uploaded. The frame equals
+   * `setTerrain` with these overlays. A stack that changes shape (output
+   * size, layer count, or no visible layers) recommits the terrain instead.
+   */
+  setTerrainOverlays(overlays: TerrainOverlaysInput): void {
+    this.#assertNotDisposed();
+    const committed = this.#committedTerrain;
+    if (committed === undefined) {
+      throw new Forge3DError("INVALID_INPUT", "setTerrainOverlays requires a committed terrain");
+    }
+    const next = normalizeTerrainHeightmapInput({ ...committed, overlays });
+    this.#runOrQueue(() => {
+      if (this.#inner.setTerrainOverlays?.call(this.#inner, next.overlays!) === true) {
+        this.#committedTerrain = next;
+        return;
+      }
+      this.setTerrain(next);
+    });
+  }
+
+  /**
+   * Changes the live opacity and reveal values of reveal overlay layers
+   * (layers committed with `reveal`), by name. Only a small uniform is
+   * written: no image is re-sent, resampled or uploaded, so this is cheap
+   * enough to call every frame.
+   */
+  updateTerrainOverlayLayers(updates: TerrainOverlayLayerUpdate[]): void {
+    this.#assertNotDisposed();
+    const committed = this.#committedTerrain;
+    if (committed?.overlays === undefined) {
+      throw new Forge3DError("INVALID_INPUT", "updateTerrainOverlayLayers requires committed terrain overlays");
+    }
+    const overlays = applyTerrainOverlayLayerUpdates(committed.overlays, updates);
+    const inner = this.#inner.updateTerrainOverlayLayers;
+    if (inner === undefined) {
+      throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime cannot update overlay layers in place");
+    }
+    this.#runOrQueue(() => {
+      inner.call(this.#inner, updates.map(cloneTerrainOverlayLayerUpdate));
+      const current = this.#committedTerrain;
+      if (current !== undefined) this.#committedTerrain = { ...current, overlays };
+    });
   }
 
   async setTerrainFromSource(
@@ -3555,6 +3643,7 @@ export class Forge3DRuntime {
         this.#geospatialVectorEpoch++;
         this.#geospatialVectorAbort?.abort();
         this.#geospatialTerrain=decoded;
+        this.#committedTerrain=decoded;
       });
     } catch (error) {
       throw Forge3DError.from(error);
@@ -3961,7 +4050,7 @@ function copyTerrainMetadata(
               image: {
                 width: layer.image.width,
                 height: layer.image.height,
-                data: layer.image.data.slice(),
+                data: ownedOverlayData(layer.image.data),
               },
               ...(layer.extent !== undefined
                 ? { extent: [...layer.extent] as typeof layer.extent }
@@ -3969,6 +4058,16 @@ function copyTerrainMetadata(
               ...(layer.crsBounds !== undefined
                 ? {
                     crsBounds: [...layer.crsBounds] as typeof layer.crsBounds,
+                  }
+                : {}),
+              ...(layer.reveal !== undefined
+                ? {
+                    reveal: {
+                      ...layer.reveal,
+                      ...(layer.reveal.freshColor !== undefined
+                        ? { freshColor: [...layer.reveal.freshColor] as [number, number, number] }
+                        : {}),
+                    },
                   }
                 : {}),
             })),
@@ -4163,6 +4262,7 @@ export {
   decodeOverlayImage,
   getTerrainOverlayDefaults,
   isTerrainOverlayLayerVisible,
+  normalizeTerrainOverlayReveal,
   normalizeTerrainOverlays,
   normalizeTerrainVirtualTexture,
   terrainOverlayVisibleLayers,

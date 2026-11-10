@@ -409,6 +409,51 @@ pub struct OverlayLayerJs {
     visible: Option<bool>,
     #[serde(default)]
     z_order: Option<i32>,
+    #[serde(default)]
+    reveal: Option<OverlayRevealJs>,
+}
+
+/// Serde view of a layer's `reveal` (see core `OverlayReveal`).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct OverlayRevealJs {
+    #[serde(default)]
+    pub threshold: Option<f32>,
+    #[serde(default)]
+    pub fade: Option<f32>,
+    #[serde(default)]
+    pub fresh_color: Option<[f32; 3]>,
+    #[serde(default)]
+    pub fresh_mix: Option<f32>,
+    #[serde(default)]
+    pub fresh_alpha: Option<bool>,
+}
+
+impl OverlayRevealJs {
+    /// Fields left out keep `base` (the core defaults for a new layer).
+    pub fn resolve(
+        &self,
+        base: forge3d_core::terrain_overlay::OverlayReveal,
+    ) -> forge3d_core::terrain_overlay::OverlayReveal {
+        forge3d_core::terrain_overlay::OverlayReveal {
+            threshold: self.threshold.unwrap_or(base.threshold),
+            fade: self.fade.unwrap_or(base.fade),
+            fresh_color: self.fresh_color.unwrap_or(base.fresh_color),
+            fresh_mix: self.fresh_mix.unwrap_or(base.fresh_mix),
+            fresh_alpha: self.fresh_alpha.unwrap_or(base.fresh_alpha),
+        }
+    }
+}
+
+/// Serde view of one `updateTerrainOverlayLayers` entry.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct OverlayLayerUpdateJs {
+    pub name: String,
+    #[serde(default)]
+    pub opacity: Option<f32>,
+    #[serde(default)]
+    pub reveal: Option<OverlayRevealJs>,
 }
 
 /// Serde view of `terrain.overlays`.
@@ -422,10 +467,12 @@ pub struct TerrainOverlaysJsOptions {
     #[serde(default)]
     pub resolution_scale: Option<f32>,
     #[serde(default)]
+    pub output_size: Option<[u32; 2]>,
+    #[serde(default)]
     pub layers: Option<Vec<OverlayLayerJs>>,
 }
 
-fn read_terrain_overlays(
+pub(crate) fn read_terrain_overlays(
     value: &JsValue,
 ) -> Result<Option<forge3d_core::terrain_overlay::OverlaySettings>, WebError> {
     use forge3d_core::terrain_overlay::{
@@ -530,7 +577,13 @@ fn read_terrain_overlays(
                 }
             })
             .with_visible(layer.visible.unwrap_or(true))
-            .with_z_order(layer.z_order.unwrap_or(0));
+            .with_z_order(layer.z_order.unwrap_or(0))
+            .with_reveal(
+                layer
+                    .reveal
+                    .as_ref()
+                    .map(|reveal| reveal.resolve(Default::default())),
+            );
         resolved.validate().map_err(crate::error::map_core_error)?;
         layers.push(resolved);
     }
@@ -540,6 +593,7 @@ fn read_terrain_overlays(
         global_opacity: parsed.global_opacity.unwrap_or(1.0),
         layers,
         resolution_scale: parsed.resolution_scale.unwrap_or(1.0),
+        output_size: parsed.output_size,
     };
     settings.validate().map_err(crate::error::map_core_error)?;
     Ok(Some(settings))

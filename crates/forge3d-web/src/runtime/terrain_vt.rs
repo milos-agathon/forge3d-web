@@ -67,17 +67,21 @@ fn perf_now_ms() -> f64 {
 /// `queue.write_texture` rejects row pitches that are not a multiple of
 /// `COPY_BYTES_PER_ROW_ALIGNMENT`; tile slot sizes are user-controlled, so
 /// rows are padded out to the alignment before upload.
-pub(super) fn pad_rows(data: &[u8], row_bytes: usize, rows: usize) -> (Vec<u8>, u32) {
+pub(super) fn pad_rows(
+    data: &[u8],
+    row_bytes: usize,
+    rows: usize,
+) -> (std::borrow::Cow<'_, [u8]>, u32) {
     let pitch = wgpu::util::align_to(row_bytes, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as usize);
     if pitch == row_bytes {
-        return (data.to_vec(), row_bytes as u32);
+        return (std::borrow::Cow::Borrowed(data), row_bytes as u32);
     }
     let mut padded = vec![0u8; pitch * rows];
     for row in 0..rows {
         padded[row * pitch..row * pitch + row_bytes]
             .copy_from_slice(&data[row * row_bytes..(row + 1) * row_bytes]);
     }
-    (padded, pitch as u32)
+    (std::borrow::Cow::Owned(padded), pitch as u32)
 }
 
 /// Bytes the VT block owns on the GPU (ledger `terrain:vt`): atlas + page

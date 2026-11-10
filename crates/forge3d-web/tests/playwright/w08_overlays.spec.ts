@@ -49,6 +49,54 @@ test.describe("W08 terrain overlays", () => {
     expect(r.report.layerCount).toBe(0);
   });
 
+  test("re-committing with one edited layer is byte-identical to a full resample", async ({
+    page,
+  }) => {
+    test.slow();
+    const r = await probe(page, "reuseIdentity");
+    expect(r.edit.byteEqual, "the edited layer must change the frame").toBe(false);
+    expect(r.identical.byteEqual, `reuse maxDiff ${r.identical.maxDiff}`).toBe(true);
+  });
+
+  test("setTerrainOverlays is byte-identical to a full terrain commit", async ({ page }) => {
+    test.slow();
+    const r = await probe(page, "overlayOnlyIdentity");
+    expect(r.edit.byteEqual, "the edited layer must change the frame").toBe(false);
+    expect(r.inPlace.byteEqual, `in-place maxDiff ${r.inPlace.maxDiff}`).toBe(true);
+    expect(r.inPlaceReport[0]).toEqual(r.inPlaceReport[1]);
+    expect(r.reshaped.byteEqual, `reshaped maxDiff ${r.reshaped.maxDiff}`).toBe(true);
+    expect(r.reshapedReport[0]).toEqual(r.reshapedReport[1]);
+    expect(r.reshapedReport[0].layerCount).toBe(2);
+  });
+
+  test("updateTerrainOverlayLayers is byte-identical to a full commit of the same reveal", async ({ page }) => {
+    test.slow();
+    const r = await probe(page, "revealUpdateIdentity");
+    expect(r.changed.byteEqual, "the reveal update must change the frame").toBe(false);
+    expect(r.identical.byteEqual, `reveal update maxDiff ${r.identical.maxDiff}`).toBe(true);
+    expect(r.reports[0]).toEqual(r.reports[1]);
+    expect(r.reports[0].layerCount).toBe(4);
+    expect(r.rejected).toBe("INVALID_INPUT");
+  });
+
+  test("device loss replays reveal values set by updateTerrainOverlayLayers", async ({ page }) => {
+    test.slow();
+    const r = await probe(page, "viewerRevealUpdateDeviceLoss");
+    expect(r.status).toBe("ready");
+    expect(r.recoveryAttempts).toBe(1);
+    expect(r.updated.byteEqual, "the reveal update must change the frame").toBe(false);
+    expect(r.diff.byteEqual, JSON.stringify(r.diff)).toBe(true);
+  });
+
+  test("device loss replays overlays set by setTerrainOverlays", async ({ page }) => {
+    test.slow();
+    const r = await probe(page, "viewerOverlayUpdateDeviceLoss");
+    expect(r.status).toBe("ready");
+    expect(r.recoveryAttempts).toBe(1);
+    expect(r.updated.byteEqual, "the overlay update must change the frame").toBe(false);
+    expect(r.diff.byteEqual, JSON.stringify(r.diff)).toBe(true);
+  });
+
   test("overlay albedo matches the core CPU blend reference within 2/255", async ({ page }) => {
     test.slow();
     const r = await probe(page, "albedoParity");

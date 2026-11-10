@@ -299,7 +299,38 @@ export interface TerrainOverlaysInput {
   enabled?: boolean;
   globalOpacity?: number;
   resolutionScale?: number;
+  /** Explicit composite pixels, independent of DEM resolution; device and memory limits still apply. */
+  outputSize?: [number, number];
   layers?: TerrainOverlayLayerInput[];
+}
+
+/** Shader-side reveal of an overlay layer. The layer's alpha channel is
+ * then a key (alpha byte / 255), not coverage: a texel shows where
+ * `key >= threshold` (key 0 never shows). Its age `key - threshold` gives a
+ * freshness `exp(-age / fade)`; the color is mixed toward `freshColor` by
+ * `freshMix * freshness`, and the alpha is 1, or the freshness when
+ * `freshAlpha` is set. The layer's `opacity` is applied in the shader, so
+ * `updateTerrainOverlayLayers` can change all of these without re-sending
+ * the image. */
+export interface TerrainOverlayRevealInput {
+  /** Key (0..1) at and above which texels show; default 0. */
+  threshold?: number;
+  /** Key distance over which freshness falls by 1/e; 0 (default) disables it. */
+  fade?: number;
+  /** sRGB color (0..1 per channel) fresh texels are mixed toward; default white. */
+  freshColor?: [number, number, number];
+  /** Mix toward `freshColor` at full freshness, 0..1; default 0. */
+  freshMix?: number;
+  /** Alpha follows freshness (a glow) instead of being 1; default false. */
+  freshAlpha?: boolean;
+}
+
+/** One `updateTerrainOverlayLayers` entry: a reveal layer named `name`
+ * gets a new live opacity and/or reveal values (omitted fields keep theirs). */
+export interface TerrainOverlayLayerUpdate {
+  name: string;
+  opacity?: number;
+  reveal?: TerrainOverlayRevealInput;
 }
 
 /** One W08 overlay layer; `extent` (uv) and `crs`/`crsBounds` are mutually
@@ -317,6 +348,8 @@ export interface TerrainOverlayLayerInput {
   blendMode?: "normal" | "multiply" | "overlay";
   visible?: boolean;
   zOrder?: number;
+  /** Shader-side reveal; the image's alpha is then a key (see `TerrainOverlayRevealInput`). */
+  reveal?: TerrainOverlayRevealInput;
 }
 
 /** W08 (E5) `getTerrainOverlayReport` shape — `enabled:false` zeros when
@@ -2835,6 +2868,20 @@ export declare class Forge3DRuntime {
   getRenderStats(): RenderStats;
   getMemoryReport(): MemoryReport;
   setTerrain(terrain: TerrainHeightmapInput|TerrainDataset): void;
+  /**
+   * Replaces the committed terrain's overlays without rebuilding the
+   * terrain; unchanged layers keep their resampled texture slice. The frame
+   * equals `setTerrain` with these overlays. A stack that changes shape
+   * (output size, layer count, or no visible layers) recommits the terrain.
+   */
+  setTerrainOverlays(overlays: TerrainOverlaysInput): void;
+  /**
+   * Changes the live opacity and reveal values of reveal overlay layers
+   * (layers committed with `reveal`), by name. Only a small uniform is
+   * written: no image is re-sent, resampled or uploaded, so this is cheap
+   * enough to call every frame.
+   */
+  updateTerrainOverlayLayers(updates: TerrainOverlayLayerUpdate[]): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setScene(scene: SceneSnapshot): void;
   setLighting(lighting: LightingSnapshot): void;
@@ -2964,6 +3011,20 @@ export declare class Forge3DViewer {
   getCapabilities(): ViewerCapabilities;
   getDiagnostics(): ViewerDiagnostics;
   setTerrain(terrain: TerrainHeightmapInput): void;
+  /**
+   * Replaces the committed terrain's overlays without rebuilding the
+   * terrain; unchanged layers keep their resampled texture slice. The frame
+   * equals `setTerrain` with these overlays. A stack that changes shape
+   * (output size, layer count, or no visible layers) recommits the terrain.
+   */
+  setTerrainOverlays(overlays: TerrainOverlaysInput): void;
+  /**
+   * Changes the live opacity and reveal values of reveal overlay layers
+   * (layers committed with `reveal`), by name. Only a small uniform is
+   * written: no image is re-sent, resampled or uploaded, so this is cheap
+   * enough to call every frame.
+   */
+  updateTerrainOverlayLayers(updates: TerrainOverlayLayerUpdate[]): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   /** W08 (E7): committed terrain geometry — grid counts or clipmap budget. */
   getTerrainGeometryReport(): TerrainGeometryReport;
@@ -4231,6 +4292,7 @@ export interface NormalizedTerrainOverlays {
   enabled: boolean;
   globalOpacity: number;
   resolutionScale: number;
+  outputSize?: [number, number];
   layers: NormalizedTerrainOverlayLayer[];
 }
 
@@ -4245,6 +4307,7 @@ export interface NormalizedTerrainOverlayLayer {
   blendMode: OverlayBlendMode;
   visible: boolean;
   zOrder: number;
+  reveal?: Required<TerrainOverlayRevealInput>;
 }
 
 /** W08 (F5): `TerrainVtLayerInput` under the native naming. */
@@ -4277,6 +4340,13 @@ export declare function getTerrainOverlayDefaults(): NormalizedTerrainOverlays;
 export declare function normalizeTerrainOverlays(
   input: TerrainOverlaysInput,
 ): NormalizedTerrainOverlays;
+
+/** Resolves a layer `reveal` against `base` (defaults for a new layer) and
+ * validates it exactly as the commit path does. */
+export declare function normalizeTerrainOverlayReveal(
+  input: TerrainOverlayRevealInput,
+  base?: Required<TerrainOverlayRevealInput>,
+): Required<TerrainOverlayRevealInput>;
 
 /** W08 (F5): native `is_effectively_visible` predicate. */
 export declare function isTerrainOverlayLayerVisible(

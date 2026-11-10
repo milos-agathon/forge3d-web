@@ -859,14 +859,54 @@ percent of the file) using the vendored geotiff 3.0.5 decoder.
 
 ### Terrain Overlays
 
-`terrain.overlays = { enabled, globalOpacity, resolutionScale, layers }`
-drapes raster imagery onto the terrain. Layers composite onto the fully
+`terrain.overlays = { enabled, globalOpacity, resolutionScale, outputSize?, layers }`
+drapes raster imagery onto the terrain.
+
+`outputSize: [width, height]` optionally specifies positive integer per-layer texture
+pixel dimensions independently of the DEM grid. For example, `[4096, 4096]`
+preserves detailed imagery over a 513-sample DEM without resampling elevation.
+When omitted, the existing `resolutionScale` (0.1–2.0) behavior is unchanged.
+Device maximum dimensions still clamp the request, and the existing memory
+budget can downscale it; inspect `getTerrainOverlayReport()` for actual dimensions
+and `downscaled` status. Each visible layer consumes width × height × 4 GPU bytes.
+Each layer is resampled to that size on the CPU when committed; a re-commit
+copies the resampled bytes of any layer whose image, placement, opacity and
+target size are unchanged. To change only the overlays of a committed terrain,
+call `setTerrainOverlays(overlays)` on `Forge3DViewer` or `Forge3DRuntime`: the
+terrain is not rebuilt and only changed layer slices are uploaded, with the same
+frame as `setTerrain` with those overlays. A stack whose shape changes (output
+size, layer count, budget downscaling, or no visible layers) recommits the
+terrain instead.
+
+A layer with `reveal: { threshold, fade, freshColor, freshMix, freshAlpha }`
+is revealed in the shader, for content that appears over time (a flood front,
+a fire perimeter, a construction sequence). Its image alpha is then a key
+(byte / 255), not coverage: a texel shows where `key >= threshold`, and key 0
+never shows. The age `key - threshold` gives a freshness `exp(-age / fade)`
+(0 when `fade` is 0, the default); the color is mixed in linear space toward
+the sRGB `freshColor` (default white) by `freshMix * freshness` (default 0),
+and the alpha is 1, or the freshness when `freshAlpha` is true. The layer's
+`opacity` multiplies that alpha in the shader instead of being baked into the
+texture, and a reveal layer keeps its slot at opacity 0. Call
+`updateTerrainOverlayLayers([{ name, opacity?, reveal? }])` on `Forge3DViewer`
+or `Forge3DRuntime` to change these values for layers committed with
+`reveal`: only the overlay uniform is written, so it is cheap enough to call
+every frame. Omitted reveal fields keep their current values. A name that
+matches no layer, more than one layer, or a layer without `reveal` rejects
+with `INVALID_INPUT`, and nothing changes.
+
+Layers composite onto the fully
 composited albedo before lighting, so draped overlays receive the same
 sun, IBL and shadowing as the terrain albedo. Each layer accepts an
 `image` (browser image source or `{width, height, data}` RGBA8 via
 `decodeOverlayImage`), `opacity`, `blendMode`, `visible`, `zOrder`, and
 exactly one placement: `extent` `[u0, v0, u1, v1]` UV rect, or
 `crs` + `crsBounds` `[minx, miny, maxx, maxy]` for geographic placement.
+UV `extent` layers retain the full per-layer texture resolution inside that
+footprint; they are sampled directly in local UV coordinates rather than baked
+into a terrain-wide raster. This supports small high-resolution detail patches
+over a low-resolution overview. UV V increases from north to south. CRS layers
+retain the full-domain CPU reprojection path. Omitted placement covers the full terrain.
 Layers sort by `zOrder` (stable by input order) and blend in linear space
 with `a = layerAlpha * globalOpacity`: `normal` = `b(1-a) + s a`,
 `multiply` = `b(1-a) + b s a`, `overlay` = `b(1-a) + ov a` with

@@ -41,8 +41,9 @@ use memory::MemoryLedger;
 use readback::screenshot_runtime;
 use render::render_runtime;
 use terrain::{
-    resize_runtime, set_camera_runtime, set_terrain_options_runtime, set_terrain_runtime,
-    DepthAttachment, TerrainRenderResources,
+    resize_runtime, set_camera_runtime, set_terrain_options_runtime, set_terrain_overlays_runtime,
+    set_terrain_runtime, update_terrain_overlay_layers_runtime, DepthAttachment,
+    TerrainRenderResources,
 };
 use timing::TimestampRing;
 
@@ -628,6 +629,29 @@ impl Forge3DRuntime {
         self.guard_mutation()?;
         set_terrain_runtime(self, terrain).map_err(to_js_error)?;
         render_change::applied(self, render_change::Change::Scene);
+        Ok(())
+    }
+
+    /// W08 (E5): overlay-only commit against the committed terrain. `false`
+    /// means nothing changed and the caller must recommit the terrain with
+    /// these overlays (see `set_terrain_overlays_runtime`).
+    #[wasm_bindgen(js_name = setTerrainOverlays)]
+    pub fn set_terrain_overlays(&mut self, overlays: JsValue) -> Result<bool, JsValue> {
+        self.guard_mutation()?;
+        let applied = set_terrain_overlays_runtime(self, overlays).map_err(to_js_error)?;
+        if applied {
+            render_change::applied(self, render_change::Change::Scene);
+        }
+        Ok(applied)
+    }
+
+    /// Live opacity and reveal values of reveal overlay layers, by name. Only
+    /// the overlay uniform is rewritten; no image is re-sent or re-uploaded.
+    #[wasm_bindgen(js_name = updateTerrainOverlayLayers)]
+    pub fn update_terrain_overlay_layers(&mut self, updates: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        update_terrain_overlay_layers_runtime(self, updates).map_err(to_js_error)?;
+        render_change::applied(self, render_change::Change::Overlay);
         Ok(())
     }
 
