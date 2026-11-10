@@ -42,7 +42,8 @@ use readback::screenshot_runtime;
 use render::render_runtime;
 use terrain::{
     resize_runtime, set_camera_runtime, set_terrain_options_runtime, set_terrain_overlays_runtime,
-    set_terrain_runtime, DepthAttachment, TerrainRenderResources,
+    set_terrain_runtime, update_terrain_overlay_layers_runtime, DepthAttachment,
+    TerrainRenderResources,
 };
 use timing::TimestampRing;
 
@@ -642,6 +643,16 @@ impl Forge3DRuntime {
             render_change::applied(self, render_change::Change::Scene);
         }
         Ok(applied)
+    }
+
+    /// Live opacity and reveal values of reveal overlay layers, by name. Only
+    /// the overlay uniform is rewritten; no image is re-sent or re-uploaded.
+    #[wasm_bindgen(js_name = updateTerrainOverlayLayers)]
+    pub fn update_terrain_overlay_layers(&mut self, updates: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        update_terrain_overlay_layers_runtime(self, updates).map_err(to_js_error)?;
+        render_change::applied(self, render_change::Change::Overlay);
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = setTerrainFromSource)]

@@ -69,6 +69,25 @@ test.describe("W08 terrain overlays", () => {
     expect(r.reshapedReport[0].layerCount).toBe(2);
   });
 
+  test("updateTerrainOverlayLayers is byte-identical to a full commit of the same reveal", async ({ page }) => {
+    test.slow();
+    const r = await probe(page, "revealUpdateIdentity");
+    expect(r.changed.byteEqual, "the reveal update must change the frame").toBe(false);
+    expect(r.identical.byteEqual, `reveal update maxDiff ${r.identical.maxDiff}`).toBe(true);
+    expect(r.reports[0]).toEqual(r.reports[1]);
+    expect(r.reports[0].layerCount).toBe(4);
+    expect(r.rejected).toBe("INVALID_INPUT");
+  });
+
+  test("device loss replays reveal values set by updateTerrainOverlayLayers", async ({ page }) => {
+    test.slow();
+    const r = await probe(page, "viewerRevealUpdateDeviceLoss");
+    expect(r.status).toBe("ready");
+    expect(r.recoveryAttempts).toBe(1);
+    expect(r.updated.byteEqual, "the reveal update must change the frame").toBe(false);
+    expect(r.diff.byteEqual, JSON.stringify(r.diff)).toBe(true);
+  });
+
   test("device loss replays overlays set by setTerrainOverlays", async ({ page }) => {
     test.slow();
     const r = await probe(page, "viewerOverlayUpdateDeviceLoss");

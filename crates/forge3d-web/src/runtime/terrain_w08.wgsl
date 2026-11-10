@@ -8,7 +8,8 @@
 
 // #if terrain_overlay
 // Planned overlay composite — layer = one RGBA8 slice in z-order, alpha
-// already carries the layer opacity (C `plan_overlays`).
+// already carries the layer opacity (C `plan_overlays`), except on reveal
+// layers, whose alpha is a key and whose opacity is `fresh[i].w`.
 @group(0) @binding(14) var terrain_overlays: texture_2d_array<f32>;
 @group(0) @binding(15) var terrain_overlay_sampler: sampler;
 
@@ -20,6 +21,10 @@ struct TerrainOverlayUniform {
     modes: array<vec4<u32>, 2>,
     // Terrain-UV footprint per texture slice, preserving local source detail.
     extents: array<vec4<f32>, 8>,
+    // Reveal per layer: threshold, fade, fresh mix, flags (1 on, 2 fresh alpha).
+    reveal: array<vec4<f32>, 8>,
+    // Reveal per layer: linear fresh color, live opacity.
+    fresh: array<vec4<f32>, 8>,
 }
 @group(0) @binding(16) var<uniform> terrain_overlay: TerrainOverlayUniform;
 
@@ -42,6 +47,23 @@ fn terrain_overlay_blend(mode: u32, base: vec3<f32>, src: vec3<f32>, a: f32) -> 
     return base * (1.0 - a) + src * a;
 }
 
+/// C `reveal_linear`: shows a texel whose key (alpha) is at or above the
+/// threshold, tints and fades it by freshness, applies the live opacity.
+fn terrain_overlay_reveal(i: u32, s: vec4<f32>) -> vec4<f32> {
+    let r = terrain_overlay.reveal[i];
+    let f = terrain_overlay.fresh[i];
+    if (s.a < r.x || s.a <= 0.5 / 255.0) {
+        return vec4<f32>(s.rgb, 0.0);
+    }
+    var fresh = 0.0;
+    if (r.y > 0.0) {
+        fresh = exp(-(s.a - r.x) / r.y);
+    }
+    let rgb = s.rgb + (f.rgb - s.rgb) * (r.z * fresh);
+    let fresh_alpha = (u32(r.w + 0.5) & 2u) != 0u;
+    return vec4<f32>(rgb, select(1.0, fresh, fresh_alpha) * clamp(f.w, 0.0, 1.0));
+}
+
 /// E5: apply the planned overlay stack over the material/color-ramp albedo
 /// before lighting. `textureSampleLevel` is uniformity-safe.
 fn terrain_apply_overlays(albedo: vec3<f32>, uv: vec2<f32>) -> vec3<f32> {
@@ -51,7 +73,10 @@ fn terrain_apply_overlays(albedo: vec3<f32>, uv: vec2<f32>) -> vec3<f32> {
         let extent = terrain_overlay.extents[i];
         if (any(uv < extent.xy) || any(uv > extent.zw)) { continue; }
         let layer_uv = (uv - extent.xy) / (extent.zw - extent.xy);
-        let s = textureSampleLevel(terrain_overlays, terrain_overlay_sampler, layer_uv, i32(i), 0.0);
+        var s = textureSampleLevel(terrain_overlays, terrain_overlay_sampler, layer_uv, i32(i), 0.0);
+        if (terrain_overlay.reveal[i].w > 0.5) {
+            s = terrain_overlay_reveal(i, s);
+        }
         let a = clamp(s.a, 0.0, 1.0) * clamp(terrain_overlay.control.y, 0.0, 1.0);
         result = terrain_overlay_blend(terrain_overlay_mode(i), result, s.rgb, a);
     }

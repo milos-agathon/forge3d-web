@@ -305,6 +305,24 @@
     ];
   }
 
+      // A reveal layer over the standard stack: color varies with v, the key
+      // (alpha) rises with u, so the threshold sweeps a front across it.
+      const REVEAL_START = { threshold: 0.2, fade: 0.15, freshColor: [1, 0.55, 0.1], freshMix: 0.7 };
+      const REVEAL_PATCH = { threshold: 0.55, freshAlpha: true };
+      function revealStack(opacity, reveal) {
+        return [
+          ...layerStack(),
+          {
+            name: "front",
+            image: gradientImage(64, (u, v) => [0.2 + 0.5 * v, 0.35, 0.6 - 0.3 * v, u]),
+            opacity,
+            blendMode: "normal",
+            zOrder: 5,
+            reveal,
+          },
+        ];
+      }
+
       function overlaysInput(options = {}) {
         return {
           enabled: true,
@@ -504,6 +522,83 @@
               recoveryAttempts: viewer.getDiagnostics().recoveryAttempts,
               reportBefore,
               reportAfter: viewer.getTerrainOverlayReport(),
+              diff: recoveryFramesEqual(before, after),
+            };
+          } finally {
+            viewer.dispose();
+          }
+        },
+
+        // Reveal: `updateTerrainOverlayLayers` (uniform only) must equal a
+        // full commit with the same live opacity and reveal values.
+        async revealUpdateIdentity() {
+          const updated = await withRuntime(async (runtime) => {
+            applyScene(runtime, await buildScene({ overlays: overlaysInput({ layers: revealStack(0.8, REVEAL_START) }) }));
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            const original = await runtime.readRgba();
+            runtime.updateTerrainOverlayLayers([{ name: "front", opacity: 0.6, reveal: REVEAL_PATCH }]);
+            runtime.render();
+            return { original, rgba: await runtime.readRgba(), report: runtime.getTerrainOverlayReport() };
+          });
+          const full = await withRuntime(async (runtime) => {
+            applyScene(runtime, await buildScene({ overlays: overlaysInput({ layers: revealStack(0.6, { ...REVEAL_START, ...REVEAL_PATCH }) }) }));
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            return { rgba: await runtime.readRgba(), report: runtime.getTerrainOverlayReport() };
+          });
+          let rejected = "";
+          try {
+            await withRuntime(async (runtime) => {
+              applyScene(runtime, await buildScene({ overlays: overlaysInput({ layers: revealStack(0.8, REVEAL_START) }) }));
+              runtime.updateTerrainOverlayLayers([{ name: "normal-patch", opacity: 0.5 }]);
+            });
+          } catch (error) {
+            rejected = error.code;
+          }
+          return {
+            // Negative control: the update is visible.
+            changed: framesEqual(updated.original, updated.rgba),
+            identical: framesEqual(updated.rgba, full.rgba),
+            reports: [updated.report, full.report],
+            rejected,
+          };
+        },
+
+        // Recovery replays reveal values set by `updateTerrainOverlayLayers`.
+        async viewerRevealUpdateDeviceLoss() {
+          const viewer = await Forge3DViewer.create(canvas, {
+            runtime: RECOVERY_RUNTIME,
+            initialView: {
+              target: [0, 0.3, 0],
+              distance: 4.8,
+              yawDegrees: 45,
+              pitchDegrees: 27,
+              fovYDegrees: 50,
+              near: 0.05,
+              far: 50,
+            },
+            controls: false,
+            resize: false,
+          });
+          try {
+            const scene = await buildScene({ overlays: overlaysInput({ layers: revealStack(0.8, REVEAL_START) }) });
+            const terrain = scene
+              .getNodes()
+              .find((node) => node.node.kind === "terrain").node.terrain;
+            viewer.setTerrain(terrain);
+            viewer.render();
+            const original = await decodePngRgba(await viewer.screenshot());
+            viewer.updateTerrainOverlayLayers([{ name: "front", opacity: 0.6, reveal: REVEAL_PATCH }]);
+            viewer.render();
+            const before = await decodePngRgba(await viewer.screenshot());
+            await loseViewer(viewer);
+            viewer.render();
+            const after = await decodePngRgba(await viewer.screenshot());
+            return {
+              status: viewer.status,
+              recoveryAttempts: viewer.getDiagnostics().recoveryAttempts,
+              updated: recoveryFramesEqual(original, before),
               diff: recoveryFramesEqual(before, after),
             };
           } finally {

@@ -1349,7 +1349,7 @@ pub(super) struct ShadowProxyMesh {
     pub(super) bytes: u64,
 }
 
-/// WGSL `TerrainOverlayUniform` mirror (binding 16): 176 bytes.
+/// WGSL `TerrainOverlayUniform` mirror (binding 16): 432 bytes.
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct TerrainOverlayUniformGpu {
@@ -1358,14 +1358,28 @@ pub(super) struct TerrainOverlayUniformGpu {
     /// Blend-mode discriminant per layer lane (`array<vec4<u32>, 2>`).
     pub modes: [u32; 8],
     pub extents: [[f32; 4]; 8],
+    /// Per layer: [threshold, fade, fresh_mix, flags]; flags bit 0 = reveal
+    /// on, bit 1 = alpha follows freshness.
+    pub reveal: [[f32; 4]; 8],
+    /// Per layer: linear fresh color rgb, live opacity (reveal layers only).
+    pub fresh: [[f32; 4]; 8],
 }
 
 impl TerrainOverlayUniformGpu {
     fn from_plan(plan: &forge3d_core::terrain_overlay::OverlayPlan) -> Self {
         let mut modes = [0u32; 8];
         let mut extents = [[0.0, 0.0, 1.0, 1.0]; 8];
+        let mut reveal = [[0.0; 4]; 8];
+        let mut fresh = [[0.0; 4]; 8];
         for (index, layer) in plan.layers.iter().enumerate() {
             extents[index] = layer.extent;
+            if let Some(r) = &layer.reveal {
+                use forge3d_core::terrain_overlay::srgb_to_linear;
+                let flags = 1.0 + if r.fresh_alpha { 2.0 } else { 0.0 };
+                reveal[index] = [r.threshold, r.fade, r.fresh_mix, flags];
+                let [red, green, blue] = r.fresh_color.map(srgb_to_linear);
+                fresh[index] = [red, green, blue, layer.opacity];
+            }
             modes[index] = match layer.blend_mode {
                 forge3d_core::terrain_overlay::OverlayBlendMode::Normal => 0,
                 forge3d_core::terrain_overlay::OverlayBlendMode::Multiply => 1,
@@ -1376,6 +1390,8 @@ impl TerrainOverlayUniformGpu {
             control: [plan.layers.len() as f32, plan.global_opacity, 0.0, 0.0],
             modes,
             extents,
+            reveal,
+            fresh,
         }
     }
 }
@@ -1440,6 +1456,38 @@ pub(super) fn set_terrain_overlays_runtime(
         Err(error) => return Err(map_core_error(error)),
     };
     Ok(state.update_in_place(&context.queue, plan, keys))
+}
+
+/// Live opacity and reveal values of reveal layers, by name: a uniform write,
+/// no image upload (see `TerrainOverlayState::update_layers`).
+pub(super) fn update_terrain_overlay_layers_runtime(
+    runtime: &mut Forge3DRuntime,
+    updates: JsValue,
+) -> Result<(), WebError> {
+    let context = runtime.context.clone().ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::RuntimeDisposed,
+            "Runtime GPU context is not available",
+        )
+    })?;
+    let updates: Vec<crate::inputs::OverlayLayerUpdateJs> = serde_wasm_bindgen::from_value(updates)
+        .map_err(|error| {
+            WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                format!("Invalid terrain overlay layer updates: {error}"),
+            )
+        })?;
+    let Some(state) = runtime
+        .terrain
+        .as_mut()
+        .and_then(|terrain| terrain.overlays.as_mut())
+    else {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "updateTerrainOverlayLayers requires committed terrain overlays",
+        ));
+    };
+    state.update_layers(&context.queue, &updates)
 }
 
 /// W08 (E5): GPU block for the planned overlay stack — one RGBA8UnormSrgb
@@ -1591,6 +1639,72 @@ impl TerrainOverlayState {
         self.plan = plan;
         self.keys = keys;
         true
+    }
+
+    /// Changes the live opacity and reveal values of the layers named in
+    /// `updates` and rewrites only the uniform. Every named layer must be a
+    /// planned reveal layer, since other layers bake opacity into their
+    /// texture. Validates every update before applying any.
+    pub(super) fn update_layers(
+        &mut self,
+        queue: &wgpu::Queue,
+        updates: &[crate::inputs::OverlayLayerUpdateJs],
+    ) -> Result<(), WebError> {
+        let invalid = |message: String| WebError::new(Forge3DErrorCode::InvalidInput, message);
+        let mut next: Vec<_> = self
+            .plan
+            .layers
+            .iter()
+            .map(|l| (l.opacity, l.reveal))
+            .collect();
+        for (index, update) in updates.iter().enumerate() {
+            let field = format!("updates[{index}]");
+            let mut matches = self
+                .plan
+                .layers
+                .iter()
+                .enumerate()
+                .filter(|(_, layer)| layer.name == update.name);
+            let Some((slot, _)) = matches.next() else {
+                return Err(invalid(format!(
+                    "Invalid {field}: no planned overlay layer is named '{}'",
+                    update.name
+                )));
+            };
+            if matches.next().is_some() {
+                return Err(invalid(format!(
+                    "Invalid {field}: more than one overlay layer is named '{}'",
+                    update.name
+                )));
+            }
+            let (opacity, reveal) = &mut next[slot];
+            let Some(current) = *reveal else {
+                return Err(invalid(format!(
+                    "Invalid {field}: layer '{}' has no reveal, so its opacity is baked into its image; change it with setTerrainOverlays",
+                    update.name
+                )));
+            };
+            if let Some(value) = update.opacity {
+                if !(value.is_finite() && (0.0..=1.0).contains(&value)) {
+                    return Err(invalid(format!(
+                        "Invalid {field}.opacity: opacity must be in [0.0, 1.0]"
+                    )));
+                }
+                *opacity = value;
+            }
+            if let Some(patch) = &update.reveal {
+                let resolved = patch.resolve(current);
+                resolved.validate().map_err(map_core_error)?;
+                *reveal = Some(resolved);
+            }
+        }
+        for (layer, (opacity, reveal)) in self.plan.layers.iter_mut().zip(next) {
+            layer.opacity = opacity;
+            layer.reveal = reveal;
+        }
+        let uniform = TerrainOverlayUniformGpu::from_plan(&self.plan);
+        queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
+        Ok(())
     }
 
     /// Ledger bytes a plan will allocate (commit pre-check).

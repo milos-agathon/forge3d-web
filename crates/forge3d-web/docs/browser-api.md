@@ -877,6 +877,24 @@ terrain is not rebuilt and only changed layer slices are uploaded, with the same
 frame as `setTerrain` with those overlays. A stack whose shape changes (output
 size, layer count, budget downscaling, or no visible layers) recommits the
 terrain instead.
+
+A layer with `reveal: { threshold, fade, freshColor, freshMix, freshAlpha }`
+is revealed in the shader, for content that appears over time (a flood front,
+a fire perimeter, a construction sequence). Its image alpha is then a key
+(byte / 255), not coverage: a texel shows where `key >= threshold`, and key 0
+never shows. The age `key - threshold` gives a freshness `exp(-age / fade)`
+(0 when `fade` is 0, the default); the color is mixed in linear space toward
+the sRGB `freshColor` (default white) by `freshMix * freshness` (default 0),
+and the alpha is 1, or the freshness when `freshAlpha` is true. The layer's
+`opacity` multiplies that alpha in the shader instead of being baked into the
+texture, and a reveal layer keeps its slot at opacity 0. Call
+`updateTerrainOverlayLayers([{ name, opacity?, reveal? }])` on `Forge3DViewer`
+or `Forge3DRuntime` to change these values for layers committed with
+`reveal`: only the overlay uniform is written, so it is cheap enough to call
+every frame. Omitted reveal fields keep their current values. A name that
+matches no layer, more than one layer, or a layer without `reveal` rejects
+with `INVALID_INPUT`, and nothing changes.
+
 Layers composite onto the fully
 composited albedo before lighting, so draped overlays receive the same
 sun, IBL and shadowing as the terrain albedo. Each layer accepts an

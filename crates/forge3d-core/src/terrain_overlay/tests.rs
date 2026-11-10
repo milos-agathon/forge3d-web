@@ -877,3 +877,115 @@ fn equal_size_uv_layer_takes_the_row_copy_and_matches_pointwise() {
         assert!(pointwise == separable, "opacity {opacity}");
     }
 }
+
+// ------------------------------------------------------------ reveal --
+
+fn reveal_layer(opacity: f32, reveal: OverlayReveal) -> OverlayLayer {
+    OverlayLayer::new(
+        "r",
+        OverlayImage::new(1, 1, vec![200, 100, 50, 128]).unwrap(),
+    )
+    .unwrap()
+    .with_opacity(opacity)
+    .with_reveal(Some(reveal))
+}
+
+#[test]
+fn reveal_layers_keep_their_key_alpha_and_live_opacity() {
+    let g = georef_none();
+    let mut settings =
+        OverlaySettings::with_layers(vec![reveal_layer(0.25, OverlayReveal::default())]);
+    settings.enabled = true;
+    let plan = plan_overlays_local_uv(&settings, &g, 2, 2, 64, u64::MAX).unwrap();
+    let layer = &plan.layers[0];
+    // Opacity is not baked: alpha is still the key byte.
+    assert!(layer
+        .rgba
+        .chunks_exact(4)
+        .all(|px| px == [200, 100, 50, 128]));
+    assert_eq!(layer.opacity, 0.25);
+    assert!(layer.reveal.is_some());
+}
+
+#[test]
+fn reveal_values_and_live_opacity_do_not_change_the_resample_key() {
+    let g = georef_none();
+    let key = |l: &OverlayLayer| overlay_layer_key(l, &g, 4, 4, true);
+    let base = reveal_layer(1.0, OverlayReveal::default());
+    let moved = reveal_layer(
+        0.3,
+        OverlayReveal {
+            threshold: 0.6,
+            fade: 0.1,
+            fresh_mix: 0.5,
+            fresh_alpha: true,
+            fresh_color: [1.0, 0.5, 0.0],
+        },
+    );
+    assert_eq!(key(&base), key(&moved));
+    // Turning reveal on or off changes the bytes (opacity baked or not).
+    let plain = base.clone().with_reveal(None).with_opacity(0.3);
+    assert_ne!(key(&moved), key(&plain));
+}
+
+#[test]
+fn reveal_layers_stay_planned_at_zero_opacity() {
+    assert!(reveal_layer(0.0, OverlayReveal::default()).is_effectively_visible());
+    assert!(!reveal_layer(0.0, OverlayReveal::default())
+        .with_reveal(None)
+        .is_effectively_visible());
+}
+
+#[test]
+fn reveal_validation() {
+    let bad = |reveal: OverlayReveal| err_msg(reveal_layer(1.0, reveal).validate());
+    assert!(bad(OverlayReveal {
+        threshold: 1.5,
+        ..Default::default()
+    })
+    .contains("threshold"));
+    assert!(bad(OverlayReveal {
+        fade: -1.0,
+        ..Default::default()
+    })
+    .contains("fade"));
+    assert!(bad(OverlayReveal {
+        fresh_color: [0.0, 2.0, 0.0],
+        ..Default::default()
+    })
+    .contains("freshColor"));
+    assert!(bad(OverlayReveal {
+        fresh_mix: f32::NAN,
+        ..Default::default()
+    })
+    .contains("freshMix"));
+}
+
+#[test]
+fn reveal_shows_keys_at_or_above_the_threshold_and_fades_freshness() {
+    let reveal = OverlayReveal {
+        threshold: 0.5,
+        fade: 0.1,
+        fresh_color: [1.0, 0.0, 0.0],
+        fresh_mix: 1.0,
+        fresh_alpha: false,
+    };
+    let grey = [0.2, 0.2, 0.2];
+    assert_eq!(reveal_linear(&reveal, grey, 0.49, 1.0).1, 0.0);
+    // At the threshold freshness is 1: full tint, opaque times opacity.
+    let (color, alpha) = reveal_linear(&reveal, grey, 0.5, 0.8);
+    assert!((color[0] - 1.0).abs() < 1e-6 && color[1].abs() < 1e-6);
+    assert!((alpha - 0.8).abs() < 1e-6);
+    // One fade older: 1/e of the tint remains.
+    let (color, _) = reveal_linear(&reveal, grey, 0.6, 1.0);
+    let k = (-1.0f32).exp();
+    assert!((color[1] - 0.2 * (1.0 - k)).abs() < 1e-5);
+    // Glow mode: alpha is the freshness; key 0 never shows.
+    let glow = OverlayReveal {
+        fresh_alpha: true,
+        threshold: 0.0,
+        ..reveal
+    };
+    assert!((reveal_linear(&glow, grey, 0.1, 1.0).1 - k).abs() < 1e-5);
+    assert_eq!(reveal_linear(&glow, grey, 0.0, 1.0).1, 0.0);
+}

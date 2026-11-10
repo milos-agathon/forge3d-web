@@ -140,6 +140,72 @@ impl OverlayPlacement {
     }
 }
 
+/// Shader-side reveal of a layer whose alpha channel is a key, not coverage.
+///
+/// A texel shows where `key >= threshold` and `key > 0` (key 0 never shows).
+/// Its age `key - threshold` drives a freshness `exp(-age / fade)` (0 when
+/// `fade` is 0): the color is mixed toward `fresh_color` by
+/// `fresh_mix * freshness`, and the alpha is 1, or the freshness when
+/// `fresh_alpha` is set. The layer's opacity then multiplies the alpha in the
+/// shader instead of being baked into the texture, so threshold, freshness
+/// and opacity all change without re-uploading the image.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct OverlayReveal {
+    /// Key value (0..1, the alpha byte / 255) at and above which texels show.
+    pub threshold: f32,
+    /// Key distance over which freshness falls by `1/e`; 0 disables it.
+    pub fade: f32,
+    /// sRGB color (0..1) fresh texels are mixed toward.
+    pub fresh_color: [f32; 3],
+    /// Mix toward `fresh_color` at full freshness, 0..1.
+    pub fresh_mix: f32,
+    /// Alpha follows freshness (a glow) instead of being 1.
+    pub fresh_alpha: bool,
+}
+
+impl Default for OverlayReveal {
+    fn default() -> Self {
+        Self {
+            threshold: 0.0,
+            fade: 0.0,
+            fresh_color: [1.0, 1.0, 1.0],
+            fresh_mix: 0.0,
+            fresh_alpha: false,
+        }
+    }
+}
+
+impl OverlayReveal {
+    pub fn validate(&self) -> Result<()> {
+        let unit = |v: f32| v.is_finite() && (0.0..=1.0).contains(&v);
+        if !unit(self.threshold) {
+            return Err(invalid(
+                "overlay.reveal.threshold",
+                "reveal threshold must be in [0.0, 1.0]".to_string(),
+            ));
+        }
+        if !(self.fade.is_finite() && self.fade >= 0.0) {
+            return Err(invalid(
+                "overlay.reveal.fade",
+                "reveal fade must be a finite number >= 0".to_string(),
+            ));
+        }
+        if !self.fresh_color.iter().all(|c| unit(*c)) {
+            return Err(invalid(
+                "overlay.reveal.fresh_color",
+                "reveal freshColor channels must be in [0.0, 1.0]".to_string(),
+            ));
+        }
+        if !unit(self.fresh_mix) {
+            return Err(invalid(
+                "overlay.reveal.fresh_mix",
+                "reveal freshMix must be in [0.0, 1.0]".to_string(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// A single draped overlay layer (native `OverlayLayerConfig` + raster data).
 #[derive(Debug, Clone, PartialEq)]
 pub struct OverlayLayer {
@@ -153,6 +219,8 @@ pub struct OverlayLayer {
     pub visible: bool,
     /// Stacking order (lower = behind, higher = in front); default 0.
     pub z_order: i32,
+    /// Shader-side reveal; the alpha channel is then a key (see [`OverlayReveal`]).
+    pub reveal: Option<OverlayReveal>,
 }
 
 impl OverlayLayer {
@@ -167,6 +235,7 @@ impl OverlayLayer {
             blend_mode: OverlayBlendMode::Normal,
             visible: true,
             z_order: 0,
+            reveal: None,
         };
         layer.validate()?;
         Ok(layer)
@@ -195,6 +264,21 @@ impl OverlayLayer {
     pub fn with_z_order(mut self, z_order: i32) -> Self {
         self.z_order = z_order;
         self
+    }
+
+    pub fn with_reveal(mut self, reveal: Option<OverlayReveal>) -> Self {
+        self.reveal = reveal;
+        self
+    }
+
+    /// Opacity baked into the resampled texture: 1 for a reveal layer, whose
+    /// alpha is a key and whose opacity is applied in the shader.
+    pub fn baked_opacity(&self) -> f32 {
+        if self.reveal.is_some() {
+            1.0
+        } else {
+            self.opacity
+        }
     }
 
     /// Native `OverlayLayerConfig.__post_init__` validation.
@@ -227,12 +311,17 @@ impl OverlayLayer {
                 ));
             }
         }
+        if let Some(reveal) = &self.reveal {
+            reveal.validate()?;
+        }
         Ok(())
     }
 
-    /// Native visible-layer predicate: `visible && opacity > 0.001`.
+    /// Native visible-layer predicate: `visible && opacity > 0.001`. A
+    /// reveal layer keeps its slot at any opacity, since its opacity is a
+    /// live shader value that later updates may raise again.
     pub fn is_effectively_visible(&self) -> bool {
-        self.visible && self.opacity > 0.001
+        self.visible && (self.reveal.is_some() || self.opacity > 0.001)
     }
 }
 
@@ -401,6 +490,32 @@ pub fn srgb_to_linear(c: f32) -> f32 {
     }
 }
 
+/// CPU reference of the WGSL reveal (`terrain_overlay_reveal`): the texel's
+/// linear color and alpha after the reveal, from its sampled sRGB-decoded
+/// color, its key (the sampled alpha) and the layer's live opacity.
+pub fn reveal_linear(
+    reveal: &OverlayReveal,
+    color_linear: [f32; 3],
+    key: f32,
+    opacity: f32,
+) -> ([f32; 3], f32) {
+    if key < reveal.threshold || key <= 0.5 / 255.0 {
+        return (color_linear, 0.0);
+    }
+    let fresh = if reveal.fade > 0.0 {
+        (-(key - reveal.threshold) / reveal.fade).exp()
+    } else {
+        0.0
+    };
+    let k = reveal.fresh_mix * fresh;
+    let mut color = color_linear;
+    for (c, tint) in color.iter_mut().zip(reveal.fresh_color) {
+        *c += (srgb_to_linear(tint) - *c) * k;
+    }
+    let alpha = if reveal.fresh_alpha { fresh } else { 1.0 };
+    (color, alpha * opacity.clamp(0.0, 1.0))
+}
+
 /// CPU reference of the WGSL overlay blend: linear-space per channel,
 /// `a = layer alpha * global_opacity`.
 pub fn blend_linear(
@@ -441,6 +556,11 @@ pub struct PlannedOverlay {
     pub extent: [f32; 4],
     /// `width * height * 4` RGBA8 (sRGB color, alpha *= layer opacity).
     pub rgba: Vec<u8>,
+    /// Layer opacity. Baked into `rgba` alpha unless `reveal` is set, in
+    /// which case the shader applies it.
+    pub opacity: f32,
+    /// Shader-side reveal (see [`OverlayReveal`]).
+    pub reveal: Option<OverlayReveal>,
 }
 
 /// Result of [`plan_overlays`].
@@ -564,7 +684,8 @@ fn resample_uv_separable(
     // the stored byte is a function of that one source byte.
     let store = |value: f32| (value.clamp(0.0, 1.0) * 255.0) as u8;
     let color: [u8; 256] = std::array::from_fn(|v| store(unorm[v]));
-    let alpha: [u8; 256] = std::array::from_fn(|v| store(unorm[v] * layer.opacity));
+    let opacity = layer.baked_opacity();
+    let alpha: [u8; 256] = std::array::from_fn(|v| store(unorm[v] * opacity));
     // Every column a weight-0 tap of the next source texel: a weight-0 row
     // is then one contiguous source span mapped byte by byte (the per-pixel
     // `t == 0` branch below, done a row at a time).
@@ -618,7 +739,7 @@ fn resample_uv_separable(
                 let bot = sample(idx01, ch) * (1.0 - tx) + sample(idx11, ch) * tx;
                 let mut value = top * (1.0 - ty) + bot * ty;
                 if ch == 3 {
-                    value *= layer.opacity;
+                    value *= opacity;
                 }
                 out[idx + ch] = store(value);
             }
@@ -683,7 +804,7 @@ fn resample_layer_pointwise(
                 layer.image.height,
                 lu,
                 lv,
-                layer.opacity,
+                layer.baked_opacity(),
             );
             let idx = ((y * tw + x) * 4) as usize;
             out[idx] = (src[0].clamp(0.0, 1.0) * 255.0) as u8;
@@ -787,7 +908,11 @@ pub fn overlay_layer_key(
     let mut mix = |value: u64| h = (h ^ value).wrapping_mul(K).rotate_left(29);
     mix(u64::from(layer.image.width) << 32 | u64::from(layer.image.height));
     mix(u64::from(tw) << 32 | u64::from(th));
-    mix(u64::from(local_uv) << 32 | u64::from(layer.opacity.to_bits()));
+    // Only the baked opacity reaches the bytes; a reveal layer's live
+    // opacity and reveal values are shader uniforms.
+    mix(u64::from(local_uv) << 33
+        | u64::from(layer.reveal.is_some()) << 32
+        | u64::from(layer.baked_opacity().to_bits()));
     // Four independent lanes over 32-byte blocks, so the multiply chains
     // overlap; then folded into `h` in order.
     let blocks = layer.image.rgba.chunks_exact(32);
@@ -909,6 +1034,8 @@ fn plan_overlays_impl(
             z_order: layer.z_order,
             extent,
             rgba,
+            opacity: layer.opacity,
+            reveal: layer.reveal,
         });
     }
 
