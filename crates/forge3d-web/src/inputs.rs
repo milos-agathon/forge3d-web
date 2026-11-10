@@ -422,10 +422,12 @@ pub struct TerrainOverlaysJsOptions {
     #[serde(default)]
     pub resolution_scale: Option<f32>,
     #[serde(default)]
+    pub output_size: Option<[u32; 2]>,
+    #[serde(default)]
     pub layers: Option<Vec<OverlayLayerJs>>,
 }
 
-fn read_terrain_overlays(
+pub(crate) fn read_terrain_overlays(
     value: &JsValue,
 ) -> Result<Option<forge3d_core::terrain_overlay::OverlaySettings>, WebError> {
     use forge3d_core::terrain_overlay::{
@@ -540,6 +542,7 @@ fn read_terrain_overlays(
         global_opacity: parsed.global_opacity.unwrap_or(1.0),
         layers,
         resolution_scale: parsed.resolution_scale.unwrap_or(1.0),
+        output_size: parsed.output_size,
     };
     settings.validate().map_err(crate::error::map_core_error)?;
     Ok(Some(settings))

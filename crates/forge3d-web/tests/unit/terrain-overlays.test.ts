@@ -35,6 +35,21 @@ describe("getTerrainOverlayDefaults", () => {
 });
 
 describe("normalizeTerrainOverlays", () => {
+  it("retains explicit imagery dimensions without changing legacy defaults", () => {
+    const outputSize: [number, number] = [4096, 2048];
+    const settings = normalizeTerrainOverlays({ outputSize, layers: [layer()] });
+    expect(settings.outputSize).toEqual([4096, 2048]);
+    outputSize[0] = 1;
+    expect(settings.outputSize).toEqual([4096, 2048]);
+    expect(normalizeTerrainOverlays({}).outputSize).toBeUndefined();
+  });
+
+  it.each([[], [4096], [4096, 4096, 1], [0, 1], [1, -1], [1.5, 1], [NaN, 1], [Infinity, 1], [4294967296, 1], null].map(value => [value]))(
+    "rejects invalid explicit dimensions %j", outputSize => {
+      expect(() => normalizeTerrainOverlays({ outputSize: outputSize as never })).toThrow(/output_size must contain two positive uint32 dimensions/);
+    },
+  );
+
   it("applies native defaults to a minimal block", () => {
     const normalized = normalizeTerrainOverlays({
       layers: [layer({ extent: [0, 0, 1, 1] })],

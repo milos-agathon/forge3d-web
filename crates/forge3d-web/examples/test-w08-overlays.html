@@ -511,6 +511,48 @@
           }
         },
 
+        // Recovery replays overlays set by `setTerrainOverlays`, not the
+        // ones of the original `setTerrain`.
+        async viewerOverlayUpdateDeviceLoss() {
+          const viewer = await Forge3DViewer.create(canvas, {
+            runtime: RECOVERY_RUNTIME,
+            initialView: {
+              target: [0, 0.3, 0],
+              distance: 4.8,
+              yawDegrees: 45,
+              pitchDegrees: 27,
+              fovYDegrees: 50,
+              near: 0.05,
+              far: 50,
+            },
+            controls: false,
+            resize: false,
+          });
+          try {
+            const scene = await buildScene({ overlays: overlaysInput() });
+            const terrain = scene
+              .getNodes()
+              .find((node) => node.node.kind === "terrain").node.terrain;
+            viewer.setTerrain(terrain);
+            viewer.render();
+            const original = await decodePngRgba(await viewer.screenshot());
+            viewer.setTerrainOverlays(overlaysInput({ layers: layerStack(2, 1, 0) }));
+            viewer.render();
+            const before = await decodePngRgba(await viewer.screenshot());
+            await loseViewer(viewer);
+            viewer.render();
+            const after = await decodePngRgba(await viewer.screenshot());
+            return {
+              status: viewer.status,
+              recoveryAttempts: viewer.getDiagnostics().recoveryAttempts,
+              updated: recoveryFramesEqual(original, before),
+              diff: recoveryFramesEqual(before, after),
+            };
+          } finally {
+            viewer.dispose();
+          }
+        },
+
         // Same contract through Forge3DSession's #recover replay.
         async sessionDeviceLoss() {
           const { session, lose, runtimeCount } = await createLosableSession(
@@ -598,6 +640,86 @@
               report,
             };
           });
+        },
+
+        // Resample reuse: re-committing a stack where one layer changed
+        // copies the unchanged layers' resampled bytes from the previous
+        // plan. The frame must equal a commit that resamples everything
+        // (no previous overlay plan to reuse).
+        async reuseIdentity() {
+          const edited = () => {
+            const layers = layerStack();
+            layers[1] = {
+              ...layers[1],
+              image: gradientImage(64, (u, v) => [0.4 + 0.5 * v, 0.4 + 0.5 * v, 0.4 + 0.5 * u, 1]),
+            };
+            return layers;
+          };
+          let original;
+          const reused = await withRuntime(async (runtime) => {
+            applyScene(runtime, await buildScene({ overlays: overlaysInput() }));
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            original = await runtime.readRgba();
+            applyScene(runtime, await buildScene({ overlays: overlaysInput({ layers: edited() }) }));
+            runtime.render();
+            return runtime.readRgba();
+          });
+          const fresh = await withRuntime(async (runtime) => {
+            applyScene(runtime, await buildScene({}));
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            applyScene(runtime, await buildScene({ overlays: overlaysInput({ layers: edited() }) }));
+            runtime.render();
+            return runtime.readRgba();
+          });
+          // Negative control: the edit is visible, so stale reuse would fail.
+          return { identical: framesEqual(reused, fresh), edit: framesEqual(original, reused) };
+        },
+
+        // Overlay-only commit: `setTerrainOverlays` on a committed terrain
+        // (in place: same size and layer count) and a shape change (one
+        // layer fewer: terrain recommit) must each equal a full commit of
+        // the same overlays on a fresh runtime.
+        async overlayOnlyIdentity() {
+          const edited = () => {
+            const layers = layerStack();
+            layers[2] = {
+              ...layers[2],
+              image: gradientImage(64, (u, v) => [0.3 + 0.6 * u, 0.5, 0.3 + 0.6 * v, 1]),
+            };
+            return layers;
+          };
+          const fewer = () => layerStack().slice(0, 2);
+          const full = (layers) => withRuntime(async (runtime) => {
+            applyScene(runtime, await buildScene({ overlays: overlaysInput({ layers }) }));
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            return { rgba: await runtime.readRgba(), report: runtime.getTerrainOverlayReport() };
+          });
+          const updated = await withRuntime(async (runtime) => {
+            applyScene(runtime, await buildScene({ overlays: overlaysInput() }));
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            const original = await runtime.readRgba();
+            runtime.setTerrainOverlays(overlaysInput({ layers: edited() }));
+            runtime.render();
+            const inPlace = { rgba: await runtime.readRgba(), report: runtime.getTerrainOverlayReport() };
+            runtime.setTerrainOverlays(overlaysInput({ layers: fewer() }));
+            runtime.render();
+            const reshaped = { rgba: await runtime.readRgba(), report: runtime.getTerrainOverlayReport() };
+            return { original, inPlace, reshaped };
+          });
+          const editedFull = await full(edited());
+          const fewerFull = await full(fewer());
+          return {
+            // Negative control: the edit is visible.
+            edit: framesEqual(updated.original, updated.inPlace.rgba),
+            inPlace: framesEqual(updated.inPlace.rgba, editedFull.rgba),
+            inPlaceReport: [updated.inPlace.report, editedFull.report],
+            reshaped: framesEqual(updated.reshaped.rgba, fewerFull.rgba),
+            reshapedReport: [updated.reshaped.report, fewerFull.report],
+          };
         },
 
         // Albedo AOV parity: the captured overlaid albedo must match a JS

@@ -299,8 +299,11 @@ export interface TerrainOverlaysInput {
   enabled?: boolean;
   globalOpacity?: number;
   resolutionScale?: number;
+  /** Explicit composite pixels, independent of DEM resolution; device and memory limits still apply. */
+  outputSize?: [number, number];
   layers?: TerrainOverlayLayerInput[];
 }
+
 
 /** One W08 overlay layer; `extent` (uv) and `crs`/`crsBounds` are mutually
  * exclusive placements. */
@@ -2835,6 +2838,13 @@ export declare class Forge3DRuntime {
   getRenderStats(): RenderStats;
   getMemoryReport(): MemoryReport;
   setTerrain(terrain: TerrainHeightmapInput|TerrainDataset): void;
+  /**
+   * Replaces the committed terrain's overlays without rebuilding the
+   * terrain; unchanged layers keep their resampled texture slice. The frame
+   * equals `setTerrain` with these overlays. A stack that changes shape
+   * (output size, layer count, or no visible layers) recommits the terrain.
+   */
+  setTerrainOverlays(overlays: TerrainOverlaysInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setScene(scene: SceneSnapshot): void;
   setLighting(lighting: LightingSnapshot): void;
@@ -2964,6 +2974,13 @@ export declare class Forge3DViewer {
   getCapabilities(): ViewerCapabilities;
   getDiagnostics(): ViewerDiagnostics;
   setTerrain(terrain: TerrainHeightmapInput): void;
+  /**
+   * Replaces the committed terrain's overlays without rebuilding the
+   * terrain; unchanged layers keep their resampled texture slice. The frame
+   * equals `setTerrain` with these overlays. A stack that changes shape
+   * (output size, layer count, or no visible layers) recommits the terrain.
+   */
+  setTerrainOverlays(overlays: TerrainOverlaysInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   /** W08 (E7): committed terrain geometry — grid counts or clipmap budget. */
   getTerrainGeometryReport(): TerrainGeometryReport;
@@ -4231,6 +4248,7 @@ export interface NormalizedTerrainOverlays {
   enabled: boolean;
   globalOpacity: number;
   resolutionScale: number;
+  outputSize?: [number, number];
   layers: NormalizedTerrainOverlayLayer[];
 }
 

@@ -18,6 +18,8 @@ struct TerrainOverlayUniform {
     // x = blend mode (0 normal / 1 multiply / 2 overlay); one u32 lane per
     // layer, matching core `OverlayBlendMode` discriminant order.
     modes: array<vec4<u32>, 2>,
+    // Terrain-UV footprint per texture slice, preserving local source detail.
+    extents: array<vec4<f32>, 8>,
 }
 @group(0) @binding(16) var<uniform> terrain_overlay: TerrainOverlayUniform;
 
@@ -46,7 +48,10 @@ fn terrain_apply_overlays(albedo: vec3<f32>, uv: vec2<f32>) -> vec3<f32> {
     var result = albedo;
     let count = u32(terrain_overlay.control.x + 0.5);
     for (var i = 0u; i < count; i = i + 1u) {
-        let s = textureSampleLevel(terrain_overlays, terrain_overlay_sampler, uv, i32(i), 0.0);
+        let extent = terrain_overlay.extents[i];
+        if (any(uv < extent.xy) || any(uv > extent.zw)) { continue; }
+        let layer_uv = (uv - extent.xy) / (extent.zw - extent.xy);
+        let s = textureSampleLevel(terrain_overlays, terrain_overlay_sampler, layer_uv, i32(i), 0.0);
         let a = clamp(s.a, 0.0, 1.0) * clamp(terrain_overlay.control.y, 0.0, 1.0);
         result = terrain_overlay_blend(terrain_overlay_mode(i), result, s.rgb, a);
     }

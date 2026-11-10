@@ -246,6 +246,9 @@ pub struct OverlaySettings {
     pub layers: Vec<OverlayLayer>,
     /// Composite texture resolution relative to terrain; default 1.0.
     pub resolution_scale: f32,
+    /// Optional composite dimensions independent of the elevation grid.
+    /// Device limits and the existing overlay budget still bound allocations.
+    pub output_size: Option<[u32; 2]>,
 }
 
 impl Default for OverlaySettings {
@@ -255,6 +258,7 @@ impl Default for OverlaySettings {
             global_opacity: 1.0,
             layers: Vec::new(),
             resolution_scale: 1.0,
+            output_size: None,
         }
     }
 }
@@ -284,6 +288,12 @@ impl OverlaySettings {
             return Err(invalid(
                 "overlay.resolution_scale",
                 "resolution_scale must be in [0.1, 2.0]".to_string(),
+            ));
+        }
+        if self.output_size.is_some_and(|size| size.contains(&0)) {
+            return Err(invalid(
+                "overlay.output_size",
+                "output_size must contain two positive uint32 dimensions".to_string(),
             ));
         }
         for layer in &self.layers {
@@ -426,6 +436,9 @@ pub struct PlannedOverlay {
     pub name: String,
     pub blend_mode: OverlayBlendMode,
     pub z_order: i32,
+    /// Terrain UV footprint of this texture slice. CPU-composited layers use
+    /// the full domain; local UV layers retain their source footprint.
+    pub extent: [f32; 4],
     /// `width * height * 4` RGBA8 (sRGB color, alpha *= layer opacity).
     pub rgba: Vec<u8>,
 }
@@ -471,6 +484,157 @@ fn resample_layer(
     georef: &TerrainGeoreference,
     tw: u32,
     th: u32,
+    local_uv: bool,
+) -> Result<Vec<u8>> {
+    match &layer.placement {
+        OverlayPlacement::Uv(extent) => Ok(resample_uv_separable(layer, extent, tw, th, local_uv)),
+        OverlayPlacement::Crs { .. } => resample_layer_pointwise(layer, georef, tw, th, local_uv),
+    }
+}
+
+/// One output column (or row) of a UV-placed layer: whether it falls
+/// outside the extent, and the bilinear taps and weight `sample_bilinear`
+/// derives from its layer coordinate.
+#[derive(Clone, Copy)]
+struct AxisTap {
+    skip: bool,
+    lo: u32,
+    hi: u32,
+    t: f32,
+}
+
+/// Taps for `n` output pixels over a layer axis of `size` texels. Every
+/// value is computed with the same f32 operations, in the same order, as
+/// [`resample_layer_pointwise`] + [`sample_bilinear`] compute it per pixel.
+fn axis_taps(n: u32, size: u32, extent_lo: f32, extent_hi: f32, local_uv: bool) -> Vec<AxisTap> {
+    (0..n)
+        .map(|i| {
+            let c = (i as f32 + 0.5) / n as f32;
+            let (skip, l) = if local_uv {
+                (false, c)
+            } else {
+                (
+                    c < extent_lo || c > extent_hi,
+                    (c - extent_lo) / (extent_hi - extent_lo),
+                )
+            };
+            let l = l.clamp(0.0, 1.0);
+            let f = (l * size as f32 - 0.5).clamp(0.0, size.saturating_sub(1) as f32);
+            let lo = f.floor() as u32;
+            AxisTap {
+                skip,
+                lo,
+                hi: (lo + 1).min(size.saturating_sub(1)),
+                t: f.fract(),
+            }
+        })
+        .collect()
+}
+
+/// [`resample_layer_pointwise`] for UV placement, where the layer `u` depends
+/// only on the output column and `v` only on the row, so the bilinear taps
+/// are computed once per column and row. Byte-identical to the pointwise
+/// path (`separable_uv_resample_matches_pointwise`).
+fn resample_uv_separable(
+    layer: &OverlayLayer,
+    extent: &[f32; 4],
+    tw: u32,
+    th: u32,
+    local_uv: bool,
+) -> Vec<u8> {
+    let mut out = vec![0u8; (tw * th * 4) as usize];
+    let (width, height) = (layer.image.width, layer.image.height);
+    if width == 0 || height == 0 {
+        return out;
+    }
+    let columns = axis_taps(tw, width, extent[0], extent[2], local_uv);
+    let rows = axis_taps(th, height, extent[1], extent[3], local_uv);
+    let rgba = &layer.image.rgba;
+    // `byte as f32 / 255.0` for every byte: the same values without a
+    // division per tap.
+    let unorm: [f32; 256] = std::array::from_fn(|v| v as f32 / 255.0);
+    let sample = |idx: usize, ch: usize| -> f32 {
+        if idx + ch < rgba.len() {
+            unorm[rgba[idx + ch] as usize]
+        } else {
+            0.0
+        }
+    };
+    // With both weights 0 the bilinear blend is exactly the `lo` texel, so
+    // the stored byte is a function of that one source byte.
+    let store = |value: f32| (value.clamp(0.0, 1.0) * 255.0) as u8;
+    let color: [u8; 256] = std::array::from_fn(|v| store(unorm[v]));
+    let alpha: [u8; 256] = std::array::from_fn(|v| store(unorm[v] * layer.opacity));
+    // Every column a weight-0 tap of the next source texel: a weight-0 row
+    // is then one contiguous source span mapped byte by byte (the per-pixel
+    // `t == 0` branch below, done a row at a time).
+    let first = columns.first().map_or(0, |column| column.lo as usize);
+    let contiguous = columns
+        .iter()
+        .enumerate()
+        .all(|(x, column)| !column.skip && column.t == 0.0 && column.lo as usize == first + x);
+    let identity = (0..256).all(|v| color[v] as usize == v && alpha[v] as usize == v);
+    let row_bytes = tw as usize * 4;
+    for (y, row) in rows.iter().enumerate() {
+        if row.skip {
+            continue;
+        }
+        let start = (row.lo as usize * width as usize + first) * 4;
+        if contiguous && row.t == 0.0 && start + row_bytes <= rgba.len() {
+            let source = &rgba[start..start + row_bytes];
+            let target = &mut out[y * row_bytes..(y + 1) * row_bytes];
+            if identity {
+                target.copy_from_slice(source);
+            } else {
+                for (dst, src) in target.chunks_exact_mut(4).zip(source.chunks_exact(4)) {
+                    dst[0] = color[src[0] as usize];
+                    dst[1] = color[src[1] as usize];
+                    dst[2] = color[src[2] as usize];
+                    dst[3] = alpha[src[3] as usize];
+                }
+            }
+            continue;
+        }
+        for (x, column) in columns.iter().enumerate() {
+            if column.skip {
+                continue;
+            }
+            let idx00 = ((row.lo * width + column.lo) * 4) as usize;
+            if column.t == 0.0 && row.t == 0.0 && idx00 + 4 <= rgba.len() {
+                let idx = (y * tw as usize + x) * 4;
+                out[idx] = color[rgba[idx00] as usize];
+                out[idx + 1] = color[rgba[idx00 + 1] as usize];
+                out[idx + 2] = color[rgba[idx00 + 2] as usize];
+                out[idx + 3] = alpha[rgba[idx00 + 3] as usize];
+                continue;
+            }
+            let idx10 = ((row.lo * width + column.hi) * 4) as usize;
+            let idx01 = ((row.hi * width + column.lo) * 4) as usize;
+            let idx11 = ((row.hi * width + column.hi) * 4) as usize;
+            let (tx, ty) = (column.t, row.t);
+            let idx = (y * tw as usize + x) * 4;
+            for ch in 0..4 {
+                let top = sample(idx00, ch) * (1.0 - tx) + sample(idx10, ch) * tx;
+                let bot = sample(idx01, ch) * (1.0 - tx) + sample(idx11, ch) * tx;
+                let mut value = top * (1.0 - ty) + bot * ty;
+                if ch == 3 {
+                    value *= layer.opacity;
+                }
+                out[idx + ch] = store(value);
+            }
+        }
+    }
+    out
+}
+
+/// Per-pixel resampler; required for CRS placement, where the layer
+/// coordinate of a pixel depends on both of its terrain coordinates.
+fn resample_layer_pointwise(
+    layer: &OverlayLayer,
+    georef: &TerrainGeoreference,
+    tw: u32,
+    th: u32,
+    local_uv: bool,
 ) -> Result<Vec<u8>> {
     let mut out = vec![0u8; (tw * th * 4) as usize];
     for y in 0..th {
@@ -479,10 +643,14 @@ fn resample_layer(
             let v = (y as f32 + 0.5) / th as f32;
             let (lu, lv) = match &layer.placement {
                 OverlayPlacement::Uv(e) => {
-                    if u < e[0] || u > e[2] || v < e[1] || v > e[3] {
-                        continue;
+                    if local_uv {
+                        (u, v)
+                    } else {
+                        if u < e[0] || u > e[2] || v < e[1] || v > e[3] {
+                            continue;
+                        }
+                        ((u - e[0]) / (e[2] - e[0]), (v - e[1]) / (e[3] - e[1]))
                     }
-                    ((u - e[0]) / (e[2] - e[0]), (v - e[1]) / (e[3] - e[1]))
                 }
                 OverlayPlacement::Crs { crs, bounds } => {
                     let Some((tx_, ty_)) = georef.uv_to_crs(u as f64, v as f64) else {
@@ -538,14 +706,159 @@ pub fn plan_overlays(
     max_dim: u32,
     budget_bytes: u64,
 ) -> Result<OverlayPlan> {
+    plan_overlays_impl(
+        settings,
+        georef,
+        terrain_w,
+        terrain_h,
+        max_dim,
+        budget_bytes,
+        false,
+        None,
+    )
+    .map(|(plan, _)| plan)
+}
+
+/// Plan texture-array slices for GPU UV placement. Local imagery keeps the
+/// entire slice resolution inside its footprint instead of being reduced to
+/// a few pixels of a terrain-wide composite. CRS placement retains the CPU
+/// reprojection path. Dimensions and budget admission match `plan_overlays`.
+pub fn plan_overlays_local_uv(
+    settings: &OverlaySettings,
+    georef: &TerrainGeoreference,
+    terrain_w: u32,
+    terrain_h: u32,
+    max_dim: u32,
+    budget_bytes: u64,
+) -> Result<OverlayPlan> {
+    plan_overlays_impl(
+        settings,
+        georef,
+        terrain_w,
+        terrain_h,
+        max_dim,
+        budget_bytes,
+        true,
+        None,
+    )
+    .map(|(plan, _)| plan)
+}
+
+/// [`plan_overlays_local_uv`] that copies a layer's resampled bytes from
+/// `previous` (an earlier plan and its [`overlay_layer_key`]s) when the key
+/// and target dims match, instead of resampling again. Resampling is a pure
+/// function of the keyed inputs, so the plan is byte-identical either way.
+/// Returns the plan and the key of each of its layers.
+pub fn plan_overlays_local_uv_reusing(
+    settings: &OverlaySettings,
+    georef: &TerrainGeoreference,
+    terrain_w: u32,
+    terrain_h: u32,
+    max_dim: u32,
+    budget_bytes: u64,
+    previous: Option<(&OverlayPlan, &[u64])>,
+) -> Result<(OverlayPlan, Vec<u64>)> {
+    plan_overlays_impl(
+        settings,
+        georef,
+        terrain_w,
+        terrain_h,
+        max_dim,
+        budget_bytes,
+        true,
+        previous,
+    )
+}
+
+/// Content key of every input that [`resample_layer`] reads: image dims and
+/// bytes, placement, opacity, target dims, UV mode and (for CRS placement)
+/// the terrain georeference. Name, blend mode, z-order and visibility are
+/// not part of the resampled bytes. 64-bit and non-cryptographic: it detects
+/// edits, it does not defend against crafted collisions.
+pub fn overlay_layer_key(
+    layer: &OverlayLayer,
+    georef: &TerrainGeoreference,
+    tw: u32,
+    th: u32,
+    local_uv: bool,
+) -> u64 {
+    const K: u64 = 0x9E37_79B9_7F4A_7C15;
+    let mut h = 0xCBF2_9CE4_8422_2325_u64;
+    let mut mix = |value: u64| h = (h ^ value).wrapping_mul(K).rotate_left(29);
+    mix(u64::from(layer.image.width) << 32 | u64::from(layer.image.height));
+    mix(u64::from(tw) << 32 | u64::from(th));
+    mix(u64::from(local_uv) << 32 | u64::from(layer.opacity.to_bits()));
+    // Four independent lanes over 32-byte blocks, so the multiply chains
+    // overlap; then folded into `h` in order.
+    let blocks = layer.image.rgba.chunks_exact(32);
+    let rest = blocks.remainder();
+    let mut lanes = [1, 2, 3, 4].map(|seed: u64| seed.wrapping_mul(K));
+    for block in blocks {
+        for (lane, word) in lanes.iter_mut().zip(block.chunks_exact(8)) {
+            let value = u64::from_le_bytes(word.try_into().expect("8-byte word"));
+            *lane = (*lane ^ value).wrapping_mul(K).rotate_left(29);
+        }
+    }
+    for lane in lanes {
+        mix(lane);
+    }
+    let chunks = rest.chunks_exact(8);
+    let tail = chunks.remainder();
+    for chunk in chunks {
+        mix(u64::from_le_bytes(chunk.try_into().expect("8-byte chunk")));
+    }
+    let mut last = [0u8; 8];
+    last[..tail.len()].copy_from_slice(tail);
+    mix(u64::from_le_bytes(last) ^ (tail.len() as u64) << 56);
+    mix(layer.image.rgba.len() as u64);
+    match &layer.placement {
+        OverlayPlacement::Uv(extent) => {
+            mix(1);
+            for v in extent {
+                mix(u64::from(v.to_bits()));
+            }
+        }
+        OverlayPlacement::Crs { crs, bounds } => {
+            mix(2);
+            for text in [Some(crs.as_str()), georef.crs.as_deref()] {
+                mix(text.map_or(u64::MAX, |t| t.len() as u64));
+                for byte in text.unwrap_or("").bytes() {
+                    mix(u64::from(byte));
+                }
+            }
+            for v in bounds.iter().chain(georef.bounds.iter().flatten()) {
+                mix(v.to_bits());
+            }
+            mix(u64::from(georef.bounds.is_some()));
+        }
+    }
+    h
+}
+
+fn plan_overlays_impl(
+    settings: &OverlaySettings,
+    georef: &TerrainGeoreference,
+    terrain_w: u32,
+    terrain_h: u32,
+    max_dim: u32,
+    budget_bytes: u64,
+    local_uv: bool,
+    previous: Option<(&OverlayPlan, &[u64])>,
+) -> Result<(OverlayPlan, Vec<u64>)> {
     settings.validate()?;
     if !settings.enabled || !settings.has_visible_layers() {
-        return Ok(OverlayPlan::empty(settings.global_opacity));
+        return Ok((OverlayPlan::empty(settings.global_opacity), Vec::new()));
     }
 
     let max_dim = max_dim.max(1);
-    let req_w = ((terrain_w as f32 * settings.resolution_scale).round() as u32).clamp(1, max_dim);
-    let req_h = ((terrain_h as f32 * settings.resolution_scale).round() as u32).clamp(1, max_dim);
+    let [requested_w, requested_h] = settings.output_size.unwrap_or_else(|| {
+        [
+            (terrain_w as f32 * settings.resolution_scale).round() as u32,
+            (terrain_h as f32 * settings.resolution_scale).round() as u32,
+        ]
+    });
+    let req_w = requested_w.clamp(1, max_dim);
+    let req_h = requested_h.clamp(1, max_dim);
 
     let visible = settings.visible_layers();
     let nlayers = visible.len() as u64;
@@ -568,25 +881,48 @@ pub fn plan_overlays(
         });
     }
 
+    let reusable = previous.filter(|(plan, keys)| {
+        plan.width == tw && plan.height == th && keys.len() == plan.layers.len()
+    });
     let mut layers = Vec::with_capacity(visible.len());
+    let mut keys = Vec::with_capacity(visible.len());
     for layer in visible {
-        let rgba = resample_layer(layer, georef, tw, th)?;
+        let key = overlay_layer_key(layer, georef, tw, th, local_uv);
+        let reused = reusable.and_then(|(plan, previous_keys)| {
+            previous_keys
+                .iter()
+                .position(|k| *k == key)
+                .map(|i| plan.layers[i].rgba.clone())
+        });
+        let rgba = match reused {
+            Some(rgba) => rgba,
+            None => resample_layer(layer, georef, tw, th, local_uv)?,
+        };
+        keys.push(key);
+        let extent = match &layer.placement {
+            OverlayPlacement::Uv(extent) if local_uv => *extent,
+            _ => [0.0, 0.0, 1.0, 1.0],
+        };
         layers.push(PlannedOverlay {
             name: layer.name.clone(),
             blend_mode: layer.blend_mode,
             z_order: layer.z_order,
+            extent,
             rgba,
         });
     }
 
-    Ok(OverlayPlan {
-        width: tw,
-        height: th,
-        layers,
-        gpu_bytes,
-        requested_width: req_w,
-        requested_height: req_h,
-        downscaled,
-        global_opacity: settings.global_opacity,
-    })
+    Ok((
+        OverlayPlan {
+            width: tw,
+            height: th,
+            layers,
+            gpu_bytes,
+            requested_width: req_w,
+            requested_height: req_h,
+            downscaled,
+            global_opacity: settings.global_opacity,
+        },
+        keys,
+    ))
 }

@@ -486,6 +486,45 @@ fn test_plan_budget_downscale_and_limit() {
 }
 
 #[test]
+fn explicit_output_size_preserves_imagery_resolution_independent_of_dem() {
+    let mut settings = OverlaySettings::with_layers(vec![layer("imagery")]);
+    settings.enabled = true;
+    settings.output_size = Some([4096, 4096]);
+    let plan = plan_overlays(&settings, &georef_none(), 513, 513, 8192, 1 << 27).unwrap();
+    assert_eq!((plan.width, plan.height), (4096, 4096));
+    assert_eq!(plan.gpu_bytes, 4096 * 4096 * 4);
+    assert!(!plan.downscaled);
+    drop(plan);
+
+    // Explicit pixels still obey device limits and budget admission.
+    let clamped = plan_overlays(&settings, &georef_none(), 513, 513, 256, 1 << 20).unwrap();
+    assert_eq!((clamped.width, clamped.height), (256, 256));
+    let budgeted = plan_overlays(&settings, &georef_none(), 513, 513, 8192, 256 * 256 * 4).unwrap();
+    assert_eq!((budgeted.width, budgeted.height), (256, 256));
+    assert_eq!(
+        (budgeted.requested_width, budgeted.requested_height),
+        (4096, 4096)
+    );
+    assert!(budgeted.downscaled);
+    assert!(plan_overlays(&settings, &georef_none(), 513, 513, 8192, 100).is_err());
+
+    settings.output_size = None;
+    settings.resolution_scale = 2.0;
+    let legacy = plan_overlays(&settings, &georef_none(), 513, 513, 8192, 1 << 27).unwrap();
+    assert_eq!((legacy.width, legacy.height), (1026, 1026));
+}
+
+#[test]
+fn explicit_output_size_rejects_zero_dimensions() {
+    for size in [[0, 4096], [4096, 0]] {
+        let mut settings = OverlaySettings::default();
+        settings.output_size = Some(size);
+        assert!(err_msg(settings.validate())
+            .contains("output_size must contain two positive uint32 dimensions"));
+    }
+}
+
+#[test]
 fn test_plan_determinism() {
     let g = georef_none();
     let mut s = OverlaySettings::with_layers(vec![
@@ -532,6 +571,47 @@ fn test_plan_resamples_uv_extent() {
     // pixel (2,2) center = 0.3125 inside; (1,1) = 0.1875 outside.
     assert_eq!(px(1, 1), [0, 0, 0, 0]);
     assert_ne!(px(2, 2)[3], 0);
+}
+
+#[test]
+fn local_uv_plan_preserves_detail_and_footprint() {
+    let extent = [0.45, 0.4, 0.46, 0.41];
+    let l = layer("detail").with_placement(OverlayPlacement::uv(extent).unwrap());
+    let mut settings = OverlaySettings::with_layers(vec![l]);
+    settings.enabled = true;
+    settings.output_size = Some([2, 2]);
+    let local = plan_overlays_local_uv(&settings, &georef_none(), 513, 513, 4096, 1024).unwrap();
+    assert_eq!(local.layers[0].extent, extent);
+    assert_eq!(local.layers[0].rgba, image_2x2().rgba);
+    // A terrain-wide bake misses this small footprint entirely at this size.
+    let baked = plan_overlays(&settings, &georef_none(), 513, 513, 4096, 1024).unwrap();
+    assert!(baked.layers[0].rgba.iter().all(|v| *v == 0));
+    assert_eq!(local.gpu_bytes, baked.gpu_bytes);
+}
+
+#[test]
+fn local_uv_plan_full_domain_is_unchanged() {
+    let mut settings = OverlaySettings::with_layers(vec![layer("overview")]);
+    settings.enabled = true;
+    let baked = plan_overlays(&settings, &georef_none(), 8, 8, 4096, 1024).unwrap();
+    let local = plan_overlays_local_uv(&settings, &georef_none(), 8, 8, 4096, 1024).unwrap();
+    assert_eq!(local, baked);
+}
+
+#[test]
+fn local_uv_plan_budget_preserves_extent_when_downscaled() {
+    let extent = [0.2, 0.3, 0.4, 0.5];
+    let mut settings = OverlaySettings::with_layers(vec![
+        layer("detail").with_placement(OverlayPlacement::uv(extent).unwrap())
+    ]);
+    settings.enabled = true;
+    settings.output_size = Some([2048, 2048]);
+    let local =
+        plan_overlays_local_uv(&settings, &georef_none(), 513, 513, 4096, 1024 * 1024).unwrap();
+    assert!(local.downscaled);
+    assert_eq!((local.width, local.height), (512, 512));
+    assert_eq!(local.layers[0].extent, extent);
+    assert_eq!(local.gpu_bytes, 1024 * 1024);
 }
 
 #[test]
@@ -619,5 +699,181 @@ fn test_plan_crs_mismatch_error() {
             "overlay layer 'bad' CRS EPSG:4326 cannot be placed on terrain CRS EPSG:32632"
         )),
         other => panic!("expected UnsupportedFeature, got {other:?}"),
+    }
+}
+
+// ------------------------------------------------ resample reuse (web) --
+
+fn reuse_settings(layers: Vec<OverlayLayer>) -> OverlaySettings {
+    let mut settings = OverlaySettings::with_layers(layers);
+    settings.enabled = true;
+    settings.output_size = Some([16, 16]);
+    settings
+}
+
+fn plan_reusing(
+    settings: &OverlaySettings,
+    previous: Option<(&OverlayPlan, &[u64])>,
+) -> (OverlayPlan, Vec<u64>) {
+    plan_overlays_local_uv_reusing(settings, &georef_none(), 64, 64, 4096, 1 << 24, previous)
+        .unwrap()
+}
+
+#[test]
+fn reusing_plan_is_byte_identical_to_a_fresh_plan() {
+    let base = layer("base");
+    let lava = OverlayLayer::new("lava", solid_image([255, 112, 40, 214]))
+        .unwrap()
+        .with_z_order(20);
+    let first = reuse_settings(vec![base.clone(), lava]);
+    let (plan, keys) = plan_reusing(&first, None);
+    assert_eq!(
+        plan,
+        plan_overlays_local_uv(&first, &georef_none(), 64, 64, 4096, 1 << 24).unwrap()
+    );
+    assert_eq!(keys.len(), plan.layers.len());
+
+    let next_lava = OverlayLayer::new("lava", solid_image([150, 50, 28, 158]))
+        .unwrap()
+        .with_z_order(20);
+    let second = reuse_settings(vec![base, next_lava]);
+    let (reused, _) = plan_reusing(&second, Some((&plan, &keys)));
+    assert_eq!(
+        reused,
+        plan_overlays_local_uv(&second, &georef_none(), 64, 64, 4096, 1 << 24).unwrap()
+    );
+}
+
+#[test]
+fn reuse_copies_only_layers_whose_key_matches() {
+    let settings = reuse_settings(vec![layer("base"), layer("lava").with_opacity(0.5)]);
+    let (mut plan, keys) = plan_reusing(&settings, None);
+    // Mark the cached bytes so a copy is distinguishable from a resample.
+    for layer in &mut plan.layers {
+        layer.rgba.fill(7);
+    }
+    let changed = reuse_settings(vec![layer("base"), layer("lava").with_opacity(0.25)]);
+    let (next, next_keys) = plan_reusing(&changed, Some((&plan, &keys)));
+    assert!(
+        next.layers[0].rgba.iter().all(|v| *v == 7),
+        "unchanged layer is copied"
+    );
+    assert!(
+        next.layers[1].rgba.iter().any(|v| *v != 7),
+        "edited layer is resampled"
+    );
+    assert_eq!(next_keys[0], keys[0]);
+    assert_ne!(next_keys[1], keys[1]);
+    // A different target size never reuses.
+    let mut resized = changed.clone();
+    resized.output_size = Some([8, 8]);
+    let (small, _) = plan_reusing(&resized, Some((&plan, &keys)));
+    assert!(small.layers[0].rgba.iter().any(|v| *v != 7));
+}
+
+#[test]
+fn layer_key_tracks_resample_inputs_only() {
+    let g = georef_none();
+    let key = |l: &OverlayLayer| overlay_layer_key(l, &g, 16, 16, true);
+    let base = layer("a");
+    let mut edited = base.clone();
+    edited.image.rgba[5] ^= 1;
+    assert_ne!(key(&base), key(&edited));
+    assert_ne!(key(&base), key(&base.clone().with_opacity(0.9)));
+    assert_ne!(
+        key(&base),
+        key(&base
+            .clone()
+            .with_placement(OverlayPlacement::uv([0.0, 0.0, 0.5, 1.0]).unwrap()))
+    );
+    assert_ne!(key(&base), overlay_layer_key(&base, &g, 16, 8, true));
+    assert_ne!(key(&base), overlay_layer_key(&base, &g, 16, 16, false));
+    let restyled = OverlayLayer {
+        name: "b".into(),
+        blend_mode: OverlayBlendMode::Multiply,
+        z_order: 9,
+        ..base.clone()
+    };
+    assert_eq!(key(&base), key(&restyled));
+}
+
+#[test]
+fn separable_uv_resample_matches_pointwise() {
+    // Deterministic pseudo-random image so every channel and texel differs.
+    let mut seed = 0x2545_F491_u32;
+    let mut next = || {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        seed
+    };
+    let g = georef_none();
+    for (iw, ih) in [(1, 1), (2, 3), (37, 19), (64, 64)] {
+        let rgba = (0..iw * ih * 4).map(|_| next() as u8).collect();
+        let image = OverlayImage::new(iw, ih, rgba).unwrap();
+        for extent in [
+            [0.0, 0.0, 1.0, 1.0],
+            [0.15, 0.2, 0.65, 0.9],
+            [0.45, 0.4, 0.46, 0.41],
+        ] {
+            for opacity in [1.0, 0.7, 0.33] {
+                let layer = OverlayLayer::new("l", image.clone())
+                    .unwrap()
+                    .with_placement(OverlayPlacement::uv(extent).unwrap())
+                    .with_opacity(opacity);
+                // Equal-size targets put taps on texel centers (zero weights).
+                for (tw, th) in [
+                    (1, 1),
+                    (16, 9),
+                    (61, 77),
+                    (128, 128),
+                    (iw, ih),
+                    (2 * iw, ih),
+                ] {
+                    for local_uv in [false, true] {
+                        let pointwise =
+                            resample_layer_pointwise(&layer, &g, tw, th, local_uv).unwrap();
+                        let separable = resample_uv_separable(&layer, &extent, tw, th, local_uv);
+                        assert!(
+                            pointwise == separable,
+                            "image {iw}x{ih} extent {extent:?} opacity {opacity} target {tw}x{th} local {local_uv}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn equal_size_uv_layer_takes_the_row_copy_and_matches_pointwise() {
+    // The La Palma lava/overview shape: a 2048² layer into a 2048² plan.
+    let size = 2048;
+    let taps = axis_taps(size, size, 0.0, 1.0, true);
+    assert!(
+        taps.iter()
+            .enumerate()
+            .all(|(i, tap)| !tap.skip && tap.t == 0.0 && tap.lo as usize == i),
+        "every column is a weight-0 tap of its own texel, so rows are copied whole"
+    );
+    let mut seed = 0x9E37_79B9_u32;
+    let rgba: Vec<u8> = (0..size * size * 4)
+        .map(|_| {
+            seed ^= seed << 13;
+            seed ^= seed >> 17;
+            seed ^= seed << 5;
+            seed as u8
+        })
+        .collect();
+    let image = OverlayImage::new(size, size, rgba).unwrap();
+    let g = georef_none();
+    let extent = [0.0, 0.0, 1.0, 1.0];
+    for opacity in [1.0, 0.62] {
+        let layer = OverlayLayer::new("l", image.clone())
+            .unwrap()
+            .with_opacity(opacity);
+        let pointwise = resample_layer_pointwise(&layer, &g, size, size, true).unwrap();
+        let separable = resample_uv_separable(&layer, &extent, size, size, true);
+        assert!(pointwise == separable, "opacity {opacity}");
     }
 }

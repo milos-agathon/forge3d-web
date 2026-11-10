@@ -116,6 +116,7 @@ import type { TerrainProbeSnapshot } from "./terrain-probes.js";
 import { TerrainScatterBatch, normalizeScatterBatches } from "./terrain-scatter.js";
 import type { ScatterBatchInput } from "./scatter-types.js";
 import { TerrainLightingProbes, validateProbeSnapshot, type TerrainProbeMemoryReport } from "./terrain-probes.js";
+import { ownedOverlayData } from "./overlay-ownership.js";
 export { TerrainScatterBatch, ScatterWindSettings, TerrainScatterSource, makeScatterTransform, seededScatterTransforms, gridScatterTransforms, bilinearScatterSample, simplifyScatterMesh, autoScatterLodLevels, scatterMeshBounds, scatterTransformBounds } from "./terrain-scatter.js";
 export type * from "./scatter-types.js";
 export { TerrainLightingProbes, getTerrainProbeMaterialDefaults } from "./terrain-probes.js";
@@ -333,6 +334,8 @@ export interface TerrainOverlaysInput {
   enabled?: boolean;
   globalOpacity?: number;
   resolutionScale?: number;
+  /** Explicit composite pixels, independent of DEM resolution; device and memory limits still apply. */
+  outputSize?: [number, number];
   layers?: TerrainOverlayLayerInput[];
 }
 
@@ -739,6 +742,7 @@ export interface NormalizedTerrainOverlays {
   enabled: boolean;
   globalOpacity: number;
   resolutionScale: number;
+  outputSize?: [number, number];
   layers: NormalizedTerrainOverlayLayer[];
 }
 
@@ -2673,6 +2677,7 @@ interface WasmRuntime {
   ): () => void;
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setTerrainOverlays?(overlays: TerrainOverlaysInput): boolean;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setEnvironment?(snapshot: EnvironmentSnapshot | null): void;
   getEnvironmentMemoryReport?(): EnvironmentMemoryReport;
@@ -2800,6 +2805,8 @@ export class Forge3DRuntime {
   #deviceLossError: Forge3DError | undefined;
   #vectorState: { input: VectorLayers | VectorSnapshot; terrain: TerrainHeightmapInput | undefined; geometryRevision: number; highlightRevision: number } | undefined;
   #geospatialTerrain: TerrainDataset | TerrainHeightmapInput | undefined;
+  /** Normalized input of the committed terrain, for overlay-only commits. */
+  #committedTerrain: TerrainHeightmapInput | undefined;
   #geospatialVectorEpoch = 0;
   #geospatialVectorAbort: AbortController | undefined;
 
@@ -3524,7 +3531,30 @@ export class Forge3DRuntime {
     const normalized = normalizeTerrainHeightmapInput(terrain instanceof TerrainDataset ? terrain.toTerrainInput() : terrain);
     this.#geospatialVectorEpoch++;
     this.#geospatialVectorAbort?.abort();
-    this.#runOrQueue(() => {this.#inner.setTerrain(normalized);this.#geospatialTerrain=terrain;});
+    this.#runOrQueue(() => {this.#inner.setTerrain(normalized);this.#geospatialTerrain=terrain;this.#committedTerrain=normalized;});
+  }
+
+  /**
+   * Replaces the committed terrain's overlays without rebuilding the
+   * terrain: layers whose inputs are unchanged keep their resampled texture
+   * slice and only changed slices are uploaded. The frame equals
+   * `setTerrain` with these overlays. A stack that changes shape (output
+   * size, layer count, or no visible layers) recommits the terrain instead.
+   */
+  setTerrainOverlays(overlays: TerrainOverlaysInput): void {
+    this.#assertNotDisposed();
+    const committed = this.#committedTerrain;
+    if (committed === undefined) {
+      throw new Forge3DError("INVALID_INPUT", "setTerrainOverlays requires a committed terrain");
+    }
+    const next = normalizeTerrainHeightmapInput({ ...committed, overlays });
+    this.#runOrQueue(() => {
+      if (this.#inner.setTerrainOverlays?.call(this.#inner, next.overlays!) === true) {
+        this.#committedTerrain = next;
+        return;
+      }
+      this.setTerrain(next);
+    });
   }
 
   async setTerrainFromSource(
@@ -3555,6 +3585,7 @@ export class Forge3DRuntime {
         this.#geospatialVectorEpoch++;
         this.#geospatialVectorAbort?.abort();
         this.#geospatialTerrain=decoded;
+        this.#committedTerrain=decoded;
       });
     } catch (error) {
       throw Forge3DError.from(error);
@@ -3961,7 +3992,7 @@ function copyTerrainMetadata(
               image: {
                 width: layer.image.width,
                 height: layer.image.height,
-                data: layer.image.data.slice(),
+                data: ownedOverlayData(layer.image.data),
               },
               ...(layer.extent !== undefined
                 ? { extent: [...layer.extent] as typeof layer.extent }

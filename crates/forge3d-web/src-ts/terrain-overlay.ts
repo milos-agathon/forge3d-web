@@ -243,6 +243,13 @@ export function normalizeTerrainOverlays(
       "resolution_scale must be in [0.1, 2.0]",
     );
   }
+  if (input.outputSize !== undefined) {
+    if (!Array.isArray(input.outputSize) || input.outputSize.length !== 2 ||
+      !input.outputSize.every(value => Number.isInteger(value) && value > 0 && value <= 0xffffffff)) {
+      throw invalidInput("overlay.output_size", "output_size must contain two positive uint32 dimensions");
+    }
+    settings.outputSize = [input.outputSize[0], input.outputSize[1]];
+  }
   const visible = terrainOverlayVisibleLayers(settings).length;
   if (visible > MAX_VISIBLE_LAYERS) {
     throw invalidInput(

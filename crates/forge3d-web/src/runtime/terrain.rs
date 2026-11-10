@@ -494,16 +494,30 @@ pub(super) fn set_terrain_options_runtime(
                 None => (validated.input.width, validated.input.height),
             };
             let overlay_budget = material_budget.saturating_sub(material_bytes);
-            let plan = forge3d_core::terrain_overlay::plan_overlays(
+            // Layers whose inputs match the committed plan copy its resampled
+            // bytes; a timeline step then pays only for the layer it changed.
+            let previous = runtime
+                .terrain
+                .as_ref()
+                .and_then(|terrain| terrain.overlays.as_ref())
+                .map(|state| (&state.plan, state.keys.as_slice()));
+            let (plan, keys) = forge3d_core::terrain_overlay::plan_overlays_local_uv_reusing(
                 settings,
                 &georef,
                 terrain_w,
                 terrain_h,
                 runtime.max_texture_dimension_2d,
                 overlay_budget,
+                previous,
             )
             .map_err(map_core_error)?;
-            (!plan.layers.is_empty()).then_some(plan)
+            let planning = OverlayPlanning {
+                georef,
+                terrain_w,
+                terrain_h,
+                max_dim: runtime.max_texture_dimension_2d,
+            };
+            (!plan.layers.is_empty()).then_some((plan, keys, planning))
         }
         None => None,
     };
@@ -561,7 +575,7 @@ pub(super) fn set_terrain_options_runtime(
         lod_select: lod_select_bytes,
         overlays: overlay_plan
             .as_ref()
-            .map_or(0, TerrainOverlayState::gpu_bytes_for),
+            .map_or(0, |(plan, _, _)| TerrainOverlayState::gpu_bytes_for(plan)),
         vt: vt_plan.as_ref().map_or(0, |(plan, _, _)| plan.gpu_bytes),
     };
     let required = candidate
@@ -590,7 +604,8 @@ pub(super) fn set_terrain_options_runtime(
         material.as_ref(),
         screen,
     );
-    let overlays = overlay_plan.map(|plan| TerrainOverlayState::new(&context, plan));
+    let overlays = overlay_plan
+        .map(|(plan, keys, planning)| TerrainOverlayState::new(&context, plan, keys, planning));
     let vt = match vt_plan {
         Some((plan, layer, settings)) => Some(super::terrain_vt::TerrainVtState::new(
             &context, plan, layer, settings,
@@ -1334,7 +1349,7 @@ pub(super) struct ShadowProxyMesh {
     pub(super) bytes: u64,
 }
 
-/// WGSL `TerrainOverlayUniform` mirror (binding 16): 48 bytes.
+/// WGSL `TerrainOverlayUniform` mirror (binding 16): 176 bytes.
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct TerrainOverlayUniformGpu {
@@ -1342,12 +1357,15 @@ pub(super) struct TerrainOverlayUniformGpu {
     pub control: [f32; 4],
     /// Blend-mode discriminant per layer lane (`array<vec4<u32>, 2>`).
     pub modes: [u32; 8],
+    pub extents: [[f32; 4]; 8],
 }
 
 impl TerrainOverlayUniformGpu {
     fn from_plan(plan: &forge3d_core::terrain_overlay::OverlayPlan) -> Self {
         let mut modes = [0u32; 8];
+        let mut extents = [[0.0, 0.0, 1.0, 1.0]; 8];
         for (index, layer) in plan.layers.iter().enumerate() {
+            extents[index] = layer.extent;
             modes[index] = match layer.blend_mode {
                 forge3d_core::terrain_overlay::OverlayBlendMode::Normal => 0,
                 forge3d_core::terrain_overlay::OverlayBlendMode::Multiply => 1,
@@ -1357,14 +1375,82 @@ impl TerrainOverlayUniformGpu {
         Self {
             control: [plan.layers.len() as f32, plan.global_opacity, 0.0, 0.0],
             modes,
+            extents,
         }
     }
+}
+
+/// Georeference and size limits an overlay plan was made against.
+pub(super) struct OverlayPlanning {
+    georef: forge3d_core::terrain_overlay::TerrainGeoreference,
+    terrain_w: u32,
+    terrain_h: u32,
+    max_dim: u32,
+}
+
+/// W08 (E5): overlay-only commit. Re-plans `overlays` against the committed
+/// terrain, copying unchanged layers from the committed plan, then rewrites
+/// only the changed texture-array slices and the uniform. The GPU state then
+/// equals a full terrain commit with these overlays.
+///
+/// Returns `false`, changing nothing, when that equality would need new
+/// allocations or another pipeline variant: no terrain or committed
+/// overlays, overlays absent/disabled/all hidden, a different size or layer
+/// count, or a budget-downscaled plan. Callers then recommit the terrain.
+pub(super) fn set_terrain_overlays_runtime(
+    runtime: &mut Forge3DRuntime,
+    overlays: JsValue,
+) -> Result<bool, WebError> {
+    let context = runtime.context.clone().ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::RuntimeDisposed,
+            "Runtime GPU context is not available",
+        )
+    })?;
+    let wrapper = JsValue::from(js_sys::Object::new());
+    super::device_health::set_js_property(&wrapper, "overlays", &overlays);
+    let Some(settings) = crate::inputs::read_terrain_overlays(&wrapper)? else {
+        return Ok(false);
+    };
+    let Some(state) = runtime
+        .terrain
+        .as_mut()
+        .and_then(|terrain| terrain.overlays.as_mut())
+    else {
+        return Ok(false);
+    };
+    if !settings.enabled || !settings.has_visible_layers() {
+        return Ok(false);
+    }
+    // The committed plan's bytes are exactly enough for its dims and layer
+    // count, so the planner only reaches the committed shape or fails it.
+    let planning = &state.planning;
+    let planned = forge3d_core::terrain_overlay::plan_overlays_local_uv_reusing(
+        &settings,
+        &planning.georef,
+        planning.terrain_w,
+        planning.terrain_h,
+        planning.max_dim,
+        state.plan.gpu_bytes,
+        Some((&state.plan, state.keys.as_slice())),
+    );
+    let (plan, keys) = match planned {
+        Ok(planned) => planned,
+        Err(forge3d_core::error::Forge3dError::ResourceLimitExceeded { .. }) => return Ok(false),
+        Err(error) => return Err(map_core_error(error)),
+    };
+    Ok(state.update_in_place(&context.queue, plan, keys))
 }
 
 /// W08 (E5): GPU block for the planned overlay stack — one RGBA8UnormSrgb
 /// layer per planned composite at bindings 14/15/16.
 pub(super) struct TerrainOverlayState {
     pub plan: forge3d_core::terrain_overlay::OverlayPlan,
+    /// `overlay_layer_key` of each planned layer, for reuse by the next plan.
+    pub keys: Vec<u64>,
+    /// Inputs the plan was made against, for overlay-only re-plans.
+    planning: OverlayPlanning,
+    texture: wgpu::Texture,
     texture_view: wgpu::TextureView,
     sampler: wgpu::Sampler,
     uniform_buffer: wgpu::Buffer,
@@ -1373,7 +1459,12 @@ pub(super) struct TerrainOverlayState {
 }
 
 impl TerrainOverlayState {
-    fn new(context: &GpuContext, plan: forge3d_core::terrain_overlay::OverlayPlan) -> Self {
+    fn new(
+        context: &GpuContext,
+        plan: forge3d_core::terrain_overlay::OverlayPlan,
+        keys: Vec<u64>,
+        planning: OverlayPlanning,
+    ) -> Self {
         let device = &context.device;
         let layers = plan.layers.len().max(1) as u32;
         let width = plan.width.max(1);
@@ -1392,32 +1483,8 @@ impl TerrainOverlayState {
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
-        for (index, layer) in plan.layers.iter().enumerate() {
-            let (data, pitch) =
-                super::terrain_vt::pad_rows(&layer.rgba, width as usize * 4, height as usize);
-            context.queue.write_texture(
-                wgpu::TexelCopyTextureInfo {
-                    texture: &texture,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d {
-                        x: 0,
-                        y: 0,
-                        z: index as u32,
-                    },
-                    aspect: wgpu::TextureAspect::All,
-                },
-                &data,
-                wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(pitch),
-                    rows_per_image: Some(height),
-                },
-                wgpu::Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: 1,
-                },
-            );
+        for index in 0..plan.layers.len() {
+            Self::write_layer(&context.queue, &texture, &plan, index);
         }
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor {
             label: Some("forge3d-web-terrain-overlays"),
@@ -1438,11 +1505,15 @@ impl TerrainOverlayState {
         let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("forge3d-web-terrain-overlay-uniform"),
             contents: bytemuck::bytes_of(&uniform),
-            usage: wgpu::BufferUsages::UNIFORM,
+            // COPY_DST: overlay-only commits rewrite it in place.
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
         Self {
             gpu_bytes: Self::gpu_bytes_for(&plan),
             plan,
+            keys,
+            planning,
+            texture,
             texture_view,
             sampler,
             uniform_buffer,
@@ -1452,6 +1523,74 @@ impl TerrainOverlayState {
     /// Texture + uniform bytes (ledger `terrain:overlays`).
     pub(super) fn gpu_bytes(&self) -> u64 {
         self.gpu_bytes
+    }
+
+    /// Uploads `plan.layers[index]` into slice `index` of the array texture.
+    fn write_layer(
+        queue: &wgpu::Queue,
+        texture: &wgpu::Texture,
+        plan: &forge3d_core::terrain_overlay::OverlayPlan,
+        index: usize,
+    ) {
+        let width = plan.width.max(1);
+        let height = plan.height.max(1);
+        let (data, pitch) = super::terrain_vt::pad_rows(
+            &plan.layers[index].rgba,
+            width as usize * 4,
+            height as usize,
+        );
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d {
+                    x: 0,
+                    y: 0,
+                    z: index as u32,
+                },
+                aspect: wgpu::TextureAspect::All,
+            },
+            &data,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(pitch),
+                rows_per_image: Some(height),
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+    }
+
+    /// Replaces the plan in place when `plan` has the committed shape
+    /// (dims and layer count), uploading only slices whose key changed.
+    /// Returns `false` without touching anything otherwise.
+    fn update_in_place(
+        &mut self,
+        queue: &wgpu::Queue,
+        plan: forge3d_core::terrain_overlay::OverlayPlan,
+        keys: Vec<u64>,
+    ) -> bool {
+        if plan.width != self.plan.width
+            || plan.height != self.plan.height
+            || plan.layers.len() != self.plan.layers.len()
+            || plan.downscaled
+            || self.plan.downscaled
+        {
+            return false;
+        }
+        for (index, key) in keys.iter().enumerate() {
+            if self.keys.get(index) != Some(key) {
+                Self::write_layer(queue, &self.texture, &plan, index);
+            }
+        }
+        let uniform = TerrainOverlayUniformGpu::from_plan(&plan);
+        queue.write_buffer(&self.uniform_buffer, 0, bytemuck::bytes_of(&uniform));
+        self.plan = plan;
+        self.keys = keys;
+        true
     }
 
     /// Ledger bytes a plan will allocate (commit pre-check).
