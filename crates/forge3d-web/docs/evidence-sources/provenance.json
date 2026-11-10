@@ -149,7 +149,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/unit/terrain-overlays.test.ts",
-      "sha256": "74c894d8958e08bab2f543767f5fec261164556b8e2d7a9ccc9ae85c8556e2b5",
+      "sha256": "2635cdc4b80af3572b8474847944c117cdfb0f27097dc550e3519131be55bf96",
       "snapshot": "evidence-sources/tests/unit/terrain-overlays.test.ts.txt"
     },
     {

@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "9b849632c0280df82a0b207d273d4909da36adfb70c6610c7001f9b2af7cb9b6",
+      "sha256": "9c4bb66c32418001988702df32465e348ea67bc80221d91ba23a4bac391501f4",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -3337,8 +3337,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-overlays.test.ts.txt",
-      "sha256": "74c894d8958e08bab2f543767f5fec261164556b8e2d7a9ccc9ae85c8556e2b5",
-      "bytes": 8424,
+      "sha256": "2635cdc4b80af3572b8474847944c117cdfb0f27097dc550e3519131be55bf96",
+      "bytes": 12040,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -3348,7 +3348,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/unit/terrain-overlays.test.ts",
-            "sha256": "74c894d8958e08bab2f543767f5fec261164556b8e2d7a9ccc9ae85c8556e2b5",
+            "sha256": "2635cdc4b80af3572b8474847944c117cdfb0f27097dc550e3519131be55bf96",
             "hashMode": "utf8-lf"
           }
         ],

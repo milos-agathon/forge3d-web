@@ -6,8 +6,10 @@ import { describe, expect, it } from "vitest";
 
 import { Forge3DError } from "../../src-ts/index.js";
 import {
+  applyTerrainOverlayLayerUpdates,
   decodeOverlayImage,
   getTerrainOverlayDefaults,
+  normalizeTerrainOverlayReveal,
   isTerrainOverlayLayerVisible,
   normalizeTerrainOverlays,
   terrainOverlayVisibleLayers,
@@ -35,6 +37,21 @@ describe("getTerrainOverlayDefaults", () => {
 });
 
 describe("normalizeTerrainOverlays", () => {
+  it("retains explicit imagery dimensions without changing legacy defaults", () => {
+    const outputSize: [number, number] = [4096, 2048];
+    const settings = normalizeTerrainOverlays({ outputSize, layers: [layer()] });
+    expect(settings.outputSize).toEqual([4096, 2048]);
+    outputSize[0] = 1;
+    expect(settings.outputSize).toEqual([4096, 2048]);
+    expect(normalizeTerrainOverlays({}).outputSize).toBeUndefined();
+  });
+
+  it.each([[], [4096], [4096, 4096, 1], [0, 1], [1, -1], [1.5, 1], [NaN, 1], [Infinity, 1], [4294967296, 1], null].map(value => [value]))(
+    "rejects invalid explicit dimensions %j", outputSize => {
+      expect(() => normalizeTerrainOverlays({ outputSize: outputSize as never })).toThrow(/output_size must contain two positive uint32 dimensions/);
+    },
+  );
+
   it("applies native defaults to a minimal block", () => {
     const normalized = normalizeTerrainOverlays({
       layers: [layer({ extent: [0, 0, 1, 1] })],
@@ -284,5 +301,58 @@ describe("decodeOverlayImage", () => {
     await expect(
       decodeOverlayImage({} as never),
     ).rejects.toThrow();
+  });
+});
+
+describe("overlay reveal", () => {
+  it("fills reveal defaults and keeps a reveal layer planned at opacity 0", () => {
+    const settings = normalizeTerrainOverlays({
+      layers: [layer({ name: "flood", opacity: 0, reveal: { threshold: 0.5 } })],
+    });
+    expect(settings.layers[0]!.reveal).toEqual({
+      threshold: 0.5,
+      fade: 0,
+      freshColor: [1, 1, 1],
+      freshMix: 0,
+      freshAlpha: false,
+    });
+    expect(isTerrainOverlayLayerVisible(settings.layers[0]!)).toBe(true);
+    expect(isTerrainOverlayLayerVisible({ ...settings.layers[0]!, reveal: undefined })).toBe(false);
+  });
+
+  it("validates reveal values with the core wording", () => {
+    const bad = (reveal: Record<string, unknown>) => () => normalizeTerrainOverlayReveal(reveal);
+    expect(bad({ threshold: 1.5 })).toThrow("reveal threshold must be in [0.0, 1.0]");
+    expect(bad({ fade: -1 })).toThrow("reveal fade must be a finite number >= 0");
+    expect(bad({ freshColor: [0, 2, 0] })).toThrow("reveal freshColor channels must be in [0.0, 1.0]");
+    expect(bad({ freshMix: Number.NaN })).toThrow("reveal freshMix must be in [0.0, 1.0]");
+  });
+
+  it("applies updates by name, keeping omitted reveal fields and sharing images", () => {
+    const image = { width: 1, height: 1, data: rgba(1) };
+    const overlays = {
+      layers: [
+        { name: "photo", image },
+        { name: "flood", image, opacity: 1, reveal: { threshold: 0.9, fade: 0.1, freshMix: 0.6 } },
+      ],
+    };
+    const next = applyTerrainOverlayLayerUpdates(overlays, [
+      { name: "flood", opacity: 0.4, reveal: { threshold: 0.2 } },
+    ]);
+    expect(next.layers![1]!.opacity).toBe(0.4);
+    expect(next.layers![1]!.reveal).toEqual({ threshold: 0.2, fade: 0.1, freshColor: [1, 1, 1], freshMix: 0.6, freshAlpha: false });
+    expect(next.layers![1]!.image).toBe(image);
+    expect(overlays.layers[1]!.reveal.threshold).toBe(0.9);
+  });
+
+  it("rejects unknown, duplicate and non-reveal layers before changing anything", () => {
+    const image = { width: 1, height: 1, data: rgba(1) };
+    const overlays = { layers: [{ name: "photo", image }, { name: "a", image, reveal: {} }, { name: "a", image, reveal: {} }] };
+    expect(() => applyTerrainOverlayLayerUpdates(overlays, [{ name: "nope" }])).toThrow("no overlay layer is named 'nope'");
+    expect(() => applyTerrainOverlayLayerUpdates(overlays, [{ name: "a" }])).toThrow("more than one overlay layer is named 'a'");
+    expect(() => applyTerrainOverlayLayerUpdates(overlays, [{ name: "photo", opacity: 0.5 }])).toThrow("has no reveal");
+    expect(() =>
+      applyTerrainOverlayLayerUpdates({ layers: [{ name: "b", image, reveal: {} }] }, [{ name: "b", opacity: 2 }]),
+    ).toThrow("opacity must be in [0.0, 1.0]");
   });
 });
